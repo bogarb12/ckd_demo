@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CKD Dashboard - ระบบแสดงผลข้อมูลผู้ป่วยโรคไตเรื้อรัง</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-left">
+                <div class="logo">
+                    <svg viewBox="0 0 40 40" width="40" height="40">
+                        <circle cx="20" cy="20" r="18" fill="#2563eb" opacity="0.2"/>
+                        <path d="M20 8 C14 8, 10 14, 10 20 C10 26, 14 32, 20 32 C26 32, 30 26, 30 20 C30 14, 26 8, 20 8 Z M16 18 Q18 14, 20 18 Q22 22, 24 18" stroke="#2563eb" stroke-width="2" fill="none"/>
+                        <circle cx="15" cy="20" r="3" fill="#2563eb" opacity="0.3"/>
+                        <circle cx="25" cy="20" r="3" fill="#2563eb" opacity="0.3"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1>CKD Progression Dashboard</h1>
+                    <p class="header-subtitle">ระบบแสดงผลข้อมูลผู้ป่วยโรคไตเรื้อรัง</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="header-stat">
+                    <span class="header-stat-value" id="header-total">-</span>
+                    <span class="header-stat-label">ผู้ป่วยทั้งหมด</span>
+                </div>
+                <div class="header-stat">
+                    <span class="header-stat-value" id="header-progression">-</span>
+                    <span class="header-stat-label">CKD Progression</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tab-nav">
+        <div class="tab-nav-content">
+            <button class="tab-btn active" data-tab="overview">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                ภาพรวม
+            </button>
+            <button class="tab-btn" data-tab="individual">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                รายบุคคล
+            </button>
+            <button class="tab-btn" data-tab="quality">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                คุณภาพข้อมูล
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Loading -->
+        <div id="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <p>กำลังสร้างข้อมูลจำลอง 1,530 ราย...</p>
+        </div>
+
+        <!-- Overview Tab -->
+        <section id="tab-overview" class="tab-panel active">
+            <!-- Summary Cards -->
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <div class="summary-card-icon blue">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <div class="summary-card-data">
+                        <span class="summary-value" id="total-patients">-</span>
+                        <span class="summary-label">ผู้ป่วยทั้งหมด</span>
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-card-icon red">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <div class="summary-card-data">
+                        <span class="summary-value" id="progression-rate">-</span>
+                        <span class="summary-label">อัตรา Progression</span>
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-card-icon green">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    </div>
+                    <div class="summary-card-data">
+                        <span class="summary-value" id="avg-egfr">-</span>
+                        <span class="summary-label">eGFR เฉลี่ย</span>
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-card-icon purple">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <div class="summary-card-data">
+                        <span class="summary-value" id="avg-age">-</span>
+                        <span class="summary-label">อายุเฉลี่ย (ปี)</span>
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-card-icon orange">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+                    </div>
+                    <div class="summary-card-data">
+                        <span class="summary-value" id="diabetes-rate">-</span>
+                        <span class="summary-label">เบาหวาน</span>
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-card-icon teal">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    </div>
+                    <div class="summary-card-data">
+                        <span class="summary-value" id="hypertension-rate">-</span>
+                        <span class="summary-label">ความดันสูง</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row 1 -->
+            <div class="charts-grid-2">
+                <div class="chart-card">
+                    <h3 class="chart-title">การกระจาย CKD Stage</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-ckd-stage"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">อัตรา Progression ตามปัจจัยเสี่ยง</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-risk-factors"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row 2 -->
+            <div class="charts-grid-2">
+                <div class="chart-card">
+                    <h3 class="chart-title">การกระจายค่า eGFR</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-egfr-dist"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">ความสัมพันธ์ อายุ vs eGFR</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-age-egfr"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row 3 -->
+            <div class="charts-grid-2">
+                <div class="chart-card">
+                    <h3 class="chart-title">การกระจายความดันโลหิต (SBP vs DBP)</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-bp"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">โปรตีนในปัสสาวะ แยกตาม Progression</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-urine-protein"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Individual Tab -->
+        <section id="tab-individual" class="tab-panel">
+            <div class="individual-layout">
+                <!-- Left: Patient List -->
+                <div class="patient-list-panel">
+                    <div class="search-filters">
+                        <input type="text" id="patient-search" class="search-input" placeholder="ค้นหา Patient ID (เช่น P00001)">
+                        <div class="filter-row">
+                            <select id="filter-stage" class="filter-select">
+                                <option value="">ทุก Stage</option>
+                                <option value="1">Stage 1</option>
+                                <option value="2">Stage 2</option>
+                                <option value="3a">Stage 3a</option>
+                                <option value="3b">Stage 3b</option>
+                                <option value="4">Stage 4</option>
+                                <option value="5">Stage 5</option>
+                            </select>
+                            <select id="filter-progression" class="filter-select">
+                                <option value="">ทุกสถานะ</option>
+                                <option value="1">Progression</option>
+                                <option value="0">No Progression</option>
+                            </select>
+                        </div>
+                        <div class="filter-row">
+                            <select id="filter-gender" class="filter-select">
+                                <option value="">ทุกเพศ</option>
+                                <option value="M">ชาย</option>
+                                <option value="F">หญิง</option>
+                            </select>
+                            <select id="filter-comorbidity" class="filter-select">
+                                <option value="">ทุกโรคร่วม</option>
+                                <option value="diabetes">เบาหวาน</option>
+                                <option value="hypertension">ความดันสูง</option>
+                                <option value="cvd">โรคหัวใจ</option>
+                            </select>
+                        </div>
+                        <div class="filter-result-count">
+                            พบ <span id="filter-count">0</span> ราย
+                        </div>
+                    </div>
+                    <div class="patient-table-wrapper">
+                        <table class="patient-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="patient_id">ID</th>
+                                    <th class="sortable" data-sort="age">อายุ</th>
+                                    <th class="sortable" data-sort="gender">เพศ</th>
+                                    <th class="sortable" data-sort="egfr">eGFR</th>
+                                    <th>Stage</th>
+                                    <th class="sortable" data-sort="ckd_progression_1yr">ผลลัพธ์</th>
+                                </tr>
+                            </thead>
+                            <tbody id="patient-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="pagination"></div>
+                </div>
+
+                <!-- Right: Patient Detail -->
+                <div class="patient-detail-panel" id="patient-detail">
+                    <div class="detail-placeholder">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <p>เลือกผู้ป่วยจากตารางด้านซ้าย<br>เพื่อดูรายละเอียด</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Quality Tab -->
+        <section id="tab-quality" class="tab-panel">
+            <div class="quality-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title">Missing Values (%)</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-missing"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">สรุปคุณภาพข้อมูล</h3>
+                    <div class="quality-stats" id="quality-stats"></div>
+                </div>
+                <div class="chart-card full-width">
+                    <h3 class="chart-title">การกระจายของ Features หลัก</h3>
+                    <div class="chart-container wide">
+                        <canvas id="chart-feature-dist"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>CKD Progression Dashboard | ข้อมูลจำลอง (Synthetic Data) สำหรับการสาธิต | Dataset: 1,530 patients</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="js/data-generator.js"></script>
+    <script src="js/overview.js"></script>
+    <script src="js/individual.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
