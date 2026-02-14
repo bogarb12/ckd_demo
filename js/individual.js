@@ -223,6 +223,22 @@ class IndividualTab {
             return 'normal';
         };
 
+        // Radar chart metric status helpers
+        const getEgfrStatus = (v) => v == null ? 'missing' : v >= 90 ? 'normal' : v >= 60 ? 'warning' : 'danger';
+        const getCrStatus = (v) => v == null ? 'missing' : v <= 1.3 ? 'normal' : v <= 2.0 ? 'warning' : 'danger';
+        const getHba1cStatus = (v) => v == null ? 'missing' : v < 5.7 ? 'normal' : v < 6.5 ? 'warning' : 'danger';
+        const getSbpStatus = (v) => v == null ? 'missing' : v < 130 ? 'normal' : v < 140 ? 'warning' : 'danger';
+        const getDbpStatus = (v) => v == null ? 'missing' : v < 80 ? 'normal' : v < 90 ? 'warning' : 'danger';
+        const getBmiStatus = (v) => v == null ? 'missing' : (v >= 18.5 && v <= 24.9) ? 'normal' : (v >= 25 && v < 30) ? 'warning' : 'danger';
+
+        const radarCrMgDl = creatinineMgDl != null ? creatinineMgDl : (pt.creatinine_unit === 'mg/dL' ? pt.creatinine : null);
+
+        const statusDot = (status) => {
+            const colors = { normal: '#22c55e', warning: '#f59e0b', danger: '#ef4444', missing: '#94a3b8' };
+            const labels = { normal: 'ปกติ', warning: 'เฝ้าระวัง', danger: 'ผิดปกติ', missing: 'ไม่มีข้อมูล' };
+            return `<span class="radar-status-dot" style="background:${colors[status]}"></span><span class="radar-status-text" style="color:${colors[status]}">${labels[status]}</span>`;
+        };
+
         panel.innerHTML = `
             <div class="detail-header">
                 <div class="detail-header-top">
@@ -250,6 +266,78 @@ class IndividualTab {
                             <span class="egfr-unit">mL/min/1.73m²</span>
                         </div>
                         <div class="stage-desc">${stageDescMap[stage] || ''}</div>
+                    </div>
+                </div>
+
+                <!-- Spider/Radar Chart Card -->
+                <div class="detail-section">
+                    <div class="detail-section-title">Health Profile (Spider Chart)</div>
+                    <div class="radar-chart-card">
+                        <div class="radar-chart-wrapper">
+                            <canvas id="patient-radar-chart"></canvas>
+                        </div>
+                        <div class="radar-legend-grid">
+                            <div class="radar-legend-item">
+                                <div class="radar-legend-header">
+                                    ${statusDot(getEgfrStatus(egfr))}
+                                </div>
+                                <div class="radar-legend-label">eGFR</div>
+                                <div class="radar-legend-value">${egfr != null ? egfr.toFixed(1) : 'N/A'} <small>mL/min</small></div>
+                                <div class="radar-legend-ref">ปกติ: &gt; 90</div>
+                            </div>
+                            <div class="radar-legend-item">
+                                <div class="radar-legend-header">
+                                    ${statusDot(getCrStatus(radarCrMgDl))}
+                                </div>
+                                <div class="radar-legend-label">Creatinine</div>
+                                <div class="radar-legend-value">${radarCrMgDl != null ? radarCrMgDl.toFixed(2) : 'N/A'} <small>mg/dL</small></div>
+                                <div class="radar-legend-ref">ปกติ: 0.7-1.3</div>
+                            </div>
+                            <div class="radar-legend-item">
+                                <div class="radar-legend-header">
+                                    ${statusDot(getHba1cStatus(pt.hba1c_percent))}
+                                </div>
+                                <div class="radar-legend-label">HbA1c</div>
+                                <div class="radar-legend-value">${pt.hba1c_percent != null ? pt.hba1c_percent + '%' : 'N/A'}</div>
+                                <div class="radar-legend-ref">ปกติ: &lt; 5.7%</div>
+                            </div>
+                            <div class="radar-legend-item">
+                                <div class="radar-legend-header">
+                                    ${statusDot(getSbpStatus(pt.sbp))}
+                                </div>
+                                <div class="radar-legend-label">SBP</div>
+                                <div class="radar-legend-value">${pt.sbp != null ? pt.sbp : 'N/A'} <small>mmHg</small></div>
+                                <div class="radar-legend-ref">ปกติ: &lt; 130</div>
+                            </div>
+                            <div class="radar-legend-item">
+                                <div class="radar-legend-header">
+                                    ${statusDot(getDbpStatus(pt.dbp))}
+                                </div>
+                                <div class="radar-legend-label">DBP</div>
+                                <div class="radar-legend-value">${pt.dbp != null ? pt.dbp : 'N/A'} <small>mmHg</small></div>
+                                <div class="radar-legend-ref">ปกติ: &lt; 80</div>
+                            </div>
+                            <div class="radar-legend-item">
+                                <div class="radar-legend-header">
+                                    ${statusDot(getBmiStatus(pt.bmi))}
+                                </div>
+                                <div class="radar-legend-label">BMI</div>
+                                <div class="radar-legend-value">${pt.bmi != null ? pt.bmi.toFixed(1) : 'N/A'} <small>kg/m²</small></div>
+                                <div class="radar-legend-ref">ปกติ: 18.5-24.9</div>
+                            </div>
+                        </div>
+                        <div class="radar-description">
+                            <div class="radar-desc-title">คำอธิบาย Spider Chart</div>
+                            <p>แผนภูมิแสดง<strong>ระดับความผิดปกติ</strong>ของค่าตรวจ 6 รายการ โดยพื้นที่ <span style="color:#22c55e;font-weight:600;">สีเขียว</span> คือช่วงค่าปกติ ยิ่งค่าผู้ป่วยยื่นออกนอกขอบเขตปกติมากเท่าไร ยิ่งบ่งบอกถึงความเสี่ยงที่สูงขึ้น</p>
+                            <ul class="radar-desc-list">
+                                <li><strong>eGFR</strong> — อัตราการกรองของไต (ยิ่งสูงยิ่งดี)</li>
+                                <li><strong>Creatinine</strong> — ค่าครีเอตินินในเลือด (ยิ่งต่ำยิ่งดี)</li>
+                                <li><strong>HbA1c</strong> — น้ำตาลสะสม 3 เดือน (ยิ่งต่ำยิ่งดี)</li>
+                                <li><strong>SBP</strong> — ความดันโลหิตตัวบน (ยิ่งต่ำยิ่งดี)</li>
+                                <li><strong>DBP</strong> — ความดันโลหิตตัวล่าง (ยิ่งต่ำยิ่งดี)</li>
+                                <li><strong>BMI</strong> — ดัชนีมวลกาย (ค่ากลางดีที่สุด)</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
@@ -377,6 +465,184 @@ class IndividualTab {
                 </div>
             </div>
         `;
+
+        // Render radar chart after DOM is updated
+        this.renderRadarChart(pt, egfr, radarCrMgDl);
+    }
+
+    renderRadarChart(pt, egfr, creatinineMgDl) {
+        // Destroy previous chart instance
+        if (this.radarChart) {
+            this.radarChart.destroy();
+            this.radarChart = null;
+        }
+
+        const canvas = document.getElementById('patient-radar-chart');
+        if (!canvas) return;
+
+        // Normalize values to 0-100 "concern" scale
+        // Higher score = more abnormal / more concerning
+        const normalize = (value, normalLow, normalHigh, maxBad, invert) => {
+            if (value == null) return 0;
+            if (invert) {
+                // For eGFR: higher is better, lower is worse
+                if (value >= normalHigh) return 0;
+                return Math.min(100, Math.max(0, ((normalHigh - value) / (normalHigh - maxBad)) * 100));
+            } else {
+                // For most metrics: lower is better, higher is worse
+                if (value <= normalLow) return 0;
+                return Math.min(100, Math.max(0, ((value - normalLow) / (maxBad - normalLow)) * 100));
+            }
+        };
+
+        // BMI special: deviation from center of normal (22) in either direction
+        const normalizeBmi = (value) => {
+            if (value == null) return 0;
+            const center = 22;
+            const maxDev = 18; // max deviation (22 ± 18 = 4 to 40)
+            const dev = Math.abs(value - center);
+            return Math.min(100, (dev / maxDev) * 100);
+        };
+
+        const patientScores = [
+            normalize(egfr, 0, 90, 0, true),                    // eGFR (inverted - high is good)
+            normalize(creatinineMgDl, 0, 1.3, 5.0, false),      // Creatinine
+            normalize(pt.hba1c_percent, 0, 5.7, 12.0, false),   // HbA1c
+            normalize(pt.sbp, 0, 130, 200, false),               // SBP
+            normalize(pt.dbp, 0, 80, 120, false),                // DBP
+            normalizeBmi(pt.bmi)                                  // BMI
+        ];
+
+        // Normal zone boundary (the "safe" threshold for each metric)
+        const normalZone = [0, 0, 0, 0, 0, 0]; // All at 0 = perfectly normal
+
+        // Warning zone (values start to be concerning)
+        const warningZone = [
+            normalize(60, 0, 90, 0, true),     // eGFR 60
+            normalize(2.0, 0, 1.3, 5.0, false), // Creatinine 2.0
+            normalize(6.5, 0, 5.7, 12.0, false), // HbA1c 6.5
+            normalize(140, 0, 130, 200, false),  // SBP 140
+            normalize(90, 0, 80, 120, false),    // DBP 90
+            normalizeBmi(25)                      // BMI 25
+        ];
+
+        const labels = ['eGFR', 'Creatinine', 'HbA1c', 'SBP', 'DBP', 'BMI'];
+
+        // Determine patient line color based on overall concern
+        const avgScore = patientScores.reduce((a, b) => a + b, 0) / patientScores.length;
+        let lineColor, bgColor;
+        if (avgScore > 50) {
+            lineColor = 'rgba(239, 68, 68, 1)';
+            bgColor = 'rgba(239, 68, 68, 0.15)';
+        } else if (avgScore > 25) {
+            lineColor = 'rgba(245, 158, 11, 1)';
+            bgColor = 'rgba(245, 158, 11, 0.15)';
+        } else {
+            lineColor = 'rgba(37, 99, 235, 1)';
+            bgColor = 'rgba(37, 99, 235, 0.15)';
+        }
+
+        // Actual display values for tooltip
+        const actualValues = [
+            egfr != null ? egfr.toFixed(1) + ' mL/min' : 'N/A',
+            creatinineMgDl != null ? creatinineMgDl.toFixed(2) + ' mg/dL' : 'N/A',
+            pt.hba1c_percent != null ? pt.hba1c_percent + '%' : 'N/A',
+            pt.sbp != null ? pt.sbp + ' mmHg' : 'N/A',
+            pt.dbp != null ? pt.dbp + ' mmHg' : 'N/A',
+            pt.bmi != null ? pt.bmi.toFixed(1) + ' kg/m²' : 'N/A'
+        ];
+
+        this.radarChart = new Chart(canvas, {
+            type: 'radar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'เกณฑ์เฝ้าระวัง',
+                        data: warningZone,
+                        backgroundColor: 'rgba(34, 197, 94, 0.08)',
+                        borderColor: 'rgba(34, 197, 94, 0.4)',
+                        borderWidth: 1.5,
+                        borderDash: [4, 4],
+                        pointRadius: 0,
+                        fill: true
+                    },
+                    {
+                        label: 'ค่าผู้ป่วย',
+                        data: patientScores,
+                        backgroundColor: bgColor,
+                        borderColor: lineColor,
+                        borderWidth: 2.5,
+                        pointBackgroundColor: lineColor,
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            stepSize: 25,
+                            display: false
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.06)',
+                            lineWidth: 1
+                        },
+                        angleLines: {
+                            color: 'rgba(0, 0, 0, 0.08)',
+                            lineWidth: 1
+                        },
+                        pointLabels: {
+                            font: {
+                                family: 'Sarabun',
+                                size: 12,
+                                weight: '600'
+                            },
+                            color: '#334155'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: { family: 'Sarabun', size: 11 },
+                            padding: 16,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleFont: { family: 'Sarabun', size: 13, weight: '600' },
+                        bodyFont: { family: 'Sarabun', size: 12 },
+                        padding: 12,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(ctx) {
+                                if (ctx.datasetIndex === 1) {
+                                    return `${ctx.label}: ${actualValues[ctx.dataIndex]} (ระดับความกังวล: ${Math.round(ctx.raw)}%)`;
+                                }
+                                return `เกณฑ์เฝ้าระวัง: ${Math.round(ctx.raw)}%`;
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 600,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
     }
 }
 
