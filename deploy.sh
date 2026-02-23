@@ -57,12 +57,18 @@ if ! systemctl is-active --quiet apache2; then
 fi
 echo "  ✓ Apache ทำงานปกติ"
 
-# ตรวจ MariaDB
-if ! systemctl is-active --quiet mariadb; then
-    echo -e "${RED}ERROR: MariaDB ไม่ทำงาน! กรุณาแก้ไข MariaDB ก่อน deploy${NC}"
-    exit 1
+# ตรวจ MariaDB (ไม่บังคับ - app ทำงานได้โดยใช้ localStorage แทน)
+MARIADB_RUNNING=false
+if systemctl is-active --quiet mariadb; then
+    MARIADB_RUNNING=true
+    echo "  ✓ MariaDB ทำงานปกติ"
+elif systemctl is-active --quiet mysql; then
+    MARIADB_RUNNING=true
+    echo "  ✓ MySQL/MariaDB ทำงานปกติ"
+else
+    echo -e "${YELLOW}  ⚠ MariaDB ไม่ทำงาน - App จะใช้ localStorage mode (Demo)${NC}"
+    echo -e "${YELLOW}    เริ่ม MariaDB ภายหลังได้: sudo systemctl start mariadb${NC}"
 fi
-echo "  ✓ MariaDB ทำงานปกติ"
 
 # ตรวจ Huathale
 if command -v pm2 &> /dev/null; then
@@ -152,14 +158,21 @@ echo ""
 # Step 5: สร้าง Database (ถ้ายังไม่มี)
 # -----------------------------------------------
 echo -e "${YELLOW}[5/7] ตรวจสอบ database...${NC}"
-DB_EXISTS=$(mysql -u ubuntu -p"$(grep DB_PASSWORD "$APP_DIR/.env" | cut -d= -f2)" -e "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'diabetes_tracking'" 2>/dev/null | grep diabetes_tracking || true)
+if [ "$MARIADB_RUNNING" = true ]; then
+    DB_PASSWORD=$(grep DB_PASSWORD "$APP_DIR/.env" | cut -d= -f2)
+    DB_EXISTS=$(mysql -u ubuntu -p"$DB_PASSWORD" -e "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'diabetes_tracking'" 2>/dev/null | grep diabetes_tracking || true)
 
-if [ -z "$DB_EXISTS" ]; then
-    echo "  กำลังสร้าง database..."
-    mysql -u ubuntu -p"$(grep DB_PASSWORD "$APP_DIR/.env" | cut -d= -f2)" < "$APP_DIR/server/schema.sql" 2>/dev/null
-    echo "  ✓ Database สร้างแล้ว"
+    if [ -z "$DB_EXISTS" ]; then
+        echo "  กำลังสร้าง database..."
+        mysql -u ubuntu -p"$DB_PASSWORD" < "$APP_DIR/server/schema.sql" 2>/dev/null && \
+            echo "  ✓ Database สร้างแล้ว" || \
+            echo -e "${YELLOW}  ⚠ สร้าง database ไม่สำเร็จ - ตรวจสอบ password ใน .env${NC}"
+    else
+        echo "  ✓ Database มีอยู่แล้ว"
+    fi
 else
-    echo "  ✓ Database มีอยู่แล้ว"
+    echo -e "${YELLOW}  ⚠ ข้าม - MariaDB ไม่ทำงาน (App จะใช้ localStorage mode)${NC}"
+    echo "    เมื่อเริ่ม MariaDB แล้ว รัน: mysql -u ubuntu -p < $APP_DIR/server/schema.sql"
 fi
 echo ""
 
