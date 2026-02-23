@@ -173,7 +173,14 @@ function _flattenObject(obj, prefix, result) {
 // ============================================================================
 
 const API = {
-    baseUrl: '',
+    // Auto-detect base path from page URL
+    // e.g. /diabetes/diabetes.html → baseUrl = '/diabetes'
+    // e.g. /diabetes.html → baseUrl = ''
+    baseUrl: (function() {
+        var path = window.location.pathname;
+        var lastSlash = path.lastIndexOf('/');
+        return lastSlash > 0 ? path.substring(0, lastSlash) : '';
+    })(),
     dbConnected: false,
 
     async checkStatus() {
@@ -481,7 +488,7 @@ function initNavigation() {
 
             // Hide all tab contents, then show the matching one
             tabContents.forEach(function (tc) {
-                if (tc.id === targetTab || tc.getAttribute('data-tab') === targetTab) {
+                if (tc.id === 'tab-' + targetTab || tc.id === targetTab || tc.getAttribute('data-tab') === targetTab) {
                     tc.classList.add('active');
                     tc.style.display = '';
                 } else {
@@ -509,14 +516,15 @@ function initNavigation() {
 
 async function initHome() {
     // Update DB status indicator
-    var statusEl = document.getElementById('db-status');
-    if (statusEl) {
+    var dotEl = document.getElementById('db-dot');
+    var textEl = document.getElementById('db-text');
+    if (dotEl && textEl) {
         if (API.dbConnected) {
-            statusEl.textContent = 'Connected';
-            statusEl.className = 'status-badge status-connected';
+            dotEl.style.background = '#22c55e';
+            textEl.textContent = 'Database Connected';
         } else {
-            statusEl.textContent = 'Offline (Local Storage)';
-            statusEl.className = 'status-badge status-offline';
+            dotEl.style.background = '#f59e0b';
+            textEl.textContent = 'Offline (Local Storage)';
         }
     }
 
@@ -524,23 +532,13 @@ async function initHome() {
     try {
         var summary = await API.getDashboardSummary();
 
-        var totalEl = document.getElementById('stat-total');
-        var expEl = document.getElementById('stat-experimental');
-        var ctrlEl = document.getElementById('stat-control');
+        var totalEl = document.getElementById('home-total');
+        var expEl = document.getElementById('home-experimental');
+        var ctrlEl = document.getElementById('home-control');
 
-        if (totalEl) totalEl.textContent = summary.total || 0;
+        if (totalEl) totalEl.textContent = summary.totalPatients || summary.total || 0;
         if (expEl) expEl.textContent = summary.experimental || 0;
         if (ctrlEl) ctrlEl.textContent = summary.control || 0;
-
-        // Show welcome message when there are no patients
-        var welcomeEl = document.getElementById('welcome-message');
-        if (welcomeEl) {
-            if (summary.total === 0) {
-                welcomeEl.style.display = '';
-            } else {
-                welcomeEl.style.display = 'none';
-            }
-        }
     } catch (e) {
         console.error('initHome error:', e);
         showToast('Failed to load home stats.', 'error');

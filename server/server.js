@@ -12,6 +12,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..')));
 
+// Redirect root to diabetes.html
+app.get('/', (req, res) => {
+    res.redirect('/diabetes.html');
+});
+
 let dbConnected = false;
 
 // ============================================
