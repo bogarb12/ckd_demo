@@ -219,8 +219,8 @@ else
     echo "  3. เพิ่มในทั้ง VirtualHost *:80 และ *:443:"
     echo "     ──────────────────────────────────────"
     echo "     # Diabetes Tracking App (Node.js port 3000)"
-    echo "     ProxyPass /diabetes/ http://127.0.0.1:3000/"
-    echo "     ProxyPassReverse /diabetes/ http://127.0.0.1:3000/"
+    echo "     ProxyPass /diabetes/ http://127.0.0.1:4000/"
+    echo "     ProxyPassReverse /diabetes/ http://127.0.0.1:4000/"
     echo "     ──────────────────────────────────────"
     echo ""
     echo "  4. เปิด mod_proxy (ถ้ายังไม่ได้เปิด):"
@@ -242,7 +242,7 @@ echo ""
 
 # ตรวจ Node.js app
 sleep 2
-if curl -sf "http://127.0.0.1:3000/api/status" > /dev/null 2>&1; then
+if curl -sf "http://127.0.0.1:4000/api/status" > /dev/null 2>&1; then
     echo -e "  ${GREEN}✓ Diabetes Tracking App ทำงานที่ port 3000${NC}"
 else
     echo -e "  ${RED}✗ Diabetes Tracking App ไม่ตอบที่ port 3000${NC}"
@@ -276,11 +276,11 @@ echo ""
 echo "============================================"
 echo "  URL ที่ใช้งาน"
 echo "============================================"
-echo "  ทดสอบตรง:  http://49.231.27.66:3000/diabetes.html"
+echo "  ทดสอบตรง:  http://49.231.27.66:4000/diabetes.html"
 echo "  ผ่าน HTTPS: https://ced.nrru.ac.th/diabetes/diabetes.html"
 echo ""
 echo "  คำสั่งตรวจสอบ:"
 echo "    pm2 status"
 echo "    pm2 logs diabetes-tracking --lines 20"
-echo "    curl http://127.0.0.1:3000/api/status"
+echo "    curl http://127.0.0.1:4000/api/status"
 echo "============================================"

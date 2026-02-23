@@ -5,7 +5,7 @@ module.exports = {
         cwd: '/var/www/html/diabetes-tracking',
         env: {
             NODE_ENV: 'production',
-            PORT: 3000
+            PORT: 4000
         },
         instances: 1,
         autorestart: true,
