@@ -1,0 +1,407 @@
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
+
+const { query, testConnection } = require('./db');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '..')));
+
+let dbConnected = false;
+
+// ============================================
+// API: Patients
+// ============================================
+
+// GET all patients
+app.get('/api/patients', async (req, res) => {
+    if (!dbConnected) return res.json([]);
+    try {
+        const rows = await query('SELECT * FROM patients ORDER BY created_at DESC');
+        // Parse comorbidities JSON
+        rows.forEach(r => {
+            if (r.comorbidities && typeof r.comorbidities === 'string') {
+                try { r.comorbidities = JSON.parse(r.comorbidities); } catch(e) {}
+            }
+        });
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET single patient with all related data
+app.get('/api/patients/:id', async (req, res) => {
+    if (!dbConnected) return res.status(404).json({ error: 'DB not connected' });
+    try {
+        const id = req.params.id;
+        const [patient] = await query('SELECT * FROM patients WHERE patient_id = ?', [id]);
+        if (!patient) return res.status(404).json({ error: 'Patient not found' });
+
+        if (patient.comorbidities && typeof patient.comorbidities === 'string') {
+            try { patient.comorbidities = JSON.parse(patient.comorbidities); } catch(e) {}
+        }
+
+        const [clinical] = await query('SELECT * FROM clinical_outcomes WHERE patient_id = ?', [id]);
+        const [paid5] = await query('SELECT * FROM paid5_scores WHERE patient_id = ?', [id]);
+        const [participation] = await query('SELECT * FROM program_participation WHERE patient_id = ?', [id]);
+        const adverse = await query('SELECT * FROM adverse_events WHERE patient_id = ?', [id]);
+        const [followUp] = await query('SELECT * FROM follow_up_status WHERE patient_id = ?', [id]);
+        const [healthLit] = await query('SELECT * FROM health_literacy WHERE patient_id = ?', [id]);
+        const [selfCare] = await query('SELECT * FROM self_care WHERE patient_id = ?', [id]);
+
+        res.json({
+            patient,
+            clinical: clinical || null,
+            paid5: paid5 || null,
+            participation: participation || null,
+            adverse: adverse || [],
+            followUp: followUp || null,
+            healthLiteracy: healthLit || null,
+            selfCare: selfCare || null
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST create patient (all sections)
+app.post('/api/patients', async (req, res) => {
+    if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
+    try {
+        const d = req.body;
+
+        // Section 1: Patient basics
+        await query(
+            `INSERT INTO patients (patient_id, enrollment_date, study_group, gender, age,
+             education_level, occupation, diabetes_duration_years, comorbidities,
+             comorbidity_other, diabetes_treatment, line_usage)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+             enrollment_date=VALUES(enrollment_date), study_group=VALUES(study_group),
+             gender=VALUES(gender), age=VALUES(age), education_level=VALUES(education_level),
+             occupation=VALUES(occupation), diabetes_duration_years=VALUES(diabetes_duration_years),
+             comorbidities=VALUES(comorbidities), comorbidity_other=VALUES(comorbidity_other),
+             diabetes_treatment=VALUES(diabetes_treatment), line_usage=VALUES(line_usage)`,
+            [d.patient_id, d.enrollment_date, d.study_group, d.gender, d.age,
+             d.education_level, d.occupation, d.diabetes_duration_years,
+             JSON.stringify(d.comorbidities || []), d.comorbidity_other || null,
+             d.diabetes_treatment, d.line_usage]
+        );
+
+        // Section 2: Clinical outcomes
+        if (d.hba1c_baseline !== undefined || d.hba1c_6month !== undefined) {
+            await query(
+                `INSERT INTO clinical_outcomes (patient_id, hba1c_baseline, hba1c_6month)
+                 VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE hba1c_baseline=VALUES(hba1c_baseline), hba1c_6month=VALUES(hba1c_6month)`,
+                [d.patient_id, d.hba1c_baseline || null, d.hba1c_6month || null]
+            );
+        }
+
+        // Section 3: PAID-5
+        if (d.paid5) {
+            const p = d.paid5;
+            await query(
+                `INSERT INTO paid5_scores (patient_id, q1_baseline, q1_6month, q2_baseline, q2_6month,
+                 q3_baseline, q3_6month, q4_baseline, q4_6month, q5_baseline, q5_6month,
+                 total_baseline, total_6month, converted_baseline, converted_6month,
+                 distress_baseline, distress_6month)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                 q1_baseline=VALUES(q1_baseline), q1_6month=VALUES(q1_6month),
+                 q2_baseline=VALUES(q2_baseline), q2_6month=VALUES(q2_6month),
+                 q3_baseline=VALUES(q3_baseline), q3_6month=VALUES(q3_6month),
+                 q4_baseline=VALUES(q4_baseline), q4_6month=VALUES(q4_6month),
+                 q5_baseline=VALUES(q5_baseline), q5_6month=VALUES(q5_6month),
+                 total_baseline=VALUES(total_baseline), total_6month=VALUES(total_6month),
+                 converted_baseline=VALUES(converted_baseline), converted_6month=VALUES(converted_6month),
+                 distress_baseline=VALUES(distress_baseline), distress_6month=VALUES(distress_6month)`,
+                [d.patient_id, p.q1_baseline, p.q1_6month, p.q2_baseline, p.q2_6month,
+                 p.q3_baseline, p.q3_6month, p.q4_baseline, p.q4_6month, p.q5_baseline, p.q5_6month,
+                 p.total_baseline, p.total_6month, p.converted_baseline, p.converted_6month,
+                 p.distress_baseline, p.distress_6month]
+            );
+        }
+
+        // Section 4: Program participation (experimental only)
+        if (d.participation && d.study_group === 'experimental') {
+            const pp = d.participation;
+            await query(
+                `INSERT INTO program_participation (patient_id, sessions_attended, line_engagement, line_interaction)
+                 VALUES (?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                 sessions_attended=VALUES(sessions_attended), line_engagement=VALUES(line_engagement),
+                 line_interaction=VALUES(line_interaction)`,
+                [d.patient_id, pp.sessions_attended, pp.line_engagement, pp.line_interaction]
+            );
+        }
+
+        // Section 5: Adverse events
+        if (d.adverse) {
+            await query('DELETE FROM adverse_events WHERE patient_id = ?', [d.patient_id]);
+            if (d.adverse.has_event) {
+                await query(
+                    'INSERT INTO adverse_events (patient_id, has_event, description, event_date) VALUES (?, ?, ?, ?)',
+                    [d.patient_id, true, d.adverse.description || null, d.adverse.event_date || null]
+                );
+            } else {
+                await query(
+                    'INSERT INTO adverse_events (patient_id, has_event) VALUES (?, ?)',
+                    [d.patient_id, false]
+                );
+            }
+        }
+
+        // Section 6: Follow-up status
+        if (d.followUp) {
+            const fu = d.followUp;
+            await query(
+                `INSERT INTO follow_up_status (patient_id, status, withdrawal_reason, end_date)
+                 VALUES (?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                 status=VALUES(status), withdrawal_reason=VALUES(withdrawal_reason), end_date=VALUES(end_date)`,
+                [d.patient_id, fu.status, fu.withdrawal_reason || null, fu.end_date || null]
+            );
+        }
+
+        res.json({ success: true, patient_id: d.patient_id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST save questionnaire (health literacy + self care)
+app.post('/api/questionnaire/:id', async (req, res) => {
+    if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
+    try {
+        const id = req.params.id;
+        const d = req.body;
+
+        // Health Literacy
+        if (d.healthLiteracy) {
+            const hl = d.healthLiteracy;
+            await query(
+                `INSERT INTO health_literacy (patient_id, q1_find_food_info, q2_ask_medication,
+                 q3_read_med_label, q4_foot_care_inst, q5_hypo_symptoms, q6_reliable_info,
+                 q7_choose_food, q8_adjust_eating, q9_med_on_time, q10_exercise, total_score)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                 q1_find_food_info=VALUES(q1_find_food_info), q2_ask_medication=VALUES(q2_ask_medication),
+                 q3_read_med_label=VALUES(q3_read_med_label), q4_foot_care_inst=VALUES(q4_foot_care_inst),
+                 q5_hypo_symptoms=VALUES(q5_hypo_symptoms), q6_reliable_info=VALUES(q6_reliable_info),
+                 q7_choose_food=VALUES(q7_choose_food), q8_adjust_eating=VALUES(q8_adjust_eating),
+                 q9_med_on_time=VALUES(q9_med_on_time), q10_exercise=VALUES(q10_exercise),
+                 total_score=VALUES(total_score)`,
+                [id, hl.q1, hl.q2, hl.q3, hl.q4, hl.q5, hl.q6, hl.q7, hl.q8, hl.q9, hl.q10, hl.total_score]
+            );
+        }
+
+        // Self Care
+        if (d.selfCare) {
+            const sc = d.selfCare;
+            await query(
+                `INSERT INTO self_care (patient_id, q1_rice_portion, q2_avoid_sweets, q3_vegetables,
+                 q4_exercise_30min, q5_move_body, q6_stop_abnormal, q7_med_daily, q8_no_stop_med,
+                 q9_carry_sweets, q10_foot_inspect, q11_closed_shoes, q12_see_provider, total_score)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                 q1_rice_portion=VALUES(q1_rice_portion), q2_avoid_sweets=VALUES(q2_avoid_sweets),
+                 q3_vegetables=VALUES(q3_vegetables), q4_exercise_30min=VALUES(q4_exercise_30min),
+                 q5_move_body=VALUES(q5_move_body), q6_stop_abnormal=VALUES(q6_stop_abnormal),
+                 q7_med_daily=VALUES(q7_med_daily), q8_no_stop_med=VALUES(q8_no_stop_med),
+                 q9_carry_sweets=VALUES(q9_carry_sweets), q10_foot_inspect=VALUES(q10_foot_inspect),
+                 q11_closed_shoes=VALUES(q11_closed_shoes), q12_see_provider=VALUES(q12_see_provider),
+                 total_score=VALUES(total_score)`,
+                [id, sc.q1, sc.q2, sc.q3, sc.q4, sc.q5, sc.q6, sc.q7, sc.q8, sc.q9, sc.q10, sc.q11, sc.q12, sc.total_score]
+            );
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PUT update patient
+app.put('/api/patients/:id', async (req, res) => {
+    if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
+    try {
+        // Reuse POST logic (ON DUPLICATE KEY UPDATE)
+        req.body.patient_id = req.params.id;
+        // Forward to POST handler logic
+        const d = req.body;
+
+        await query(
+            `UPDATE patients SET enrollment_date=?, study_group=?, gender=?, age=?,
+             education_level=?, occupation=?, diabetes_duration_years=?, comorbidities=?,
+             comorbidity_other=?, diabetes_treatment=?, line_usage=?
+             WHERE patient_id=?`,
+            [d.enrollment_date, d.study_group, d.gender, d.age,
+             d.education_level, d.occupation, d.diabetes_duration_years,
+             JSON.stringify(d.comorbidities || []), d.comorbidity_other || null,
+             d.diabetes_treatment, d.line_usage, d.patient_id]
+        );
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// DELETE patient
+app.delete('/api/patients/:id', async (req, res) => {
+    if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
+    try {
+        await query('DELETE FROM patients WHERE patient_id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================
+// API: Dashboard Summary
+// ============================================
+app.get('/api/dashboard/summary', async (req, res) => {
+    if (!dbConnected) return res.json({ totalPatients: 0, experimental: 0, control: 0 });
+    try {
+        const [counts] = await query(
+            `SELECT COUNT(*) as total,
+             SUM(study_group='experimental') as experimental,
+             SUM(study_group='control') as control
+             FROM patients`
+        );
+
+        const hba1c = await query(
+            `SELECT p.study_group, c.hba1c_baseline, c.hba1c_6month
+             FROM clinical_outcomes c JOIN patients p ON c.patient_id = p.patient_id
+             WHERE c.hba1c_baseline IS NOT NULL`
+        );
+
+        const paid5 = await query(
+            `SELECT p.study_group, s.converted_baseline, s.converted_6month,
+             s.distress_baseline, s.distress_6month
+             FROM paid5_scores s JOIN patients p ON s.patient_id = p.patient_id`
+        );
+
+        const patients = await query(
+            `SELECT p.*, c.hba1c_baseline, c.hba1c_6month,
+             s.converted_baseline as paid5_baseline, s.converted_6month as paid5_6month,
+             s.distress_baseline, s.distress_6month
+             FROM patients p
+             LEFT JOIN clinical_outcomes c ON p.patient_id = c.patient_id
+             LEFT JOIN paid5_scores s ON p.patient_id = s.patient_id
+             ORDER BY p.created_at DESC`
+        );
+
+        res.json({
+            totalPatients: Number(counts.total) || 0,
+            experimental: Number(counts.experimental) || 0,
+            control: Number(counts.control) || 0,
+            hba1c,
+            paid5,
+            patients
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================
+// API: Export CSV
+// ============================================
+app.get('/api/export/csv', async (req, res) => {
+    if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
+    try {
+        const rows = await query(
+            `SELECT p.*,
+             c.hba1c_baseline, c.hba1c_6month,
+             s.q1_baseline as paid5_q1_bl, s.q1_6month as paid5_q1_6m,
+             s.q2_baseline as paid5_q2_bl, s.q2_6month as paid5_q2_6m,
+             s.q3_baseline as paid5_q3_bl, s.q3_6month as paid5_q3_6m,
+             s.q4_baseline as paid5_q4_bl, s.q4_6month as paid5_q4_6m,
+             s.q5_baseline as paid5_q5_bl, s.q5_6month as paid5_q5_6m,
+             s.total_baseline as paid5_total_bl, s.total_6month as paid5_total_6m,
+             s.converted_baseline as paid5_conv_bl, s.converted_6month as paid5_conv_6m,
+             s.distress_baseline, s.distress_6month,
+             pp.sessions_attended, pp.line_engagement, pp.line_interaction,
+             ae.has_event as adverse_event, ae.description as adverse_desc,
+             fu.status as follow_up_status, fu.withdrawal_reason, fu.end_date,
+             hl.q1_find_food_info as hl_q1, hl.q2_ask_medication as hl_q2,
+             hl.q3_read_med_label as hl_q3, hl.q4_foot_care_inst as hl_q4,
+             hl.q5_hypo_symptoms as hl_q5, hl.q6_reliable_info as hl_q6,
+             hl.q7_choose_food as hl_q7, hl.q8_adjust_eating as hl_q8,
+             hl.q9_med_on_time as hl_q9, hl.q10_exercise as hl_q10,
+             hl.total_score as hl_total,
+             sc.q1_rice_portion as sc_q1, sc.q2_avoid_sweets as sc_q2,
+             sc.q3_vegetables as sc_q3, sc.q4_exercise_30min as sc_q4,
+             sc.q5_move_body as sc_q5, sc.q6_stop_abnormal as sc_q6,
+             sc.q7_med_daily as sc_q7, sc.q8_no_stop_med as sc_q8,
+             sc.q9_carry_sweets as sc_q9, sc.q10_foot_inspect as sc_q10,
+             sc.q11_closed_shoes as sc_q11, sc.q12_see_provider as sc_q12,
+             sc.total_score as sc_total
+             FROM patients p
+             LEFT JOIN clinical_outcomes c ON p.patient_id = c.patient_id
+             LEFT JOIN paid5_scores s ON p.patient_id = s.patient_id
+             LEFT JOIN program_participation pp ON p.patient_id = pp.patient_id
+             LEFT JOIN adverse_events ae ON p.patient_id = ae.patient_id
+             LEFT JOIN follow_up_status fu ON p.patient_id = fu.patient_id
+             LEFT JOIN health_literacy hl ON p.patient_id = hl.patient_id
+             LEFT JOIN self_care sc ON p.patient_id = sc.patient_id
+             ORDER BY p.patient_id`
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'No data to export' });
+        }
+
+        // Build CSV
+        const headers = Object.keys(rows[0]).filter(k => k !== 'meta');
+        let csv = '\uFEFF' + headers.join(',') + '\n'; // BOM for Thai Excel
+        rows.forEach(row => {
+            const values = headers.map(h => {
+                let val = row[h];
+                if (val === null || val === undefined) return '';
+                val = String(val).replace(/"/g, '""');
+                if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+                    return `"${val}"`;
+                }
+                return val;
+            });
+            csv += values.join(',') + '\n';
+        });
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename=diabetes_data_export.csv');
+        res.send(csv);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================
+// API: DB Status
+// ============================================
+app.get('/api/status', (req, res) => {
+    res.json({ dbConnected, mode: dbConnected ? 'database' : 'localStorage' });
+});
+
+// ============================================
+// Start Server
+// ============================================
+async function start() {
+    dbConnected = await testConnection();
+    app.listen(PORT, () => {
+        console.log(`\nDiabetes Tracking App running at http://localhost:${PORT}/diabetes.html`);
+        console.log(`Mode: ${dbConnected ? 'MariaDB Database' : 'localStorage (Demo)'}`);
+        console.log(`API: http://localhost:${PORT}/api/status\n`);
+    });
+}
+
+start();
