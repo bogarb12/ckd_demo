@@ -64,11 +64,15 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html {
+    font-size: 28.8px; /* 16px × 1.8 = 80% larger */
+}
+
 body {
     font-family: 'Athiti', ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
     background: var(--bg);
     color: var(--text);
-    font-size: 16px;
+    font-size: 1rem;
     line-height: 1.5;
     min-height: 100vh;
     padding-bottom: 80px;
@@ -312,7 +316,7 @@ textarea {
     border: 1.5px solid var(--border);
     border-radius: var(--radius-sm);
     font-family: inherit;
-    font-size: 16px;
+    font-size: 1rem;
     color: var(--text);
     background: var(--surface);
     transition: var(--transition);
