@@ -72,7 +72,7 @@ const DiabetesDashboard = {
             if (!banner) {
                 banner = document.createElement('div');
                 banner.id = 'demo-data-banner';
-                banner.style.cssText = 'background:#fef3c7;color:#92400e;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;font-family:Sarabun,sans-serif;display:flex;align-items:center;gap:8px;border:1px solid #fcd34d;';
+                banner.style.cssText = 'background:#fff3ed;color:#92400e;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;font-family:Athiti,sans-serif;display:flex;align-items:center;gap:8px;border:1px solid rgba(254,106,53,0.3);';
                 banner.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>กำลังแสดงข้อมูลตัวอย่าง (Demo Data) - เพิ่มข้อมูลผู้ป่วยจริงผ่านแบบฟอร์ม CRF เพื่อแสดงข้อมูลจริง</span>';
 
                 // Insert at top of dashboard tab content
@@ -247,20 +247,20 @@ const DiabetesDashboard = {
                     {
                         label: 'กลุ่มทดลอง (Experimental)',
                         data: [expBL, exp6m],
-                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(44, 175, 254, 0.8)',
+                        borderColor: '#2caffe',
                         borderWidth: 1,
-                        borderRadius: 4,
+                        borderRadius: 6,
                         barPercentage: 0.7,
                         categoryPercentage: 0.6
                     },
                     {
                         label: 'กลุ่มควบคุม (Control)',
                         data: [ctrlBL, ctrl6m],
-                        backgroundColor: 'rgba(249, 115, 22, 0.8)',
-                        borderColor: 'rgba(249, 115, 22, 1)',
+                        backgroundColor: 'rgba(254, 106, 53, 0.8)',
+                        borderColor: '#fe6a35',
                         borderWidth: 1,
-                        borderRadius: 4,
+                        borderRadius: 6,
                         barPercentage: 0.7,
                         categoryPercentage: 0.6
                     }
@@ -273,14 +273,14 @@ const DiabetesDashboard = {
                     legend: {
                         position: 'top',
                         labels: {
-                            font: { family: 'Sarabun', size: 13 },
+                            font: { family: 'Athiti', size: 13 },
                             usePointStyle: true,
                             pointStyle: 'rectRounded'
                         }
                     },
                     tooltip: {
-                        titleFont: { family: 'Sarabun' },
-                        bodyFont: { family: 'Sarabun' },
+                        titleFont: { family: 'Athiti' },
+                        bodyFont: { family: 'Athiti' },
                         callbacks: {
                             label: function(ctx) {
                                 return ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + '%';
@@ -290,8 +290,8 @@ const DiabetesDashboard = {
                     title: {
                         display: true,
                         text: 'ค่าเฉลี่ย HbA1c เปรียบเทียบ Baseline กับ 6 เดือน',
-                        font: { family: 'Sarabun', size: 15, weight: '600' },
-                        color: '#1e293b'
+                        font: { family: 'Athiti', size: 15, weight: '600' },
+                        color: '#19191B'
                     }
                 },
                 scales: {
@@ -302,10 +302,10 @@ const DiabetesDashboard = {
                         title: {
                             display: true,
                             text: 'HbA1c (%)',
-                            font: { family: 'Sarabun', size: 13 }
+                            font: { family: 'Athiti', size: 13 }
                         },
                         ticks: {
-                            font: { family: 'Sarabun', size: 12 },
+                            font: { family: 'Athiti', size: 12 },
                             callback: function(value) {
                                 return value + '%';
                             }
@@ -316,7 +316,7 @@ const DiabetesDashboard = {
                     },
                     x: {
                         ticks: {
-                            font: { family: 'Sarabun', size: 13 }
+                            font: { family: 'Athiti', size: 13 }
                         },
                         grid: {
                             display: false
@@ -357,20 +357,20 @@ const DiabetesDashboard = {
                     {
                         label: 'กลุ่มทดลอง (Experimental)',
                         data: [expBL, exp6m],
-                        backgroundColor: 'rgba(20, 184, 166, 0.8)',
-                        borderColor: 'rgba(20, 184, 166, 1)',
+                        backgroundColor: 'rgba(0, 226, 114, 0.8)',
+                        borderColor: '#00e272',
                         borderWidth: 1,
-                        borderRadius: 4,
+                        borderRadius: 6,
                         barPercentage: 0.7,
                         categoryPercentage: 0.6
                     },
                     {
                         label: 'กลุ่มควบคุม (Control)',
                         data: [ctrlBL, ctrl6m],
-                        backgroundColor: 'rgba(139, 92, 246, 0.8)',
-                        borderColor: 'rgba(139, 92, 246, 1)',
+                        backgroundColor: 'rgba(84, 79, 197, 0.8)',
+                        borderColor: '#544fc5',
                         borderWidth: 1,
-                        borderRadius: 4,
+                        borderRadius: 6,
                         barPercentage: 0.7,
                         categoryPercentage: 0.6
                     }
@@ -383,14 +383,14 @@ const DiabetesDashboard = {
                     legend: {
                         position: 'top',
                         labels: {
-                            font: { family: 'Sarabun', size: 13 },
+                            font: { family: 'Athiti', size: 13 },
                             usePointStyle: true,
                             pointStyle: 'rectRounded'
                         }
                     },
                     tooltip: {
-                        titleFont: { family: 'Sarabun' },
-                        bodyFont: { family: 'Sarabun' },
+                        titleFont: { family: 'Athiti' },
+                        bodyFont: { family: 'Athiti' },
                         callbacks: {
                             label: function(ctx) {
                                 return ctx.dataset.label + ': ' + ctx.raw.toFixed(0) + ' คะแนน';
@@ -400,8 +400,8 @@ const DiabetesDashboard = {
                     title: {
                         display: true,
                         text: 'คะแนน PAID-5 (ค่าแปลง) เปรียบเทียบ Baseline กับ 6 เดือน',
-                        font: { family: 'Sarabun', size: 15, weight: '600' },
-                        color: '#1e293b'
+                        font: { family: 'Athiti', size: 15, weight: '600' },
+                        color: '#19191B'
                     }
                 },
                 scales: {
@@ -411,10 +411,10 @@ const DiabetesDashboard = {
                         title: {
                             display: true,
                             text: 'คะแนน PAID-5 (0-100)',
-                            font: { family: 'Sarabun', size: 13 }
+                            font: { family: 'Athiti', size: 13 }
                         },
                         ticks: {
-                            font: { family: 'Sarabun', size: 12 }
+                            font: { family: 'Athiti', size: 12 }
                         },
                         grid: {
                             color: 'rgba(0,0,0,0.06)'
@@ -422,7 +422,7 @@ const DiabetesDashboard = {
                     },
                     x: {
                         ticks: {
-                            font: { family: 'Sarabun', size: 13 }
+                            font: { family: 'Athiti', size: 13 }
                         },
                         grid: {
                             display: false
@@ -482,8 +482,8 @@ const DiabetesDashboard = {
                         title: {
                             display: true,
                             text: 'ระดับ Diabetes Distress',
-                            font: { family: 'Sarabun', size: 15, weight: '600' },
-                            color: '#1e293b'
+                            font: { family: 'Athiti', size: 15, weight: '600' },
+                            color: '#19191B'
                         }
                     }
                 },
@@ -498,8 +498,8 @@ const DiabetesDashboard = {
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
 
-                        ctx.font = '600 14px Sarabun';
-                        ctx.fillStyle = '#94a3b8';
+                        ctx.font = '600 14px Athiti';
+                        ctx.fillStyle = '#AFB1B6';
                         ctx.fillText('ยังไม่มีข้อมูล', centerX, centerY);
 
                         ctx.restore();
@@ -519,12 +519,12 @@ const DiabetesDashboard = {
                 datasets: [{
                     data: [lowCount, highCount],
                     backgroundColor: [
-                        'rgba(34, 197, 94, 0.8)',
-                        'rgba(239, 68, 68, 0.8)'
+                        'rgba(0, 226, 114, 0.8)',
+                        'rgba(250, 75, 66, 0.8)'
                     ],
                     borderColor: [
-                        'rgba(34, 197, 94, 1)',
-                        'rgba(239, 68, 68, 1)'
+                        '#00e272',
+                        '#fa4b42'
                     ],
                     borderWidth: 2,
                     hoverOffset: 8
@@ -538,15 +538,15 @@ const DiabetesDashboard = {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            font: { family: 'Sarabun', size: 13 },
+                            font: { family: 'Athiti', size: 13 },
                             usePointStyle: true,
                             pointStyle: 'circle',
                             padding: 16
                         }
                     },
                     tooltip: {
-                        titleFont: { family: 'Sarabun' },
-                        bodyFont: { family: 'Sarabun' },
+                        titleFont: { family: 'Athiti' },
+                        bodyFont: { family: 'Athiti' },
                         callbacks: {
                             label: function(ctx) {
                                 const pct = ((ctx.raw / totalCount) * 100).toFixed(1);
@@ -557,8 +557,8 @@ const DiabetesDashboard = {
                     title: {
                         display: true,
                         text: 'ระดับ Diabetes Distress',
-                        font: { family: 'Sarabun', size: 15, weight: '600' },
-                        color: '#1e293b'
+                        font: { family: 'Athiti', size: 15, weight: '600' },
+                        color: '#19191B'
                     }
                 }
             },
@@ -574,13 +574,13 @@ const DiabetesDashboard = {
                     ctx.textBaseline = 'middle';
 
                     // Total count number
-                    ctx.font = '700 28px Sarabun';
-                    ctx.fillStyle = '#1e293b';
+                    ctx.font = '700 28px Athiti';
+                    ctx.fillStyle = '#19191B';
                     ctx.fillText(totalCount.toString(), centerX, centerY - 8);
 
                     // Label below
-                    ctx.font = '400 12px Sarabun';
-                    ctx.fillStyle = '#64748b';
+                    ctx.font = '400 12px Athiti';
+                    ctx.fillStyle = '#61646B';
                     ctx.fillText('รายทั้งหมด', centerX, centerY + 14);
 
                     ctx.restore();
@@ -605,7 +605,7 @@ const DiabetesDashboard = {
 
         // If no data, show placeholder
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:#94a3b8;font-family:Sarabun,sans-serif;font-size:14px;">ยังไม่มีข้อมูล</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:#94a3b8;font-family:Athiti,sans-serif;font-size:14px;">ยังไม่มีข้อมูล</td></tr>';
             return;
         }
 

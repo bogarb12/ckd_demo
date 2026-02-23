@@ -1,67 +1,101 @@
 /* ============================================
-   Diabetes Tracking App - Mobile-First Stylesheet
+   Diabetes Tracking App — NOAH-Style Design System
    ระบบติดตามผลโปรแกรมโรงเรียนเบาหวาน + LINE
+   Based on: NOAH (Nakhon Ratchasima Data Platform) UX/UI
    ============================================ */
 
 :root {
-    --primary: #1e3a5f;
-    --primary-light: #2563eb;
-    --primary-lighter: #dbeafe;
-    --accent: #0ea5e9;
-    --success: #22c55e;
-    --success-light: #dcfce7;
-    --warning: #f59e0b;
-    --warning-light: #fef3c7;
-    --danger: #ef4444;
-    --danger-light: #fee2e2;
-    --purple: #8b5cf6;
-    --purple-light: #ede9fe;
-    --orange: #f97316;
-    --orange-light: #ffedd5;
-    --teal: #14b8a6;
-    --teal-light: #ccfbf1;
-    --bg: #f0f4f8;
-    --surface: #ffffff;
-    --text: #1e293b;
-    --text-secondary: #64748b;
-    --text-muted: #94a3b8;
-    --border: #e2e8f0;
-    --border-light: #f1f5f9;
-    --radius: 12px;
+    /* === NOAH Color Tokens === */
+    --primary: #2A86FF;
+    --primary-subtle: #F5FAFF;
+    --primary-hover: #1677FF;
+    --surface: #FFFFFF;
+    --normal: #19191B;
+    --subtle-dark: #61646B;
+    --subtle-light: #AFB1B6;
+    --active-bg: #333333;
+    --border-default: #E5E7EB;
+    --border-active: #2A86FF;
+    --disabled-bg: #DDDDDD;
+    --login-bg: #E8EBF0;
+
+    /* === Status Colors === */
+    --success: #00e272;
+    --success-light: #e6fbf0;
+    --warning: #fe6a35;
+    --warning-light: #fff3ed;
+    --danger: #fa4b42;
+    --danger-light: #fef0ef;
+    --purple: #544fc5;
+    --purple-light: #f0effa;
+    --teal: #2ee0ca;
+    --teal-light: #e8fcf9;
+
+    /* === Highcharts Palette === */
+    --chart-0: #2caffe;
+    --chart-1: #544fc5;
+    --chart-2: #00e272;
+    --chart-3: #fe6a35;
+    --chart-4: #6b8abc;
+    --chart-5: #d568fb;
+    --chart-6: #2ee0ca;
+    --chart-7: #fa4b42;
+    --chart-8: #feb56a;
+    --chart-9: #91e8e1;
+
+    /* === Layout === */
+    --bg: #F0F2F5;
+    --text: #19191B;
+    --text-secondary: #61646B;
+    --text-muted: #AFB1B6;
+    --border: #E5E7EB;
+    --border-light: #F3F4F6;
+    --radius: 16px;
     --radius-sm: 8px;
-    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
-    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+    --radius-full: 9999px;
+
+    /* === Shadows (Minimal — NOAH flat style) === */
+    --shadow: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-lg: 0 4px 16px rgba(0,0,0,0.08);
+
     --transition: all 0.2s ease;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-    font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Athiti', ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
     background: var(--bg);
     color: var(--text);
-    line-height: 1.6;
+    font-size: 16px;
+    line-height: 1.5;
     min-height: 100vh;
     padding-bottom: 80px;
     -webkit-tap-highlight-color: transparent;
 }
 
-/* ============ Header ============ */
+/* ============ Header — NOAH Style (White Surface) ============ */
 .app-header {
-    background: linear-gradient(135deg, var(--primary) 0%, #1e40af 100%);
-    color: white;
-    padding: 12px 16px;
-    position: sticky;
+    background: var(--surface);
+    color: var(--text);
+    padding: 8px 16px;
+    position: fixed;
     top: 0;
-    z-index: 100;
-    box-shadow: var(--shadow-md);
+    left: 0;
+    right: 0;
+    z-index: 10;
+    height: 60px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
 }
 
 .header-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    width: 100%;
     gap: 10px;
 }
 
@@ -71,17 +105,30 @@ body {
     gap: 10px;
 }
 
-.header-logo svg { flex-shrink: 0; }
+.logo-box {
+    width: 36px;
+    height: 36px;
+    background: var(--active-bg);
+    color: #fff;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
 
 .header-logo h1 {
     font-size: 1rem;
     font-weight: 700;
     line-height: 1.2;
+    color: var(--text);
 }
 
 .header-logo .subtitle {
     font-size: 0.7rem;
-    opacity: 0.8;
+    color: var(--subtle-dark);
 }
 
 .db-status {
@@ -89,10 +136,12 @@ body {
     align-items: center;
     gap: 6px;
     font-size: 0.7rem;
-    background: rgba(255,255,255,0.15);
+    color: var(--subtle-dark);
+    background: var(--primary-subtle);
     padding: 4px 10px;
-    border-radius: 20px;
+    border-radius: var(--radius-full);
     white-space: nowrap;
+    border: 1px solid var(--border);
 }
 
 .db-status .dot {
@@ -104,7 +153,7 @@ body {
 
 .db-status .dot.connected { background: var(--success); }
 
-/* ============ Bottom Navigation ============ */
+/* ============ Bottom Navigation — NOAH Pill Style on Mobile ============ */
 .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -116,8 +165,7 @@ body {
     align-items: stretch;
     height: 64px;
     padding-bottom: env(safe-area-inset-bottom, 0);
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-    z-index: 1000;
+    z-index: 10;
     border-top: 1px solid var(--border);
 }
 
@@ -135,7 +183,7 @@ body {
     font-size: 0.65rem;
     font-weight: 500;
     cursor: pointer;
-    transition: var(--transition);
+    transition: color 0.2s ease;
     padding: 6px 2px;
     position: relative;
     -webkit-tap-highlight-color: transparent;
@@ -148,7 +196,7 @@ body {
 }
 
 .bottom-nav-btn.active {
-    color: var(--primary-light);
+    color: var(--primary);
     font-weight: 700;
 }
 
@@ -159,7 +207,7 @@ body {
     left: 25%;
     right: 25%;
     height: 3px;
-    background: var(--primary-light);
+    background: var(--primary);
     border-radius: 0 0 4px 4px;
 }
 
@@ -167,6 +215,7 @@ body {
 .tab-content {
     display: none;
     padding: 16px;
+    padding-top: 76px; /* offset for fixed header */
     max-width: 800px;
     margin: 0 auto;
     animation: fadeIn 0.3s ease;
@@ -174,22 +223,22 @@ body {
 
 .tab-content.active { display: block; }
 
-/* ============ Cards ============ */
+/* ============ Cards — NOAH Modern Flat ============ */
 .card {
     background: var(--surface);
     border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 16px;
+    border: 1px solid var(--border);
+    padding: 20px;
     margin-bottom: 16px;
 }
 
 .card-header {
     font-size: 1rem;
-    font-weight: 700;
-    color: var(--primary);
+    font-weight: 600;
+    color: var(--text);
     margin-bottom: 12px;
     padding-bottom: 8px;
-    border-bottom: 2px solid var(--primary-lighter);
+    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -199,7 +248,7 @@ body {
     font-size: 1.2rem;
 }
 
-/* Stat Cards */
+/* ============ Stat Cards — NOAH primary-subtle BG ============ */
 .stat-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -208,32 +257,31 @@ body {
 }
 
 .stat-card {
-    background: var(--surface);
+    background: var(--primary-subtle);
     border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 16px;
+    padding: 20px;
     text-align: center;
 }
 
 .stat-card .stat-value {
     font-size: 1.75rem;
     font-weight: 700;
-    color: var(--primary-light);
+    color: var(--primary);
     line-height: 1.2;
 }
 
 .stat-card .stat-label {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
+    font-size: 0.8rem;
+    color: var(--subtle-dark);
     margin-top: 4px;
 }
 
-.stat-card.accent .stat-value { color: var(--accent); }
-.stat-card.success .stat-value { color: var(--success); }
+.stat-card.accent .stat-value { color: var(--chart-0); }
+.stat-card.success .stat-value { color: #16a34a; }
 .stat-card.warning .stat-value { color: var(--warning); }
 .stat-card.purple .stat-value { color: var(--purple); }
 
-/* ============ Forms (Touch-friendly) ============ */
+/* ============ Forms (Touch-friendly — NOAH flat inputs) ============ */
 .form-group {
     margin-bottom: 16px;
 }
@@ -273,13 +321,13 @@ textarea {
 
 input:focus, select:focus, textarea:focus {
     outline: none;
-    border-color: var(--primary-light);
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(42,134,255,0.12);
 }
 
 textarea { min-height: 80px; resize: vertical; }
 
-/* Radio & Checkbox as Cards */
+/* Radio & Checkbox as Cards — NOAH selection style */
 .radio-group, .checkbox-group {
     display: flex;
     flex-direction: column;
@@ -301,20 +349,21 @@ textarea { min-height: 80px; resize: vertical; }
 }
 
 .radio-option:hover, .checkbox-option:hover {
-    border-color: var(--primary-light);
-    background: var(--primary-lighter);
+    border-color: var(--primary);
+    background: var(--primary-subtle);
 }
 
 .radio-option input, .checkbox-option input {
     width: 20px;
     height: 20px;
-    accent-color: var(--primary-light);
+    accent-color: var(--primary);
     flex-shrink: 0;
 }
 
 .radio-option.selected, .checkbox-option.selected {
-    border-color: var(--primary-light);
-    background: var(--primary-lighter);
+    border-color: var(--primary);
+    background: var(--primary-subtle);
+    color: var(--primary);
     font-weight: 600;
 }
 
@@ -330,7 +379,7 @@ textarea { min-height: 80px; resize: vertical; }
     text-align: center;
 }
 
-/* ============ Step Wizard ============ */
+/* ============ Step Wizard — NOAH clean style ============ */
 .step-indicator {
     display: flex;
     align-items: center;
@@ -384,23 +433,23 @@ textarea { min-height: 80px; resize: vertical; }
 }
 
 .step.active .step-circle {
-    background: var(--primary-light);
-    border-color: var(--primary-light);
+    background: var(--primary);
+    border-color: var(--primary);
     color: white;
 }
 
 .step.active .step-label {
-    color: var(--primary-light);
+    color: var(--primary);
     font-weight: 600;
 }
 
 .step.completed .step-circle {
-    background: var(--success);
-    border-color: var(--success);
+    background: #16a34a;
+    border-color: #16a34a;
     color: white;
 }
 
-.step.completed .step-label { color: var(--success); }
+.step.completed .step-label { color: #16a34a; }
 
 .step-content { display: none; }
 .step-content.active { display: block; animation: fadeIn 0.3s ease; }
@@ -414,13 +463,15 @@ textarea { min-height: 80px; resize: vertical; }
     border-top: 1px solid var(--border);
 }
 
-/* ============ PAID-5 Scale Table ============ */
+/* ============ PAID-5 Scale ============ */
 .paid5-question {
     background: var(--surface);
     border-radius: var(--radius-sm);
     padding: 12px;
     margin-bottom: 12px;
-    border-left: 4px solid var(--primary-light);
+    border-left: 4px solid var(--primary);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--primary);
 }
 
 .paid5-question .q-text {
@@ -456,7 +507,7 @@ textarea { min-height: 80px; resize: vertical; }
     justify-content: center;
 }
 
-.scale-options label:hover { border-color: var(--primary-light); }
+.scale-options label:hover { border-color: var(--primary); }
 
 .scale-options input { display: none; }
 
@@ -465,17 +516,17 @@ textarea { min-height: 80px; resize: vertical; }
 }
 
 .scale-options label.selected {
-    background: var(--primary-light);
+    background: var(--primary);
     color: white;
-    border-color: var(--primary-light);
+    border-color: var(--primary);
     font-weight: 600;
 }
 
-/* Score Display */
+/* Score Display — NOAH subtle card */
 .score-display {
-    background: var(--primary-lighter);
-    border-radius: var(--radius-sm);
-    padding: 16px;
+    background: var(--primary-subtle);
+    border-radius: var(--radius);
+    padding: 20px;
     text-align: center;
     margin-top: 12px;
 }
@@ -483,19 +534,19 @@ textarea { min-height: 80px; resize: vertical; }
 .score-display .score-value {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--primary-light);
+    color: var(--primary);
 }
 
 .score-display .score-label {
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--subtle-dark);
 }
 
-/* Distress Badge */
+/* Distress Badge — NOAH rounded pill */
 .badge {
     display: inline-block;
     padding: 4px 12px;
-    border-radius: 20px;
+    border-radius: var(--radius-full);
     font-size: 0.75rem;
     font-weight: 600;
 }
@@ -503,8 +554,8 @@ textarea { min-height: 80px; resize: vertical; }
 .badge-success { background: var(--success-light); color: #166534; }
 .badge-warning { background: var(--warning-light); color: #92400e; }
 .badge-danger { background: var(--danger-light); color: #991b1b; }
-.badge-info { background: var(--primary-lighter); color: var(--primary); }
-.badge-purple { background: var(--purple-light); color: #5b21b6; }
+.badge-info { background: var(--primary-subtle); color: var(--primary); }
+.badge-purple { background: var(--purple-light); color: #3c379b; }
 
 /* ============ Questionnaire Cards ============ */
 .question-card {
@@ -522,7 +573,7 @@ textarea { min-height: 80px; resize: vertical; }
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: var(--primary-light);
+    background: var(--primary);
     color: white;
     font-size: 0.7rem;
     font-weight: 700;
@@ -553,15 +604,15 @@ textarea { min-height: 80px; resize: vertical; }
 }
 
 .likert-options label.selected {
-    background: var(--primary-light);
+    background: var(--primary);
     color: white;
-    border-color: var(--primary-light);
+    border-color: var(--primary);
     font-weight: 600;
 }
 
 .likert-options input[type="radio"] { display: none; }
 
-/* ============ Flash Cards (Education) ============ */
+/* ============ Flash Cards (Education) — NOAH rounded ============ */
 .category-pills {
     display: flex;
     gap: 8px;
@@ -575,27 +626,27 @@ textarea { min-height: 80px; resize: vertical; }
     align-items: center;
     gap: 6px;
     padding: 10px 16px;
-    border: 2px solid var(--border);
-    border-radius: 24px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-full);
     background: var(--surface);
     font-family: inherit;
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--subtle-dark);
     cursor: pointer;
     white-space: nowrap;
     transition: var(--transition);
 }
 
 .category-pill.active {
-    border-color: var(--primary-light);
-    background: var(--primary-lighter);
-    color: var(--primary-light);
+    border-color: var(--primary);
+    background: var(--primary-subtle);
+    color: var(--primary);
 }
 
 .category-pill .cat-icon { font-size: 1.1rem; }
 
-/* Flash Card */
+/* Flash Card — Clean flat */
 .flash-card-wrapper {
     perspective: 1000px;
     margin: 16px auto;
@@ -620,14 +671,14 @@ textarea { min-height: 80px; resize: vertical; }
     min-height: 320px;
     backface-visibility: hidden;
     border-radius: var(--radius);
-    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
     padding: 24px;
     display: flex;
     flex-direction: column;
 }
 
 .flash-card-front {
-    background: linear-gradient(135deg, var(--surface) 0%, var(--primary-lighter) 100%);
+    background: var(--primary-subtle);
     align-items: center;
     justify-content: center;
     text-align: center;
@@ -638,13 +689,13 @@ textarea { min-height: 80px; resize: vertical; }
 .flash-card-front .card-title {
     font-size: 1.1rem;
     font-weight: 700;
-    color: var(--primary);
+    color: var(--text);
     margin-bottom: 12px;
 }
 
 .flash-card-front .card-question {
     font-size: 0.9rem;
-    color: var(--text-secondary);
+    color: var(--subtle-dark);
     margin-bottom: 20px;
 }
 
@@ -653,20 +704,20 @@ textarea { min-height: 80px; resize: vertical; }
     color: var(--text-muted);
     padding: 6px 16px;
     border: 1px dashed var(--border);
-    border-radius: 20px;
+    border-radius: var(--radius-full);
 }
 
 .flash-card-back {
     background: var(--surface);
     transform: rotateY(180deg);
     overflow-y: auto;
-    border-top: 4px solid var(--primary-light);
+    border-top: 4px solid var(--primary);
 }
 
 .flash-card-back .back-title {
     font-size: 0.95rem;
     font-weight: 700;
-    color: var(--primary);
+    color: var(--text);
     margin-bottom: 12px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--border);
@@ -691,19 +742,20 @@ textarea { min-height: 80px; resize: vertical; }
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    border: 2px solid var(--border);
+    border: 1.5px solid var(--border);
     background: var(--surface);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: var(--transition);
-    color: var(--text-secondary);
+    color: var(--subtle-dark);
 }
 
 .card-nav-btn:hover {
-    border-color: var(--primary-light);
-    color: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-subtle);
 }
 
 .card-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
@@ -711,15 +763,15 @@ textarea { min-height: 80px; resize: vertical; }
 .card-counter {
     font-size: 0.9rem;
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--subtle-dark);
 }
 
-/* ============ BMI Calculator ============ */
+/* ============ BMI Calculator — NOAH card ============ */
 .bmi-calculator {
     background: var(--surface);
     border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 20px;
+    border: 1px solid var(--border);
+    padding: 24px;
     margin-top: 20px;
 }
 
@@ -732,9 +784,9 @@ textarea { min-height: 80px; resize: vertical; }
 
 .bmi-result {
     text-align: center;
-    padding: 20px;
-    border-radius: var(--radius-sm);
-    background: var(--bg);
+    padding: 24px;
+    border-radius: var(--radius);
+    background: var(--primary-subtle);
     margin-top: 12px;
 }
 
@@ -752,7 +804,7 @@ textarea { min-height: 80px; resize: vertical; }
 
 .bmi-result .bmi-advice {
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--subtle-dark);
     margin-top: 8px;
 }
 
@@ -775,21 +827,21 @@ textarea { min-height: 80px; resize: vertical; }
 .bmi-row.underweight { background: #e0f2fe; }
 .bmi-row.normal { background: var(--success-light); }
 .bmi-row.overweight { background: var(--warning-light); }
-.bmi-row.obese1 { background: var(--orange-light); }
+.bmi-row.obese1 { background: #fff4e0; }
 .bmi-row.obese2 { background: var(--danger-light); }
 
-/* ============ Dashboard ============ */
+/* ============ Dashboard — NOAH chart containers ============ */
 .chart-container {
     background: var(--surface);
     border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 16px;
+    border: 1px solid var(--border);
+    padding: 20px;
     margin-bottom: 16px;
 }
 
 .chart-container .chart-title {
     font-size: 0.9rem;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--text);
     margin-bottom: 12px;
 }
@@ -813,12 +865,12 @@ textarea { min-height: 80px; resize: vertical; }
     min-width: 160px;
 }
 
-/* Patient Table */
+/* Patient Table — NOAH clean style */
 .data-table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     border-radius: var(--radius);
-    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
     background: var(--surface);
 }
 
@@ -830,8 +882,8 @@ textarea { min-height: 80px; resize: vertical; }
 }
 
 .data-table th {
-    background: var(--primary);
-    color: white;
+    background: var(--primary-subtle);
+    color: var(--text);
     padding: 10px 8px;
     text-align: left;
     font-weight: 600;
@@ -839,6 +891,7 @@ textarea { min-height: 80px; resize: vertical; }
     white-space: nowrap;
     position: sticky;
     top: 0;
+    border-bottom: 1px solid var(--border);
 }
 
 .data-table td {
@@ -847,11 +900,11 @@ textarea { min-height: 80px; resize: vertical; }
     white-space: nowrap;
 }
 
-.data-table tr:hover { background: var(--border-light); }
+.data-table tr:hover { background: var(--primary-subtle); }
 
 .data-table .text-center { text-align: center; }
 
-/* ============ Buttons ============ */
+/* ============ Buttons — NOAH flat style ============ */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -870,20 +923,24 @@ textarea { min-height: 80px; resize: vertical; }
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--primary-light), #1d4ed8);
+    background: var(--primary);
     color: white;
 }
-.btn-primary:hover { filter: brightness(1.1); }
+.btn-primary:hover { background: var(--primary-hover); }
 
 .btn-success {
-    background: linear-gradient(135deg, var(--success), #16a34a);
+    background: #16a34a;
     color: white;
 }
+.btn-success:hover { background: #15803d; }
 
 .btn-outline {
     background: var(--surface);
-    color: var(--primary-light);
-    border: 2px solid var(--primary-light);
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
+}
+.btn-outline:hover {
+    background: var(--primary-subtle);
 }
 
 .btn-danger {
@@ -900,6 +957,8 @@ textarea { min-height: 80px; resize: vertical; }
 .btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    background: var(--disabled-bg);
+    color: var(--text-muted);
 }
 
 .btn svg {
@@ -907,10 +966,10 @@ textarea { min-height: 80px; resize: vertical; }
     height: 18px;
 }
 
-/* ============ Toast Notifications ============ */
+/* ============ Toast Notifications — NOAH subtle ============ */
 .toast-container {
     position: fixed;
-    top: 16px;
+    top: 70px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 9999;
@@ -941,7 +1000,7 @@ textarea { min-height: 80px; resize: vertical; }
 .loading-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.85);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -952,16 +1011,16 @@ textarea { min-height: 80px; resize: vertical; }
     width: 40px;
     height: 40px;
     border: 4px solid var(--border);
-    border-top-color: var(--primary-light);
+    border-top-color: var(--primary);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
 
-/* ============ Section Divider ============ */
+/* ============ Section Titles & Dividers ============ */
 .section-title {
     font-size: 1rem;
-    font-weight: 700;
-    color: var(--primary);
+    font-weight: 600;
+    color: var(--text);
     margin: 20px 0 12px;
     display: flex;
     align-items: center;
@@ -977,20 +1036,21 @@ textarea { min-height: 80px; resize: vertical; }
 /* ============ Welcome / Empty State ============ */
 .welcome-card {
     text-align: center;
-    padding: 32px 16px;
+    padding: 32px 20px;
 }
 
 .welcome-card .welcome-icon { font-size: 3rem; margin-bottom: 16px; }
 
 .welcome-card h2 {
     font-size: 1.2rem;
-    color: var(--primary);
+    color: var(--text);
+    font-weight: 700;
     margin-bottom: 8px;
 }
 
 .welcome-card p {
     font-size: 0.85rem;
-    color: var(--text-secondary);
+    color: var(--subtle-dark);
     line-height: 1.6;
 }
 
@@ -1006,7 +1066,7 @@ textarea { min-height: 80px; resize: vertical; }
 .hidden { display: none !important; }
 .text-center { text-align: center; }
 .text-right { text-align: right; }
-.text-success { color: var(--success); }
+.text-success { color: #16a34a; }
 .text-danger { color: var(--danger); }
 .text-warning { color: var(--warning); }
 .text-muted { color: var(--text-muted); }
@@ -1031,15 +1091,15 @@ textarea { min-height: 80px; resize: vertical; }
 }
 
 .notice-banner.info {
-    background: var(--primary-lighter);
+    background: var(--primary-subtle);
     color: var(--primary);
-    border: 1px solid rgba(37,99,235,0.2);
+    border: 1px solid rgba(42,134,255,0.2);
 }
 
 .notice-banner.warning {
     background: var(--warning-light);
     color: #92400e;
-    border: 1px solid rgba(245,158,11,0.3);
+    border: 1px solid rgba(254,106,53,0.3);
 }
 
 /* ============ Animations ============ */
@@ -1057,10 +1117,19 @@ textarea { min-height: 80px; resize: vertical; }
     to { transform: rotate(360deg); }
 }
 
-/* ============ Media Queries ============ */
+/* ============ Media Queries — NOAH Breakpoints ============ */
 
-/* Tablet (768px+) */
+/* Tablet (768px+) → md breakpoint */
 @media (min-width: 768px) {
+    .app-header {
+        height: 73px;
+        padding: 8px 28px;
+    }
+
+    .tab-content {
+        padding-top: 89px; /* offset for taller header */
+    }
+
     .stat-grid { grid-template-columns: repeat(3, 1fr); }
 
     .radio-group.horizontal .radio-option { min-width: auto; }
@@ -1084,9 +1153,10 @@ textarea { min-height: 80px; resize: vertical; }
 
     .bottom-nav {
         position: sticky;
-        top: 56px;
+        top: 73px;
         height: 52px;
-        box-shadow: var(--shadow);
+        border-top: none;
+        border-bottom: 1px solid var(--border);
     }
 
     .bottom-nav-btn {
@@ -1095,7 +1165,10 @@ textarea { min-height: 80px; resize: vertical; }
         font-size: 0.85rem;
     }
 
-    .tab-content { padding: 24px; }
+    .tab-content {
+        padding: 24px;
+        padding-top: 24px;
+    }
 
     .stat-grid { grid-template-columns: repeat(4, 1fr); }
 
@@ -1107,10 +1180,15 @@ textarea { min-height: 80px; resize: vertical; }
     .step .step-label { max-width: 80px; font-size: 0.7rem; }
 }
 
+/* Large Desktop (1280px+) → xl breakpoint */
+@media (min-width: 1280px) {
+    .tab-content { max-width: 1000px; }
+}
+
 /* Print */
 @media print {
     .bottom-nav, .app-header, .btn, .step-nav { display: none; }
-    .tab-content { display: block !important; padding: 0; }
+    .tab-content { display: block !important; padding: 0; padding-top: 0; }
     body { padding: 0; background: white; }
-    .card { box-shadow: none; border: 1px solid #ddd; }
+    .card { border: 1px solid #ddd; }
 }

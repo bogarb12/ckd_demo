@@ -364,9 +364,9 @@ function showToast(message, type) {
     type = type || 'info';
 
     var colorMap = {
-        success: '#28a745',
-        error: '#dc3545',
-        info: '#007bff'
+        success: '#166534',
+        error: '#991b1b',
+        info: '#2A86FF'
     };
 
     var bgColor = colorMap[type] || colorMap.info;
@@ -383,6 +383,7 @@ function showToast(message, type) {
         'color: #fff',
         'padding: 12px 24px',
         'border-radius: 8px',
+        'font-family: Athiti, sans-serif',
         'font-size: 14px',
         'z-index: 10000',
         'box-shadow: 0 4px 12px rgba(0,0,0,0.25)',
@@ -442,7 +443,7 @@ function showLoading() {
         'width: 48px',
         'height: 48px',
         'border: 4px solid #e0e0e0',
-        'border-top-color: #007bff',
+        'border-top-color: #2A86FF',
         'border-radius: 50%',
         'animation: spin 0.8s linear infinite'
     ].join(';');
@@ -520,10 +521,10 @@ async function initHome() {
     var textEl = document.getElementById('db-text');
     if (dotEl && textEl) {
         if (API.dbConnected) {
-            dotEl.style.background = '#22c55e';
+            dotEl.style.background = '#00e272';
             textEl.textContent = 'Database Connected';
         } else {
-            dotEl.style.background = '#f59e0b';
+            dotEl.style.background = '#fe6a35';
             textEl.textContent = 'Offline (Local Storage)';
         }
     }
