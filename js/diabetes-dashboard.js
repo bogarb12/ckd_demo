@@ -792,7 +792,8 @@ const DiabetesDashboard = {
             // If DB connected, fetch from API
             if (typeof DiabetesApp !== 'undefined' && DiabetesApp.dbConnected) {
                 try {
-                    const response = await fetch('/api/export/csv');
+                    const baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
+                    const response = await fetch(baseUrl + '/api/export/csv');
                     if (!response.ok) {
                         throw new Error('Export API failed');
                     }
