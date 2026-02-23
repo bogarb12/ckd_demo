@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบติดตามผลโปรแกรมโรงเรียนเบาหวาน + LINE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/diabetes.css">
+</head>
+<body>
+
+<!-- Header -->
+<header class="app-header">
+    <div class="header-row">
+        <div class="header-logo">
+            <svg viewBox="0 0 36 36" width="36" height="36">
+                <circle cx="18" cy="18" r="16" fill="rgba(255,255,255,0.15)"/>
+                <text x="18" y="24" text-anchor="middle" font-size="20">🩺</text>
+            </svg>
+            <div>
+                <h1>Diabetes Tracking</h1>
+                <p class="subtitle">ระบบติดตามโปรแกรมเบาหวาน + LINE</p>
+            </div>
+        </div>
+        <div class="db-status" id="db-status">
+            <span class="dot" id="db-dot"></span>
+            <span id="db-text">กำลังเชื่อมต่อ...</span>
+        </div>
+    </div>
+</header>
+
+<!-- ============================================ -->
+<!-- TAB 1: หน้าแรก (Home) -->
+<!-- ============================================ -->
+<div class="tab-content active" id="tab-home">
+    <div class="card welcome-card">
+        <div class="welcome-icon">🏥</div>
+        <h2>ระบบติดตามผลโปรแกรมโรงเรียนเบาหวาน + LINE</h2>
+        <p>งานวิจัย RCT: ผลของโปรแกรมโรงเรียนเบาหวานแบบกลุ่มร่วมกับการติดตามผ่าน LINE ต่อระดับ HbA1c และภาวะความเครียดจากโรคเบาหวานในผู้ป่วยเบาหวานชนิดที่ 2 ในคลินิกปฐมภูมิ</p>
+    </div>
+
+    <div class="stat-grid" id="home-stats">
+        <div class="stat-card">
+            <div class="stat-value" id="home-total">0</div>
+            <div class="stat-label">ผู้ป่วยทั้งหมด</div>
+        </div>
+        <div class="stat-card accent">
+            <div class="stat-value" id="home-experimental">0</div>
+            <div class="stat-label">กลุ่มทดลอง</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-value" id="home-control">0</div>
+            <div class="stat-label">กลุ่มควบคุม</div>
+        </div>
+        <div class="stat-card warning">
+            <div class="stat-value" id="home-complete">0</div>
+            <div class="stat-label">ติดตามครบ</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><span class="icon">📋</span> เกี่ยวกับระบบ</div>
+        <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.8">
+            ระบบนี้ใช้สำหรับเก็บข้อมูลและติดตามผลการวิจัยในผู้ป่วยเบาหวานชนิดที่ 2 ประกอบด้วย:
+        </p>
+        <ul style="font-size:0.85rem;color:var(--text-secondary);padding-left:20px;margin-top:8px;line-height:1.8">
+            <li><strong>แบบฟอร์ม CRF</strong> - เก็บข้อมูลพื้นฐาน, HbA1c, PAID-5, การเข้าร่วมโปรแกรม</li>
+            <li><strong>แบบประเมิน</strong> - ความรอบรู้ด้านสุขภาพ + พฤติกรรมดูแลตนเอง</li>
+            <li><strong>สื่อความรู้</strong> - Flash cards อาหาร, ออกกำลังกาย, ยา, เท้า + BMI Calculator</li>
+            <li><strong>Dashboard</strong> - กราฟเปรียบเทียบผลลัพธ์ + Export CSV</li>
+        </ul>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- TAB 2: แบบฟอร์ม CRF -->
+<!-- ============================================ -->
+<div class="tab-content" id="tab-form">
+    <!-- Load existing patient -->
+    <div class="card" style="padding:12px 16px">
+        <div class="form-group" style="margin-bottom:0">
+            <label>โหลดข้อมูลผู้ป่วยที่มีอยู่</label>
+            <select id="form-patient-select">
+                <option value="">-- เลือกผู้ป่วย หรือ กรอกข้อมูลใหม่ --</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+        <div class="step active" data-step="1">
+            <div class="step-circle">1</div>
+            <div class="step-label">ข้อมูล พื้นฐาน</div>
+        </div>
+        <div class="step" data-step="2">
+            <div class="step-circle">2</div>
+            <div class="step-label">HbA1c</div>
+        </div>
+        <div class="step" data-step="3">
+            <div class="step-circle">3</div>
+            <div class="step-label">PAID-5</div>
+        </div>
+        <div class="step" data-step="4">
+            <div class="step-circle">4</div>
+            <div class="step-label">เข้าร่วม โปรแกรม</div>
+        </div>
+        <div class="step" data-step="5">
+            <div class="step-circle">5</div>
+            <div class="step-label">เหตุการณ์ ไม่พึงประสงค์</div>
+        </div>
+        <div class="step" data-step="6">
+            <div class="step-circle">6</div>
+            <div class="step-label">สถานะ ติดตาม</div>
+        </div>
+    </div>
+
+    <!-- ===== Section 1: ข้อมูลพื้นฐาน ===== -->
+    <div class="step-content active" data-step="1">
+        <div class="card">
+            <div class="card-header"><span class="icon">👤</span> ส่วนที่ 1: ข้อมูลพื้นฐาน</div>
+
+            <div class="form-group">
+                <label>รหัสผู้เข้าร่วม *</label>
+                <input type="text" id="f-patient-id" placeholder="เช่น DM-001" required>
+            </div>
+
+            <div class="form-group">
+                <label>วันที่ลงทะเบียน</label>
+                <input type="date" id="f-enrollment-date">
+            </div>
+
+            <div class="form-group">
+                <label>กลุ่มศึกษา *</label>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="study_group" value="experimental">
+                        กลุ่มทดลอง (DSME + LINE)
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="study_group" value="control">
+                        กลุ่มควบคุม (Usual care)
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>เพศ *</label>
+                <div class="radio-group horizontal">
+                    <label class="radio-option"><input type="radio" name="gender" value="male"> ชาย</label>
+                    <label class="radio-option"><input type="radio" name="gender" value="female"> หญิง</label>
+                    <label class="radio-option"><input type="radio" name="gender" value="other"> อื่นๆ</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>อายุ (ปี) *</label>
+                <input type="number" id="f-age" min="18" max="120" placeholder="เช่น 55">
+            </div>
+
+            <div class="form-group">
+                <label>ระดับการศึกษา</label>
+                <select id="f-education">
+                    <option value="">-- เลือก --</option>
+                    <option value="primary">ประถมศึกษา</option>
+                    <option value="secondary">มัธยมศึกษา</option>
+                    <option value="diploma">อนุปริญญา</option>
+                    <option value="bachelor_plus">ปริญญาตรีขึ้นไป</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>อาชีพ</label>
+                <select id="f-occupation">
+                    <option value="">-- เลือก --</option>
+                    <option value="เกษตรกรรม">เกษตรกรรม</option>
+                    <option value="รับจ้าง">รับจ้าง</option>
+                    <option value="ราชการ">ราชการ</option>
+                    <option value="ค้าขาย">ค้าขาย</option>
+                    <option value="อื่นๆ">อื่นๆ</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>ระยะเวลาที่เป็นเบาหวาน (ปี)</label>
+                <input type="number" id="f-diabetes-duration" min="0" max="50" step="0.5" placeholder="เช่น 5.5">
+            </div>
+
+            <div class="form-group">
+                <label>โรคร่วม (เลือกได้มากกว่า 1)</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-option"><input type="checkbox" name="comorbidities" value="hypertension"> ความดันโลหิตสูง</label>
+                    <label class="checkbox-option"><input type="checkbox" name="comorbidities" value="dyslipidemia"> ไขมันในเลือดสูง</label>
+                    <label class="checkbox-option"><input type="checkbox" name="comorbidities" value="cvd"> โรคหัวใจและหลอดเลือด</label>
+                    <label class="checkbox-option"><input type="checkbox" name="comorbidities" value="ckd"> โรคไตเรื้อรัง</label>
+                    <label class="checkbox-option"><input type="checkbox" name="comorbidities" value="gout"> โรคเกาต์</label>
+                    <label class="checkbox-option"><input type="checkbox" name="comorbidities" value="none"> ไม่มีโรคร่วม</label>
+                    <label class="checkbox-option"><input type="checkbox" name="comorbidities" value="other"> อื่นๆ</label>
+                </div>
+                <input type="text" id="f-comorbidity-other" class="hidden mt-1" placeholder="ระบุโรคร่วมอื่นๆ">
+            </div>
+
+            <div class="form-group">
+                <label>การรักษาเบาหวานปัจจุบัน</label>
+                <div class="radio-group">
+                    <label class="radio-option"><input type="radio" name="diabetes_treatment" value="oral"> ยากิน</label>
+                    <label class="radio-option"><input type="radio" name="diabetes_treatment" value="insulin"> อินซูลิน</label>
+                    <label class="radio-option"><input type="radio" name="diabetes_treatment" value="oral_insulin"> ยากิน + อินซูลิน</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>ความถี่ในการใช้ LINE</label>
+                <div class="radio-group">
+                    <label class="radio-option"><input type="radio" name="line_usage" value="regular"> ใช้เป็นประจำ</label>
+                    <label class="radio-option"><input type="radio" name="line_usage" value="occasional"> ใช้บ้าง</label>
+                    <label class="radio-option"><input type="radio" name="line_usage" value="rarely"> ใช้น้อย</label>
+                    <label class="radio-option"><input type="radio" name="line_usage" value="cannot_use"> ใช้ไม่เป็น</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Section 2: HbA1c ===== -->
+    <div class="step-content" data-step="2">
+        <div class="card">
+            <div class="card-header"><span class="icon">🔬</span> ส่วนที่ 2: ผลลัพธ์ทางคลินิก (HbA1c)</div>
+
+            <div class="form-group">
+                <label>HbA1c Baseline (%)</label>
+                <input type="number" id="f-hba1c-baseline" min="4" max="20" step="0.1" placeholder="เช่น 8.5">
+            </div>
+
+            <div class="form-group">
+                <label>HbA1c 6 เดือน (%)</label>
+                <input type="number" id="f-hba1c-6month" min="4" max="20" step="0.1" placeholder="เช่น 7.2">
+            </div>
+
+            <div class="score-display" id="hba1c-change" style="display:none">
+                <div class="score-label">การเปลี่ยนแปลง HbA1c</div>
+                <div class="score-value" id="hba1c-change-value">-</div>
+                <div id="hba1c-change-text" style="font-size:0.8rem;margin-top:4px"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Section 3: PAID-5 ===== -->
+    <div class="step-content" data-step="3">
+        <div class="card">
+            <div class="card-header"><span class="icon">📝</span> ส่วนที่ 3: PAID-5 แบบประเมินความเครียดจากเบาหวาน</div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px">
+                คะแนน: 0 = ไม่เป็นปัญหา, 1 = เล็กน้อย, 2 = ปานกลาง, 3 = ค่อนข้างมาก, 4 = มาก
+            </p>
+
+            <div id="paid5-questions">
+                <!-- Q1 -->
+                <div class="paid5-question">
+                    <div class="q-text">1. รู้สึกหมดหวังกับการดูแลเบาหวาน</div>
+                    <div class="q-label">Baseline</div>
+                    <div class="scale-options" data-name="paid5_q1_baseline">
+                        <label><input type="radio" name="paid5_q1_baseline" value="0"><span>0</span></label>
+                        <label><input type="radio" name="paid5_q1_baseline" value="1"><span>1</span></label>
+                        <label><input type="radio" name="paid5_q1_baseline" value="2"><span>2</span></label>
+                        <label><input type="radio" name="paid5_q1_baseline" value="3"><span>3</span></label>
+                        <label><input type="radio" name="paid5_q1_baseline" value="4"><span>4</span></label>
+                    </div>
+                    <div class="q-label mt-1">6 เดือน</div>
+                    <div class="scale-options" data-name="paid5_q1_6month">
+                        <label><input type="radio" name="paid5_q1_6month" value="0"><span>0</span></label>
+                        <label><input type="radio" name="paid5_q1_6month" value="1"><span>1</span></label>
+                        <label><input type="radio" name="paid5_q1_6month" value="2"><span>2</span></label>
+                        <label><input type="radio" name="paid5_q1_6month" value="3"><span>3</span></label>
+                        <label><input type="radio" name="paid5_q1_6month" value="4"><span>4</span></label>
+                    </div>
+                </div>
+                <!-- Q2 -->
+                <div class="paid5-question">
+                    <div class="q-text">2. รู้สึกกลัวเมื่อคิดถึงการใช้ชีวิตกับเบาหวาน</div>
+                    <div class="q-label">Baseline</div>
+                    <div class="scale-options"><label><input type="radio" name="paid5_q2_baseline" value="0"><span>0</span></label><label><input type="radio" name="paid5_q2_baseline" value="1"><span>1</span></label><label><input type="radio" name="paid5_q2_baseline" value="2"><span>2</span></label><label><input type="radio" name="paid5_q2_baseline" value="3"><span>3</span></label><label><input type="radio" name="paid5_q2_baseline" value="4"><span>4</span></label></div>
+                    <div class="q-label mt-1">6 เดือน</div>
+                    <div class="scale-options"><label><input type="radio" name="paid5_q2_6month" value="0"><span>0</span></label><label><input type="radio" name="paid5_q2_6month" value="1"><span>1</span></label><label><input type="radio" name="paid5_q2_6month" value="2"><span>2</span></label><label><input type="radio" name="paid5_q2_6month" value="3"><span>3</span></label><label><input type="radio" name="paid5_q2_6month" value="4"><span>4</span></label></div>
+                </div>
+                <!-- Q3 -->
+                <div class="paid5-question">
+                    <div class="q-text">3. รู้สึกไม่มีเป้าหมายชัดเจนในการดูแลเบาหวาน</div>
+                    <div class="q-label">Baseline</div>
+                    <div class="scale-options"><label><input type="radio" name="paid5_q3_baseline" value="0"><span>0</span></label><label><input type="radio" name="paid5_q3_baseline" value="1"><span>1</span></label><label><input type="radio" name="paid5_q3_baseline" value="2"><span>2</span></label><label><input type="radio" name="paid5_q3_baseline" value="3"><span>3</span></label><label><input type="radio" name="paid5_q3_baseline" value="4"><span>4</span></label></div>
+                    <div class="q-label mt-1">6 เดือน</div>
+                    <div class="scale-options"><label><input type="radio" name="paid5_q3_6month" value="0"><span>0</span></label><label><input type="radio" name="paid5_q3_6month" value="1"><span>1</span></label><label><input type="radio" name="paid5_q3_6month" value="2"><span>2</span></label><label><input type="radio" name="paid5_q3_6month" value="3"><span>3</span></label><label><input type="radio" name="paid5_q3_6month" value="4"><span>4</span></label></div>
+                </div>
+                <!-- Q4 -->
+                <div class="paid5-question">
+                    <div class="q-text">4. รู้สึกว่าเบาหวานทำให้ชีวิตมีข้อจำกัด</div>
+                    <div class="q-label">Baseline</div>
+                    <div class="scale-options"><label><input type="radio" name="paid5_q4_baseline" value="0"><span>0</span></label><label><input type="radio" name="paid5_q4_baseline" value="1"><span>1</span></label><label><input type="radio" name="paid5_q4_baseline" value="2"><span>2</span></label><label><input type="radio" name="paid5_q4_baseline" value="3"><span>3</span></label><label><input type="radio" name="paid5_q4_baseline" value="4"><span>4</span></label></div>
+                    <div class="q-label mt-1">6 เดือน</div>
+                    <div class="scale-options"><label><input type="radio" name="paid5_q4_6month" value="0"><span>0</span></label><label><input type="radio" name="paid5_q4_6month" value="1"><span>1</span></label><label><input type="radio" name="paid5_q4_6month" value="2"><span>2</span></label><label><input type="radio" name="paid5_q4_6month" value="3"><span>3</span></label><label><input type="radio" name="paid5_q4_6month" value="4"><span>4</span></label></div>
+                </div>
+                <!-- Q5 -->
+                <div class="paid5-question">
+                    <div class="q-text">5. รู้สึกหดหู่เมื่อคิดถึงการดูแลเบาหวาน</div>
+                    <div class="q-label">Baseline</div>
+                    <div class="scale-options"><label><input type="radio" name="paid5_q5_baseline" value="0"><span>0</span></label><label><input type="radio" name="paid5_q5_baseline" value="1"><span>1</span></label><label><input type="radio" name="paid5_q5_baseline" value="2"><span>2</span></label><label><input type="radio" name="paid5_q5_baseline" value="3"><span>3</span></label><label><input type="radio" name="paid5_q5_baseline" value="4"><span>4</span></label></div>
+                    <div class="q-label mt-1">6 เดือน</div>
+                    <div class="scale-options"><label><input type="radio" name="paid5_q5_6month" value="0"><span>0</span></label><label><input type="radio" name="paid5_q5_6month" value="1"><span>1</span></label><label><input type="radio" name="paid5_q5_6month" value="2"><span>2</span></label><label><input type="radio" name="paid5_q5_6month" value="3"><span>3</span></label><label><input type="radio" name="paid5_q5_6month" value="4"><span>4</span></label></div>
+                </div>
+            </div>
+
+            <!-- PAID-5 Score Summary -->
+            <div class="stat-grid mt-2">
+                <div class="stat-card">
+                    <div class="stat-label">คะแนนรวม Baseline</div>
+                    <div class="stat-value" id="paid5-total-baseline">-</div>
+                    <div class="text-muted" style="font-size:0.7rem">แปลง: <span id="paid5-converted-baseline">-</span>/100</div>
+                    <div id="paid5-distress-baseline" class="mt-1"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">คะแนนรวม 6 เดือน</div>
+                    <div class="stat-value" id="paid5-total-6month">-</div>
+                    <div class="text-muted" style="font-size:0.7rem">แปลง: <span id="paid5-converted-6month">-</span>/100</div>
+                    <div id="paid5-distress-6month" class="mt-1"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Section 4: การเข้าร่วมโปรแกรม ===== -->
+    <div class="step-content" data-step="4">
+        <div class="card" id="section-participation">
+            <div class="card-header"><span class="icon">📊</span> ส่วนที่ 4: การเข้าร่วมโปรแกรม</div>
+            <div class="notice-banner info" id="participation-notice" style="display:none">
+                ส่วนนี้เฉพาะกลุ่มทดลอง (DSME + LINE) เท่านั้น
+            </div>
+            <div id="participation-fields">
+                <div class="form-group">
+                    <label>จำนวนครั้งที่เข้าร่วมโรงเรียนเบาหวาน</label>
+                    <div class="radio-group">
+                        <label class="radio-option"><input type="radio" name="sessions_attended" value="0-1"> 0-1 ครั้ง</label>
+                        <label class="radio-option"><input type="radio" name="sessions_attended" value="2-3"> 2-3 ครั้ง</label>
+                        <label class="radio-option"><input type="radio" name="sessions_attended" value="4_plus"> 4 ครั้งขึ้นไป</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>การอ่านข้อความใน LINE</label>
+                    <div class="radio-group">
+                        <label class="radio-option"><input type="radio" name="line_engagement" value="regular"> อ่านเป็นประจำ</label>
+                        <label class="radio-option"><input type="radio" name="line_engagement" value="sometimes"> อ่านบ้าง</label>
+                        <label class="radio-option"><input type="radio" name="line_engagement" value="rarely"> อ่านน้อย</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>การตอบโต้ใน LINE</label>
+                    <div class="radio-group">
+                        <label class="radio-option"><input type="radio" name="line_interaction" value="regular"> ตอบโต้เป็นประจำ</label>
+                        <label class="radio-option"><input type="radio" name="line_interaction" value="sometimes"> ตอบโต้บ้าง</label>
+                        <label class="radio-option"><input type="radio" name="line_interaction" value="never"> ไม่เคยตอบ</label>
+                    </div>
+                </div>
+            </div>
+            <div id="participation-control-msg" class="empty-state" style="display:none">
+                <div class="empty-icon">ℹ️</div>
+                <p>ส่วนนี้ไม่จำเป็นสำหรับกลุ่มควบคุม<br>กรุณาข้ามไปส่วนถัดไป</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Section 5: เหตุการณ์ไม่พึงประสงค์ ===== -->
+    <div class="step-content" data-step="5">
+        <div class="card">
+            <div class="card-header"><span class="icon">⚠️</span> ส่วนที่ 5: เหตุการณ์ไม่พึงประสงค์</div>
+            <div class="form-group">
+                <label>มีเหตุการณ์ไม่พึงประสงค์หรือไม่</label>
+                <div class="radio-group">
+                    <label class="radio-option"><input type="radio" name="has_event" value="no"> ไม่มี</label>
+                    <label class="radio-option"><input type="radio" name="has_event" value="yes"> มี</label>
+                </div>
+            </div>
+            <div id="adverse-detail" class="hidden">
+                <div class="form-group">
+                    <label>รายละเอียด</label>
+                    <textarea id="f-adverse-desc" placeholder="อธิบายเหตุการณ์ที่เกิดขึ้น..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>วันที่เกิดเหตุ</label>
+                    <input type="date" id="f-adverse-date">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Section 6: สถานะการติดตาม ===== -->
+    <div class="step-content" data-step="6">
+        <div class="card">
+            <div class="card-header"><span class="icon">📌</span> ส่วนที่ 6: สถานะการติดตาม</div>
+            <div class="form-group">
+                <label>สถานะ</label>
+                <div class="radio-group">
+                    <label class="radio-option"><input type="radio" name="follow_up_status" value="complete"> ติดตามครบถ้วน</label>
+                    <label class="radio-option"><input type="radio" name="follow_up_status" value="lost"> ขาดการติดตาม</label>
+                    <label class="radio-option"><input type="radio" name="follow_up_status" value="withdrawn"> ถอนตัวจากการศึกษา</label>
+                </div>
+            </div>
+            <div id="withdrawal-detail" class="hidden">
+                <div class="form-group">
+                    <label>เหตุผลที่ถอนตัว</label>
+                    <textarea id="f-withdrawal-reason" placeholder="ระบุเหตุผล..."></textarea>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>วันที่สิ้นสุด</label>
+                <input type="date" id="f-end-date">
+            </div>
+        </div>
+    </div>
+
+    <!-- Step Navigation -->
+    <div class="step-nav">
+        <button class="btn btn-outline" id="btn-prev" style="display:none">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            ก่อนหน้า
+        </button>
+        <div></div>
+        <button class="btn btn-primary" id="btn-next">
+            ถัดไป
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <button class="btn btn-success btn-lg" id="btn-save-form" style="display:none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+            บันทึกข้อมูล
+        </button>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- TAB 3: แบบประเมิน -->
+<!-- ============================================ -->
+<div class="tab-content" id="tab-questionnaire">
+    <!-- Patient Selector -->
+    <div class="card" style="padding:12px 16px">
+        <div class="form-group" style="margin-bottom:0">
+            <label>เลือกผู้ป่วย</label>
+            <select id="q-patient-select">
+                <option value="">-- เลือกผู้ป่วย --</option>
+            </select>
+            <div class="hint">รหัสผู้ป่วย: <strong id="q-patient-id-display">-</strong></div>
+        </div>
+    </div>
+
+    <!-- Part 1: Health Literacy -->
+    <div id="health-literacy-section">
+        <div class="section-title">📚 ส่วนที่ 1: ความรอบรู้ด้านสุขภาพ</div>
+        <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px">
+            คะแนน: 1 = ง่ายมาก, 2 = ง่าย, 3 = ปานกลาง, 4 = ยาก, 5 = ยากมาก
+        </p>
+
+        <div class="question-card"><div class="q-text"><span class="q-number">1</span>ท่านหาข้อมูลเรื่องอาหารสำหรับผู้ป่วยเบาหวานได้</div><div class="likert-options"><label><input type="radio" name="hl_q1" value="1">ง่ายมาก</label><label><input type="radio" name="hl_q1" value="2">ง่าย</label><label><input type="radio" name="hl_q1" value="3">ปานกลาง</label><label><input type="radio" name="hl_q1" value="4">ยาก</label><label><input type="radio" name="hl_q1" value="5">ยากมาก</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">2</span>ท่านสอบถามเจ้าหน้าที่เรื่องยาที่ใช้รักษาเบาหวานได้</div><div class="likert-options"><label><input type="radio" name="hl_q2" value="1">ง่ายมาก</label><label><input type="radio" name="hl_q2" value="2">ง่าย</label><label><input type="radio" name="hl_q2" value="3">ปานกลาง</label><label><input type="radio" name="hl_q2" value="4">ยาก</label><label><input type="radio" name="hl_q2" value="5">ยากมาก</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">3</span>ท่านอ่านฉลากยาและเข้าใจวิธีใช้ยาได้</div><div class="likert-options"><label><input type="radio" name="hl_q3" value="1">ง่ายมาก</label><label><input type="radio" name="hl_q3" value="2">ง่าย</label><label><input type="radio" name="hl_q3" value="3">ปานกลาง</label><label><input type="radio" name="hl_q3" value="4">ยาก</label><label><input type="radio" name="hl_q3" value="5">ยากมาก</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">4</span>ท่านเข้าใจคำแนะนำในการดูแลเท้าได้</div><div class="likert-options"><label><input type="radio" name="hl_q4" value="1">ง่ายมาก</label><label><input type="radio" name="hl_q4" value="2">ง่าย</label><label><input type="radio" name="hl_q4" value="3">ปานกลาง</label><label><input type="radio" name="hl_q4" value="4">ยาก</label><label><input type="radio" name="hl_q4" value="5">ยากมาก</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">5</span>ท่านรู้จักอาการน้ำตาลต่ำในเลือดได้</div><div class="likert-options"><label><input type="radio" name="hl_q5" value="1">ง่ายมาก</label><label><input type="radio" name="hl_q5" value="2">ง่าย</label><label><input type="radio" name="hl_q5" value="3">ปานกลาง</label><label><input type="radio" name="hl_q5" value="4">ยาก</label><label><input type="radio" name="hl_q5" value="5">ยากมาก</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">6</span>ท่านหาข้อมูลสุขภาพที่เชื่อถือได้</div><div class="likert-options"><label><input type="radio" name="hl_q6" value="1">ง่ายมาก</label><label><input type="radio" name="hl_q6" value="2">ง่าย</label><label><input type="radio" name="hl_q6" value="3">ปานกลาง</label><label><input type="radio" name="hl_q6" value="4">ยาก</label><label><input type="radio" name="hl_q6" value="5">ยากมาก</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">7</span>ท่านเลือกกินอาหารที่เหมาะสมกับโรคเบาหวานได้</div><div class="likert-options"><label><input type="radio" name="hl_q7" value="1">ง่ายมาก</label><label><input type="radio" name="hl_q7" value="2">ง่าย</label><label><input type="radio" name="hl_q7" value="3">ปานกลาง</label><label><input type="radio" name="hl_q7" value="4">ยาก</label><label><input type="radio" name="hl_q7" value="5">ยากมาก</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">8</span>ท่านปรับเปลี่ยนพฤติกรรมการกินได้</div><div class="likert-options"><label><input type="radio" name="hl_q8" value="1">ง่ายมาก</label><label><input type="radio" name="hl_q8" value="2">ง่าย</label><label><input type="radio" name="hl_q8" value="3">ปานกลาง</label><label><input type="radio" name="hl_q8" value="4">ยาก</label><label><input type="radio" name="hl_q8" value="5">ยากมาก</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">9</span>ท่านกินยาได้ตรงเวลา</div><div class="likert-options"><label><input type="radio" name="hl_q9" value="1">ง่ายมาก</label><label><input type="radio" name="hl_q9" value="2">ง่าย</label><label><input type="radio" name="hl_q9" value="3">ปานกลาง</label><label><input type="radio" name="hl_q9" value="4">ยาก</label><label><input type="radio" name="hl_q9" value="5">ยากมาก</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">10</span>ท่านออกกำลังกายอย่างเหมาะสมได้</div><div class="likert-options"><label><input type="radio" name="hl_q10" value="1">ง่ายมาก</label><label><input type="radio" name="hl_q10" value="2">ง่าย</label><label><input type="radio" name="hl_q10" value="3">ปานกลาง</label><label><input type="radio" name="hl_q10" value="4">ยาก</label><label><input type="radio" name="hl_q10" value="5">ยากมาก</label></div></div>
+
+        <div class="score-display">
+            <div class="score-label">คะแนนรวมความรอบรู้ด้านสุขภาพ</div>
+            <div class="score-value" id="hl-total-score">-</div>
+            <div id="hl-interpretation" class="mt-1"></div>
+        </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- Part 2: Self-care Behavior -->
+    <div id="self-care-section">
+        <div class="section-title">💪 ส่วนที่ 2: พฤติกรรมการดูแลตนเอง</div>
+        <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px">
+            คะแนน: 1 = ไม่เคยทำ, 2 = ทำบางครั้ง, 3 = ทำบ่อยครั้ง, 4 = ทำทุกวัน/ทุกครั้ง
+        </p>
+
+        <div class="question-card"><div class="q-text"><span class="q-number">1</span>ควบคุมปริมาณข้าว/แป้งในแต่ละมื้อ</div><div class="likert-options"><label><input type="radio" name="sc_q1" value="1">ไม่เคย</label><label><input type="radio" name="sc_q1" value="2">บางครั้ง</label><label><input type="radio" name="sc_q1" value="3">บ่อยครั้ง</label><label><input type="radio" name="sc_q1" value="4">ทุกวัน</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">2</span>งดเครื่องดื่มหวาน ขนมหวาน</div><div class="likert-options"><label><input type="radio" name="sc_q2" value="1">ไม่เคย</label><label><input type="radio" name="sc_q2" value="2">บางครั้ง</label><label><input type="radio" name="sc_q2" value="3">บ่อยครั้ง</label><label><input type="radio" name="sc_q2" value="4">ทุกวัน</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">3</span>กินผักอย่างน้อยครึ่งจาน</div><div class="likert-options"><label><input type="radio" name="sc_q3" value="1">ไม่เคย</label><label><input type="radio" name="sc_q3" value="2">บางครั้ง</label><label><input type="radio" name="sc_q3" value="3">บ่อยครั้ง</label><label><input type="radio" name="sc_q3" value="4">ทุกวัน</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">4</span>ออกกำลังกายอย่างน้อย 30 นาที</div><div class="likert-options"><label><input type="radio" name="sc_q4" value="1">ไม่เคย</label><label><input type="radio" name="sc_q4" value="2">บางครั้ง</label><label><input type="radio" name="sc_q4" value="3">บ่อยครั้ง</label><label><input type="radio" name="sc_q4" value="4">ทุกวัน</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">5</span>ขยับร่างกายแม้ไม่ได้ออกกำลังกาย</div><div class="likert-options"><label><input type="radio" name="sc_q5" value="1">ไม่เคย</label><label><input type="radio" name="sc_q5" value="2">บางครั้ง</label><label><input type="radio" name="sc_q5" value="3">บ่อยครั้ง</label><label><input type="radio" name="sc_q5" value="4">ทุกวัน</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">6</span>หยุดออกกำลังกายเมื่อมีอาการผิดปกติ</div><div class="likert-options"><label><input type="radio" name="sc_q6" value="1">ไม่เคย</label><label><input type="radio" name="sc_q6" value="2">บางครั้ง</label><label><input type="radio" name="sc_q6" value="3">บ่อยครั้ง</label><label><input type="radio" name="sc_q6" value="4">ทุกครั้ง</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">7</span>กินยาตรงเวลาทุกวัน</div><div class="likert-options"><label><input type="radio" name="sc_q7" value="1">ไม่เคย</label><label><input type="radio" name="sc_q7" value="2">บางครั้ง</label><label><input type="radio" name="sc_q7" value="3">บ่อยครั้ง</label><label><input type="radio" name="sc_q7" value="4">ทุกวัน</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">8</span>ไม่หยุดยาเองเมื่อน้ำตาลดีขึ้น</div><div class="likert-options"><label><input type="radio" name="sc_q8" value="1">ไม่เคย</label><label><input type="radio" name="sc_q8" value="2">บางครั้ง</label><label><input type="radio" name="sc_q8" value="3">บ่อยครั้ง</label><label><input type="radio" name="sc_q8" value="4">ทุกครั้ง</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">9</span>พกของหวานเพื่อป้องกันน้ำตาลต่ำ</div><div class="likert-options"><label><input type="radio" name="sc_q9" value="1">ไม่เคย</label><label><input type="radio" name="sc_q9" value="2">บางครั้ง</label><label><input type="radio" name="sc_q9" value="3">บ่อยครั้ง</label><label><input type="radio" name="sc_q9" value="4">ทุกครั้ง</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">10</span>ตรวจดูเท้าทุกวัน</div><div class="likert-options"><label><input type="radio" name="sc_q10" value="1">ไม่เคย</label><label><input type="radio" name="sc_q10" value="2">บางครั้ง</label><label><input type="radio" name="sc_q10" value="3">บ่อยครั้ง</label><label><input type="radio" name="sc_q10" value="4">ทุกวัน</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">11</span>สวมรองเท้าหุ้มส้นเมื่อออกนอกบ้าน</div><div class="likert-options"><label><input type="radio" name="sc_q11" value="1">ไม่เคย</label><label><input type="radio" name="sc_q11" value="2">บางครั้ง</label><label><input type="radio" name="sc_q11" value="3">บ่อยครั้ง</label><label><input type="radio" name="sc_q11" value="4">ทุกครั้ง</label></div></div>
+        <div class="question-card"><div class="q-text"><span class="q-number">12</span>ไปพบแพทย์ทันทีเมื่อมีแผลที่เท้า</div><div class="likert-options"><label><input type="radio" name="sc_q12" value="1">ไม่เคย</label><label><input type="radio" name="sc_q12" value="2">บางครั้ง</label><label><input type="radio" name="sc_q12" value="3">บ่อยครั้ง</label><label><input type="radio" name="sc_q12" value="4">ทุกครั้ง</label></div></div>
+
+        <div class="score-display">
+            <div class="score-label">คะแนนรวมพฤติกรรมการดูแลตนเอง</div>
+            <div class="score-value" id="sc-total-score">-</div>
+            <div id="sc-interpretation" class="mt-1"></div>
+        </div>
+    </div>
+
+    <button class="btn btn-success btn-lg mt-2" id="btn-save-questionnaire">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+        บันทึกแบบประเมิน
+    </button>
+</div>
+
+<!-- ============================================ -->
+<!-- TAB 4: สื่อความรู้ (Education) -->
+<!-- ============================================ -->
+<div class="tab-content" id="tab-education">
+    <div class="section-title">📖 สื่อความรู้เบาหวาน</div>
+
+    <!-- Category Pills -->
+    <div class="category-pills">
+        <button class="category-pill active" data-category="nutrition">
+            <span class="cat-icon">🍽️</span> อาหาร
+        </button>
+        <button class="category-pill" data-category="exercise">
+            <span class="cat-icon">🏃</span> ออกกำลังกาย
+        </button>
+        <button class="category-pill" data-category="medication">
+            <span class="cat-icon">💊</span> ยาเบาหวาน
+        </button>
+        <button class="category-pill" data-category="foot">
+            <span class="cat-icon">🦶</span> เท้าเบาหวาน
+        </button>
+    </div>
+
+    <!-- Flash Card Container -->
+    <div class="flash-card-wrapper">
+        <div class="flash-card" id="flash-card-container">
+            <div class="flash-card-face flash-card-front" id="card-front">
+                <div class="card-icon" id="card-icon">🍽️</div>
+                <div class="card-title" id="card-title">กำลังโหลด...</div>
+                <div class="card-question" id="card-question"></div>
+                <div class="flip-hint">แตะเพื่อดูคำตอบ</div>
+            </div>
+            <div class="flash-card-face flash-card-back" id="card-back">
+                <div class="back-title" id="back-title"></div>
+                <div class="back-content" id="back-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card Navigation -->
+    <div class="card-nav">
+        <button class="card-nav-btn" id="card-prev">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <span class="card-counter" id="card-counter">1/5</span>
+        <button class="card-nav-btn" id="card-next">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- BMI Calculator -->
+    <div class="bmi-calculator">
+        <div class="card-header"><span class="icon">⚖️</span> เครื่องคำนวณ BMI</div>
+        <div class="bmi-inputs">
+            <div class="form-group">
+                <label>น้ำหนัก (กก.)</label>
+                <input type="number" id="bmi-weight" min="20" max="300" step="0.1" placeholder="65">
+            </div>
+            <div class="form-group">
+                <label>ส่วนสูง (ซม.)</label>
+                <input type="number" id="bmi-height" min="100" max="250" step="0.1" placeholder="165">
+            </div>
+        </div>
+        <button class="btn btn-primary btn-lg" id="btn-calc-bmi">คำนวณ BMI</button>
+
+        <div class="bmi-result hidden" id="bmi-result">
+            <div class="bmi-value" id="bmi-value">-</div>
+            <div class="bmi-category" id="bmi-category">-</div>
+            <div class="bmi-advice" id="bmi-advice"></div>
+        </div>
+
+        <div class="bmi-table mt-2">
+            <div class="section-title" style="font-size:0.85rem">เกณฑ์ BMI สำหรับคนเอเชีย</div>
+            <div class="bmi-row underweight"><span class="range">&lt; 18.5</span><span class="category">น้ำหนักต่ำกว่าเกณฑ์</span></div>
+            <div class="bmi-row normal"><span class="range">18.5 - 22.9</span><span class="category">น้ำหนักปกติ</span></div>
+            <div class="bmi-row overweight"><span class="range">23.0 - 24.9</span><span class="category">น้ำหนักเกิน</span></div>
+            <div class="bmi-row obese1"><span class="range">25.0 - 29.9</span><span class="category">อ้วนระดับ 1</span></div>
+            <div class="bmi-row obese2"><span class="range">&ge; 30.0</span><span class="category">อ้วนระดับ 2</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- TAB 5: Dashboard -->
+<!-- ============================================ -->
+<div class="tab-content" id="tab-dashboard">
+    <div class="section-title">📊 Dashboard ภาพรวมข้อมูล</div>
+
+    <div class="notice-banner warning hidden" id="demo-notice">
+        ⚠️ ไม่ได้เชื่อมต่อฐานข้อมูล - แสดงข้อมูลตัวอย่าง (Demo)
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="stat-grid">
+        <div class="stat-card">
+            <div class="stat-value" id="dash-total">0</div>
+            <div class="stat-label">ผู้ป่วยทั้งหมด</div>
+        </div>
+        <div class="stat-card accent">
+            <div class="stat-value" id="dash-experimental">0</div>
+            <div class="stat-label">กลุ่มทดลอง</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-value" id="dash-control">0</div>
+            <div class="stat-label">กลุ่มควบคุม</div>
+        </div>
+        <div class="stat-card warning">
+            <div class="stat-value" id="dash-avg-hba1c">-</div>
+            <div class="stat-label">HbA1c เฉลี่ย</div>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-row">
+        <label style="font-weight:600;font-size:0.85rem">กรอง:</label>
+        <select id="dash-filter-group">
+            <option value="all">ทั้งหมด</option>
+            <option value="experimental">กลุ่มทดลอง</option>
+            <option value="control">กลุ่มควบคุม</option>
+        </select>
+        <button class="btn btn-success" id="btn-export-csv">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+        </button>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-container">
+        <div class="chart-title">HbA1c เปรียบเทียบ Baseline vs 6 เดือน</div>
+        <canvas id="chart-hba1c" height="250"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-title">PAID-5 คะแนนความเครียดจากเบาหวาน</div>
+        <canvas id="chart-paid5" height="250"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-title">ระดับ Distress ของผู้ป่วย</div>
+        <canvas id="chart-distress" height="220"></canvas>
+    </div>
+
+    <!-- Patient Table -->
+    <div class="data-table-wrapper mt-2">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>รหัส</th>
+                    <th>เพศ</th>
+                    <th>อายุ</th>
+                    <th>กลุ่ม</th>
+                    <th>HbA1c BL</th>
+                    <th>HbA1c 6m</th>
+                    <th>PAID-5 BL</th>
+                    <th>PAID-5 6m</th>
+                    <th>Distress</th>
+                    <th>สถานะ</th>
+                </tr>
+            </thead>
+            <tbody id="dash-patient-table">
+                <tr><td colspan="10" class="text-center text-muted" style="padding:24px">กำลังโหลดข้อมูล...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- Bottom Navigation Bar -->
+<!-- ============================================ -->
+<nav class="bottom-nav">
+    <button class="bottom-nav-btn active" data-tab="home">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+        <span>หน้าแรก</span>
+    </button>
+    <button class="bottom-nav-btn" data-tab="form">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+        <span>แบบฟอร์ม</span>
+    </button>
+    <button class="bottom-nav-btn" data-tab="questionnaire">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <span>แบบประเมิน</span>
+    </button>
+    <button class="bottom-nav-btn" data-tab="education">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+        <span>สื่อความรู้</span>
+    </button>
+    <button class="bottom-nav-btn" data-tab="dashboard">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+        <span>Dashboard</span>
+    </button>
+</nav>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay hidden" id="loading-overlay">
+    <div class="spinner"></div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="js/diabetes-app.js"></script>
+<script src="js/diabetes-form.js"></script>
+<script src="js/diabetes-questionnaire.js"></script>
+<script src="js/diabetes-education.js"></script>
+<script src="js/diabetes-dashboard.js"></script>
+
+</body>
+</html>
