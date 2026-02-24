@@ -33,14 +33,12 @@ const LocalDB = {
             );
 
             if (existingIndex >= 0) {
-                // Merge all sections into the existing patient object
                 patients[existingIndex] = {
                     ...patients[existingIndex],
                     ...data,
                     updatedAt: new Date().toISOString()
                 };
             } else {
-                // New patient entry
                 data.id = data.id || 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 data.createdAt = new Date().toISOString();
                 data.updatedAt = new Date().toISOString();
@@ -81,7 +79,6 @@ const LocalDB = {
                 localStorage.setItem(this.STORAGE_KEY, JSON.stringify(patients));
                 return patients[index];
             } else {
-                // Create a new entry with the questionnaire data attached
                 const newPatient = {
                     id: id || 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                     questionnaire: data,
@@ -104,23 +101,18 @@ const LocalDB = {
             return null;
         }
 
-        // Collect all unique keys across every patient (flattened with dot notation)
         const allKeys = new Set();
         patients.forEach(function (patient) {
             _flattenKeys(patient, '', allKeys);
         });
 
         const sortedKeys = Array.from(allKeys).sort();
-
-        // BOM for Thai Excel support
         const BOM = '\uFEFF';
 
-        // Build CSV header row
         const headerRow = sortedKeys.map(function (key) {
             return '"' + key.replace(/"/g, '""') + '"';
         }).join(',');
 
-        // Build data rows
         const dataRows = patients.map(function (patient) {
             const flat = {};
             _flattenObject(patient, '', flat);
@@ -134,9 +126,6 @@ const LocalDB = {
     }
 };
 
-/**
- * Helper: recursively collect flattened keys from a nested object.
- */
 function _flattenKeys(obj, prefix, keysSet) {
     for (const key in obj) {
         if (!obj.hasOwnProperty(key)) continue;
@@ -150,9 +139,6 @@ function _flattenKeys(obj, prefix, keysSet) {
     }
 }
 
-/**
- * Helper: recursively flatten an object into dot-notation key-value pairs.
- */
 function _flattenObject(obj, prefix, result) {
     for (const key in obj) {
         if (!obj.hasOwnProperty(key)) continue;
@@ -169,13 +155,26 @@ function _flattenObject(obj, prefix, result) {
 }
 
 // ============================================================================
-// API Client
+// Authenticated Fetch Helper
+// ============================================================================
+
+function authFetch(url, options) {
+    options = options || {};
+    options.headers = options.headers || {};
+
+    // Add auth token if available
+    if (window.Auth && Auth.getToken()) {
+        options.headers['Authorization'] = 'Bearer ' + Auth.getToken();
+    }
+
+    return fetch(url, options);
+}
+
+// ============================================================================
+// API Client (with auth headers)
 // ============================================================================
 
 const API = {
-    // Auto-detect base path from page URL
-    // e.g. /diabetes/diabetes.html → baseUrl = '/diabetes'
-    // e.g. /diabetes.html → baseUrl = ''
     baseUrl: (function() {
         var path = window.location.pathname;
         var lastSlash = path.lastIndexOf('/');
@@ -202,7 +201,7 @@ const API = {
             return LocalDB.getAll();
         }
         try {
-            const response = await fetch(this.baseUrl + '/api/patients');
+            const response = await authFetch(this.baseUrl + '/api/patients');
             if (!response.ok) throw new Error('Failed to fetch patients');
             return await response.json();
         } catch (e) {
@@ -217,7 +216,7 @@ const API = {
             return LocalDB.get(id);
         }
         try {
-            const response = await fetch(this.baseUrl + '/api/patients/' + encodeURIComponent(id));
+            const response = await authFetch(this.baseUrl + '/api/patients/' + encodeURIComponent(id));
             if (!response.ok) throw new Error('Failed to fetch patient');
             return await response.json();
         } catch (e) {
@@ -234,7 +233,7 @@ const API = {
             return saved;
         }
         try {
-            const response = await fetch(this.baseUrl + '/api/patients', {
+            const response = await authFetch(this.baseUrl + '/api/patients', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
@@ -257,7 +256,7 @@ const API = {
             return saved;
         }
         try {
-            const response = await fetch(this.baseUrl + '/api/questionnaire/' + encodeURIComponent(id), {
+            const response = await authFetch(this.baseUrl + '/api/questionnaire/' + encodeURIComponent(id), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
@@ -278,7 +277,7 @@ const API = {
             return _buildLocalDashboardSummary();
         }
         try {
-            const response = await fetch(this.baseUrl + '/api/dashboard/summary');
+            const response = await authFetch(this.baseUrl + '/api/dashboard/summary');
             if (!response.ok) throw new Error('Failed to fetch dashboard summary');
             return await response.json();
         } catch (e) {
@@ -293,7 +292,7 @@ const API = {
             return _downloadLocalCSV();
         }
         try {
-            const response = await fetch(this.baseUrl + '/api/export/csv');
+            const response = await authFetch(this.baseUrl + '/api/export/csv');
             if (!response.ok) throw new Error('Failed to export CSV');
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
@@ -313,9 +312,6 @@ const API = {
     }
 };
 
-/**
- * Build a dashboard summary object from localStorage data.
- */
 function _buildLocalDashboardSummary() {
     const patients = LocalDB.getAll();
     const total = patients.length;
@@ -334,9 +330,6 @@ function _buildLocalDashboardSummary() {
     };
 }
 
-/**
- * Trigger a file download of CSV generated from localStorage data.
- */
 function _downloadLocalCSV() {
     const csvContent = LocalDB.exportCSV();
     if (!csvContent) {
@@ -395,12 +388,10 @@ function showToast(message, type) {
 
     document.body.appendChild(toast);
 
-    // Trigger fade-in on next frame
     requestAnimationFrame(function () {
         toast.style.opacity = '1';
     });
 
-    // Auto-remove after 3 seconds
     setTimeout(function () {
         toast.style.opacity = '0';
         setTimeout(function () {
@@ -422,7 +413,6 @@ function showLoading() {
         return;
     }
 
-    // Create the overlay element if it does not already exist in the DOM
     overlay = document.createElement('div');
     overlay.id = 'loading-overlay';
     overlay.style.cssText = [
@@ -448,7 +438,6 @@ function showLoading() {
         'animation: spin 0.8s linear infinite'
     ].join(';');
 
-    // Inject the spin keyframe animation if not already present
     if (!document.getElementById('loading-spinner-style')) {
         var style = document.createElement('style');
         style.id = 'loading-spinner-style';
@@ -468,7 +457,7 @@ function hideLoading() {
 }
 
 // ============================================================================
-// Tab Navigation
+// Tab Navigation (role-aware)
 // ============================================================================
 
 function initNavigation() {
@@ -478,6 +467,12 @@ function initNavigation() {
     navButtons.forEach(function (btn) {
         btn.addEventListener('click', function () {
             var targetTab = btn.getAttribute('data-tab');
+
+            // Check if this tab requires admin
+            if (btn.getAttribute('data-role') === 'admin' && window.Auth && !Auth.isAdmin()) {
+                showToast('เฉพาะผู้ดูแลระบบเท่านั้น', 'error');
+                return;
+            }
 
             // Remove active class from all nav buttons
             navButtons.forEach(function (b) {
@@ -505,8 +500,11 @@ function initNavigation() {
                 if (window.DiabetesDashboard && typeof window.DiabetesDashboard.init === 'function') {
                     window.DiabetesDashboard.init();
                 }
+            } else if (targetTab === 'users') {
+                if (window.Auth) {
+                    Auth.renderUserList();
+                }
             }
-            // form, questionnaire, and education tabs are already initialized at startup
         });
     });
 }
@@ -516,7 +514,6 @@ function initNavigation() {
 // ============================================================================
 
 async function initHome() {
-    // Update DB status indicator
     var dotEl = document.getElementById('db-dot');
     var textEl = document.getElementById('db-text');
     if (dotEl && textEl) {
@@ -529,7 +526,6 @@ async function initHome() {
         }
     }
 
-    // Load and display quick stats
     try {
         var summary = await API.getDashboardSummary();
 
@@ -542,18 +538,51 @@ async function initHome() {
         if (ctrlEl) ctrlEl.textContent = summary.control || 0;
     } catch (e) {
         console.error('initHome error:', e);
-        showToast('Failed to load home stats.', 'error');
     }
 }
 
 // ============================================================================
-// DOMContentLoaded - App Initialization
+// DOMContentLoaded - App Initialization with Auth
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', async function () {
+    // Initialize login form handler
+    if (window.Auth) {
+        Auth.initLoginForm();
+    }
+
+    // Check if user is already logged in
+    if (window.Auth && Auth.isLoggedIn()) {
+        // Verify token with server
+        var valid = await Auth.verifyToken();
+        if (valid) {
+            // Token is valid, show the app
+            Auth.hideLoginScreen();
+            await initApp();
+            return;
+        }
+        // Token invalid, show login
+        Auth.showLoginScreen();
+    } else {
+        // Not logged in, show login screen
+        if (window.Auth) {
+            Auth.showLoginScreen();
+        }
+    }
+});
+
+async function initApp() {
     showLoading();
 
     await API.checkStatus();
+
+    // Apply role-based visibility
+    if (window.Auth) {
+        Auth.applyRoleAccess();
+        Auth.updateUserMenu();
+        Auth.initUserManagement();
+    }
+
     initNavigation();
     await initHome();
 
@@ -569,7 +598,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     hideLoading();
-});
+}
 
 // ============================================================================
 // Expose all public functions and objects on window for global access
@@ -577,8 +606,10 @@ document.addEventListener('DOMContentLoaded', async function () {
 
 window.API = API;
 window.LocalDB = LocalDB;
+window.authFetch = authFetch;
 window.showToast = showToast;
 window.showLoading = showLoading;
 window.hideLoading = hideLoading;
 window.initNavigation = initNavigation;
 window.initHome = initHome;
+window.initApp = initApp;

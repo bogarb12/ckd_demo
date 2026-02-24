@@ -1,18 +1,23 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const { query, testConnection } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'dt-secret-2024-diabetes-tracking';
+const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..')));
 
-// Redirect root to diabetes.html (relative redirect for reverse proxy support)
+// Redirect root to diabetes.html
 app.get('/', (req, res) => {
     res.redirect('diabetes.html');
 });
@@ -20,15 +25,204 @@ app.get('/', (req, res) => {
 let dbConnected = false;
 
 // ============================================
-// API: Patients
+// User File Management
+// ============================================
+
+function loadUsers() {
+    try {
+        if (fs.existsSync(USERS_FILE)) {
+            return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+        }
+    } catch (e) {
+        console.error('Error loading users:', e.message);
+    }
+    return [];
+}
+
+function saveUsers(users) {
+    const dir = path.dirname(USERS_FILE);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+}
+
+async function initDefaultAdmin() {
+    const users = loadUsers();
+    if (users.length === 0) {
+        const hash = await bcrypt.hash('admin123', 10);
+        users.push({
+            username: 'admin',
+            password: hash,
+            role: 'admin',
+            displayName: 'ผู้ดูแลระบบ',
+            createdAt: new Date().toISOString()
+        });
+        saveUsers(users);
+        console.log('Default admin created (admin / admin123)');
+    }
+}
+
+// ============================================
+// Auth Middleware
+// ============================================
+
+function authMiddleware(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบ' });
+    }
+    try {
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (e) {
+        return res.status(401).json({ error: 'Token ไม่ถูกต้องหรือหมดอายุ' });
+    }
+}
+
+function adminOnly(req, res, next) {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'เฉพาะผู้ดูแลระบบเท่านั้น' });
+    }
+    next();
+}
+
+// ============================================
+// API: Auth
+// ============================================
+
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน' });
+        }
+
+        const users = loadUsers();
+        const user = users.find(u => u.username === username);
+        if (!user) {
+            return res.status(401).json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
+        }
+
+        const valid = await bcrypt.compare(password, user.password);
+        if (!valid) {
+            return res.status(401).json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
+        }
+
+        const token = jwt.sign(
+            { username: user.username, role: user.role, displayName: user.displayName },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        res.json({
+            token,
+            user: {
+                username: user.username,
+                role: user.role,
+                displayName: user.displayName
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/auth/me', authMiddleware, (req, res) => {
+    res.json({ user: req.user });
+});
+
+// ============================================
+// API: User Management (Admin only)
+// ============================================
+
+app.get('/api/users', authMiddleware, adminOnly, (req, res) => {
+    const users = loadUsers().map(u => ({
+        username: u.username,
+        role: u.role,
+        displayName: u.displayName,
+        createdAt: u.createdAt
+    }));
+    res.json(users);
+});
+
+app.post('/api/users', authMiddleware, adminOnly, async (req, res) => {
+    try {
+        const { username, password, role, displayName } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน' });
+        }
+
+        const users = loadUsers();
+        if (users.find(u => u.username === username)) {
+            return res.status(409).json({ error: 'ชื่อผู้ใช้นี้มีอยู่แล้ว' });
+        }
+
+        const hash = await bcrypt.hash(password, 10);
+        users.push({
+            username,
+            password: hash,
+            role: role || 'user',
+            displayName: displayName || username,
+            createdAt: new Date().toISOString()
+        });
+        saveUsers(users);
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/users/:username', authMiddleware, adminOnly, async (req, res) => {
+    try {
+        const { username } = req.params;
+        const { role, displayName, password } = req.body;
+
+        const users = loadUsers();
+        const user = users.find(u => u.username === username);
+        if (!user) {
+            return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
+        }
+
+        if (role) user.role = role;
+        if (displayName) user.displayName = displayName;
+        if (password) user.password = await bcrypt.hash(password, 10);
+
+        saveUsers(users);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/users/:username', authMiddleware, adminOnly, (req, res) => {
+    const { username } = req.params;
+    if (username === 'admin') {
+        return res.status(400).json({ error: 'ไม่สามารถลบบัญชี admin หลักได้' });
+    }
+
+    let users = loadUsers();
+    const before = users.length;
+    users = users.filter(u => u.username !== username);
+    if (users.length === before) {
+        return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
+    }
+    saveUsers(users);
+    res.json({ success: true });
+});
+
+// ============================================
+// API: Patients (Requires auth)
 // ============================================
 
 // GET all patients
-app.get('/api/patients', async (req, res) => {
+app.get('/api/patients', authMiddleware, async (req, res) => {
     if (!dbConnected) return res.json([]);
     try {
         const rows = await query('SELECT * FROM patients ORDER BY created_at DESC');
-        // Parse comorbidities JSON
         rows.forEach(r => {
             if (r.comorbidities && typeof r.comorbidities === 'string') {
                 try { r.comorbidities = JSON.parse(r.comorbidities); } catch(e) {}
@@ -41,7 +235,7 @@ app.get('/api/patients', async (req, res) => {
 });
 
 // GET single patient with all related data
-app.get('/api/patients/:id', async (req, res) => {
+app.get('/api/patients/:id', authMiddleware, async (req, res) => {
     if (!dbConnected) return res.status(404).json({ error: 'DB not connected' });
     try {
         const id = req.params.id;
@@ -76,7 +270,7 @@ app.get('/api/patients/:id', async (req, res) => {
 });
 
 // POST create patient (all sections)
-app.post('/api/patients', async (req, res) => {
+app.post('/api/patients', authMiddleware, async (req, res) => {
     if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
     try {
         const d = req.body;
@@ -182,7 +376,7 @@ app.post('/api/patients', async (req, res) => {
 });
 
 // POST save questionnaire (health literacy + self care)
-app.post('/api/questionnaire/:id', async (req, res) => {
+app.post('/api/questionnaire/:id', authMiddleware, async (req, res) => {
     if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
     try {
         const id = req.params.id;
@@ -234,12 +428,10 @@ app.post('/api/questionnaire/:id', async (req, res) => {
 });
 
 // PUT update patient
-app.put('/api/patients/:id', async (req, res) => {
+app.put('/api/patients/:id', authMiddleware, async (req, res) => {
     if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
     try {
-        // Reuse POST logic (ON DUPLICATE KEY UPDATE)
         req.body.patient_id = req.params.id;
-        // Forward to POST handler logic
         const d = req.body;
 
         await query(
@@ -260,7 +452,7 @@ app.put('/api/patients/:id', async (req, res) => {
 });
 
 // DELETE patient
-app.delete('/api/patients/:id', async (req, res) => {
+app.delete('/api/patients/:id', authMiddleware, async (req, res) => {
     if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
     try {
         await query('DELETE FROM patients WHERE patient_id = ?', [req.params.id]);
@@ -271,9 +463,9 @@ app.delete('/api/patients/:id', async (req, res) => {
 });
 
 // ============================================
-// API: Dashboard Summary
+// API: Dashboard Summary (Admin only)
 // ============================================
-app.get('/api/dashboard/summary', async (req, res) => {
+app.get('/api/dashboard/summary', authMiddleware, adminOnly, async (req, res) => {
     if (!dbConnected) return res.json({ totalPatients: 0, experimental: 0, control: 0 });
     try {
         const [counts] = await query(
@@ -319,9 +511,9 @@ app.get('/api/dashboard/summary', async (req, res) => {
 });
 
 // ============================================
-// API: Export CSV
+// API: Export CSV (Admin only)
 // ============================================
-app.get('/api/export/csv', async (req, res) => {
+app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
     if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
     try {
         const rows = await query(
@@ -366,9 +558,8 @@ app.get('/api/export/csv', async (req, res) => {
             return res.status(404).json({ error: 'No data to export' });
         }
 
-        // Build CSV
         const headers = Object.keys(rows[0]).filter(k => k !== 'meta');
-        let csv = '\uFEFF' + headers.join(',') + '\n'; // BOM for Thai Excel
+        let csv = '\uFEFF' + headers.join(',') + '\n';
         rows.forEach(row => {
             const values = headers.map(h => {
                 let val = row[h];
@@ -391,7 +582,7 @@ app.get('/api/export/csv', async (req, res) => {
 });
 
 // ============================================
-// API: DB Status
+// API: DB Status (Public - needed before login)
 // ============================================
 app.get('/api/status', (req, res) => {
     res.json({ dbConnected, mode: dbConnected ? 'database' : 'localStorage' });
@@ -401,6 +592,7 @@ app.get('/api/status', (req, res) => {
 // Start Server
 // ============================================
 async function start() {
+    await initDefaultAdmin();
     dbConnected = await testConnection();
     app.listen(PORT, () => {
         console.log(`\nDiabetes Tracking App running at http://localhost:${PORT}/diabetes.html`);
