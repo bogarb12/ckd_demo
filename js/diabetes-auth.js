@@ -64,7 +64,13 @@ const Auth = {
 
     logout() {
         this.clearAuth();
-        window.location.reload();
+        this.applyRoleAccess();
+        this.updateUserMenu();
+        this.updateHeaderLoginButton();
+        // Switch back to home tab
+        var homeBtn = document.querySelector('.bottom-nav-btn[data-tab="home"]');
+        if (homeBtn) homeBtn.click();
+        if (window.showToast) window.showToast('ออกจากระบบแล้ว', 'info');
     },
 
     async verifyToken() {
@@ -90,25 +96,26 @@ const Auth = {
     },
 
     // ==========================================
-    // UI: Login Screen
+    // UI: Login Modal
     // ==========================================
 
-    showLoginScreen() {
+    showLoginModal() {
         var overlay = document.getElementById('login-overlay');
         if (overlay) {
             overlay.classList.remove('hidden');
         }
-        // Hide main app
-        document.getElementById('app-main').style.display = 'none';
+        var inputUser = document.getElementById('login-username');
+        if (inputUser) inputUser.focus();
     },
 
-    hideLoginScreen() {
+    hideLoginModal() {
         var overlay = document.getElementById('login-overlay');
         if (overlay) {
             overlay.classList.add('hidden');
         }
-        // Show main app
-        document.getElementById('app-main').style.display = '';
+        // Clear form
+        var errorEl = document.getElementById('login-error');
+        if (errorEl) errorEl.style.display = 'none';
     },
 
     initLoginForm() {
@@ -118,8 +125,26 @@ const Auth = {
         var btnLogin = document.getElementById('btn-login');
         var inputUser = document.getElementById('login-username');
         var inputPass = document.getElementById('login-password');
+        var closeBtn = document.getElementById('login-close');
+        var overlay = document.getElementById('login-overlay');
 
         if (!form) return;
+
+        // Close button
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                self.hideLoginModal();
+            });
+        }
+
+        // Click outside to close
+        if (overlay) {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    self.hideLoginModal();
+                }
+            });
+        }
 
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -138,11 +163,10 @@ const Auth = {
 
             try {
                 await self.login(username, password);
-                self.hideLoginScreen();
+                self.hideLoginModal();
                 self.applyRoleAccess();
                 self.updateUserMenu();
-                // Re-initialize app
-                if (window.initHome) window.initHome();
+                if (window.showToast) window.showToast('เข้าสู่ระบบสำเร็จ', 'success');
             } catch (err) {
                 errorEl.textContent = err.message;
                 errorEl.style.display = 'block';
@@ -151,13 +175,26 @@ const Auth = {
                 btnLogin.textContent = 'เข้าสู่ระบบ';
             }
         });
+    },
 
-        // Enter key on password field
-        inputPass.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                form.dispatchEvent(new Event('submit'));
-            }
+    // Header login button
+    initHeaderLoginButton() {
+        var self = this;
+        var btn = document.getElementById('btn-header-login');
+        if (!btn) return;
+
+        btn.addEventListener('click', function() {
+            self.showLoginModal();
         });
+
+        // Update visibility based on login state
+        this.updateHeaderLoginButton();
+    },
+
+    updateHeaderLoginButton() {
+        var btn = document.getElementById('btn-header-login');
+        if (!btn) return;
+        btn.style.display = this.isLoggedIn() ? 'none' : 'flex';
     },
 
     // ==========================================
@@ -209,6 +246,9 @@ const Auth = {
                 self.logout();
             };
         }
+
+        // Also update header login button visibility
+        this.updateHeaderLoginButton();
     },
 
     // ==========================================

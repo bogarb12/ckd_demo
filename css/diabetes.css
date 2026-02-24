@@ -1189,11 +1189,11 @@ textarea { min-height: 80px; resize: vertical; }
     .tab-content { max-width: 1000px; }
 }
 
-/* ============ Login Overlay ============ */
+/* ============ Login Modal ============ */
 .login-overlay {
     position: fixed;
     inset: 0;
-    background: var(--bg);
+    background: rgba(0,0,0,0.5);
     z-index: 9999;
     display: flex;
     align-items: center;
@@ -1212,6 +1212,50 @@ textarea { min-height: 80px; resize: vertical; }
     max-width: 380px;
     text-align: center;
     box-shadow: var(--shadow-lg);
+    position: relative;
+}
+
+.login-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+}
+
+.login-close:hover { color: var(--text); }
+
+/* Header Login Button */
+.btn-header-login {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border: 1.5px solid var(--primary);
+    border-radius: var(--radius-full);
+    background: var(--primary-subtle);
+    color: var(--primary);
+    font-family: inherit;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.btn-header-login:hover {
+    background: var(--primary);
+    color: #fff;
+}
+
+.btn-header-login svg {
+    width: 16px;
+    height: 16px;
 }
 
 .login-logo {

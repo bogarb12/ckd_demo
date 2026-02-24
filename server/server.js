@@ -215,11 +215,11 @@ app.delete('/api/users/:username', authMiddleware, adminOnly, (req, res) => {
 });
 
 // ============================================
-// API: Patients (Requires auth)
+// API: Patients (Public - guest accessible)
 // ============================================
 
 // GET all patients
-app.get('/api/patients', authMiddleware, async (req, res) => {
+app.get('/api/patients', async (req, res) => {
     if (!dbConnected) return res.json([]);
     try {
         const rows = await query('SELECT * FROM patients ORDER BY created_at DESC');
@@ -235,7 +235,7 @@ app.get('/api/patients', authMiddleware, async (req, res) => {
 });
 
 // GET single patient with all related data
-app.get('/api/patients/:id', authMiddleware, async (req, res) => {
+app.get('/api/patients/:id', async (req, res) => {
     if (!dbConnected) return res.status(404).json({ error: 'DB not connected' });
     try {
         const id = req.params.id;
@@ -270,7 +270,7 @@ app.get('/api/patients/:id', authMiddleware, async (req, res) => {
 });
 
 // POST create patient (all sections)
-app.post('/api/patients', authMiddleware, async (req, res) => {
+app.post('/api/patients', async (req, res) => {
     if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
     try {
         const d = req.body;
@@ -376,7 +376,7 @@ app.post('/api/patients', authMiddleware, async (req, res) => {
 });
 
 // POST save questionnaire (health literacy + self care)
-app.post('/api/questionnaire/:id', authMiddleware, async (req, res) => {
+app.post('/api/questionnaire/:id', async (req, res) => {
     if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
     try {
         const id = req.params.id;
@@ -428,7 +428,7 @@ app.post('/api/questionnaire/:id', authMiddleware, async (req, res) => {
 });
 
 // PUT update patient
-app.put('/api/patients/:id', authMiddleware, async (req, res) => {
+app.put('/api/patients/:id', async (req, res) => {
     if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
     try {
         req.body.patient_id = req.params.id;
@@ -452,7 +452,7 @@ app.put('/api/patients/:id', authMiddleware, async (req, res) => {
 });
 
 // DELETE patient
-app.delete('/api/patients/:id', authMiddleware, async (req, res) => {
+app.delete('/api/patients/:id', async (req, res) => {
     if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
     try {
         await query('DELETE FROM patients WHERE patient_id = ?', [req.params.id]);

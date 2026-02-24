@@ -468,9 +468,9 @@ function initNavigation() {
         btn.addEventListener('click', function () {
             var targetTab = btn.getAttribute('data-tab');
 
-            // Check if this tab requires admin
+            // Check if this tab requires admin login
             if (btn.getAttribute('data-role') === 'admin' && window.Auth && !Auth.isAdmin()) {
-                showToast('เฉพาะผู้ดูแลระบบเท่านั้น', 'error');
+                Auth.showLoginModal();
                 return;
             }
 
@@ -542,33 +542,23 @@ async function initHome() {
 }
 
 // ============================================================================
-// DOMContentLoaded - App Initialization with Auth
+// DOMContentLoaded - App Initialization (Guest-first, no login required)
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', async function () {
-    // Initialize login form handler
+    // Initialize auth module (login form, header button, etc.)
     if (window.Auth) {
         Auth.initLoginForm();
+        Auth.initHeaderLoginButton();
+
+        // If already logged in, verify token silently
+        if (Auth.isLoggedIn()) {
+            await Auth.verifyToken();
+        }
     }
 
-    // Check if user is already logged in
-    if (window.Auth && Auth.isLoggedIn()) {
-        // Verify token with server
-        var valid = await Auth.verifyToken();
-        if (valid) {
-            // Token is valid, show the app
-            Auth.hideLoginScreen();
-            await initApp();
-            return;
-        }
-        // Token invalid, show login
-        Auth.showLoginScreen();
-    } else {
-        // Not logged in, show login screen
-        if (window.Auth) {
-            Auth.showLoginScreen();
-        }
-    }
+    // Always initialize the app (guest mode by default)
+    await initApp();
 });
 
 async function initApp() {

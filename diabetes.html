@@ -12,15 +12,16 @@
 <body>
 
 <!-- ============================================ -->
-<!-- Login Overlay -->
+<!-- Login Modal (hidden by default) -->
 <!-- ============================================ -->
-<div class="login-overlay" id="login-overlay">
+<div class="login-overlay hidden" id="login-overlay">
     <div class="login-card">
+        <button class="login-close" id="login-close" title="ปิด">&times;</button>
         <div class="login-logo">
             <div class="logo-box" style="width:56px;height:56px;font-size:1.3rem">DT</div>
         </div>
-        <h2 class="login-title">เข้าสู่ระบบ</h2>
-        <p class="login-subtitle">ระบบติดตามผลโปรแกรมโรงเรียนเบาหวาน</p>
+        <h2 class="login-title">เข้าสู่ระบบ (Admin)</h2>
+        <p class="login-subtitle">เข้าสู่ระบบเพื่อดู Dashboard และจัดการผู้ใช้</p>
         <form id="login-form" autocomplete="off">
             <div class="form-group">
                 <label>ชื่อผู้ใช้</label>
@@ -37,9 +38,9 @@
 </div>
 
 <!-- ============================================ -->
-<!-- Main App (hidden until login) -->
+<!-- Main App (visible by default - guest access) -->
 <!-- ============================================ -->
-<div id="app-main" style="display:none">
+<div id="app-main">
 
 <!-- Header -->
 <header class="app-header">
@@ -56,6 +57,12 @@
                 <span class="dot" id="db-dot"></span>
                 <span id="db-text">กำลังเชื่อมต่อ...</span>
             </div>
+            <!-- Login button (shown when not logged in) -->
+            <button class="btn-header-login" id="btn-header-login" title="เข้าสู่ระบบ Admin">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10,17 15,12 10,7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                <span>Admin</span>
+            </button>
+            <!-- User menu (shown when logged in) -->
             <div class="user-menu" id="user-menu" style="display:none">
                 <span id="user-display-name"></span>
                 <span id="user-role-badge" class="role-badge"></span>
@@ -766,7 +773,7 @@
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
         <span>แบบฟอร์ม</span>
     </button>
-    <button class="bottom-nav-btn" data-tab="questionnaire" data-role="admin">
+    <button class="bottom-nav-btn" data-tab="questionnaire">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
         <span>แบบประเมิน</span>
     </button>
