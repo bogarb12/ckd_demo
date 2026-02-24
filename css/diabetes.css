@@ -665,10 +665,10 @@ textarea { min-height: 80px; resize: vertical; }
 
 .category-pill .cat-icon { font-size: 1.1rem; }
 
-/* Video Links — Education Tab */
+/* Video Links — Education Section */
 .video-links-container {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 10px;
     margin: 16px 0;
 }
@@ -1142,7 +1142,7 @@ textarea { min-height: 80px; resize: vertical; }
 
     .bmi-inputs { grid-template-columns: 1fr 1fr auto; }
 
-    .video-links-container { max-width: 550px; margin-left: auto; margin-right: auto; }
+    .video-links-container { grid-template-columns: 1fr 1fr; }
 
     .header-logo h1 { font-size: 1.15rem; }
 
