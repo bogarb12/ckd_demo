@@ -272,6 +272,20 @@ const API = {
         }
     },
 
+    async getStatsCounts() {
+        if (!this.dbConnected) {
+            return _buildLocalDashboardSummary();
+        }
+        try {
+            const response = await fetch(this.baseUrl + '/api/stats/counts');
+            if (!response.ok) throw new Error('Failed to fetch stats');
+            return await response.json();
+        } catch (e) {
+            console.error('API.getStatsCounts error, falling back to localStorage:', e.message);
+            return _buildLocalDashboardSummary();
+        }
+    },
+
     async getDashboardSummary() {
         if (!this.dbConnected) {
             return _buildLocalDashboardSummary();
@@ -527,7 +541,7 @@ async function initHome() {
     }
 
     try {
-        var summary = await API.getDashboardSummary();
+        var summary = await API.getStatsCounts();
 
         var totalEl = document.getElementById('home-total');
         var expEl = document.getElementById('home-experimental');

@@ -463,6 +463,28 @@ app.delete('/api/patients/:id', async (req, res) => {
 });
 
 // ============================================
+// API: Public Stats (Guest accessible - counts only)
+// ============================================
+app.get('/api/stats/counts', async (req, res) => {
+    if (!dbConnected) return res.json({ totalPatients: 0, experimental: 0, control: 0 });
+    try {
+        const [counts] = await query(
+            `SELECT COUNT(*) as total,
+             SUM(study_group='experimental') as experimental,
+             SUM(study_group='control') as control
+             FROM patients`
+        );
+        res.json({
+            totalPatients: Number(counts.total) || 0,
+            experimental: Number(counts.experimental) || 0,
+            control: Number(counts.control) || 0
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================
 // API: Dashboard Summary (Admin only)
 // ============================================
 app.get('/api/dashboard/summary', authMiddleware, adminOnly, async (req, res) => {
