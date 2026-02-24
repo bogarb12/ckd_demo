@@ -4,7 +4,10 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
 require('dotenv').config();
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 const { query, testConnection } = require('./db');
 
@@ -218,15 +221,40 @@ app.delete('/api/users/:username', authMiddleware, adminOnly, (req, res) => {
 // API: Patients (Public - guest accessible)
 // ============================================
 
-// GET all patients
+// GET all patients (with joined clinical + PAID-5 + follow-up data)
 app.get('/api/patients', async (req, res) => {
     if (!dbConnected) return res.json([]);
     try {
-        const rows = await query('SELECT * FROM patients ORDER BY created_at DESC');
+        const rows = await query(
+            `SELECT p.*,
+             c.hba1c_baseline, c.hba1c_6month,
+             s.total_baseline as paid5_total_baseline, s.total_6month as paid5_total_6month,
+             s.converted_baseline as paid5_converted_baseline, s.converted_6month as paid5_converted_6month,
+             s.distress_baseline as paid5_distress_baseline, s.distress_6month as paid5_distress_6month,
+             fu.status as follow_up_status, fu.end_date as follow_up_end_date
+             FROM patients p
+             LEFT JOIN clinical_outcomes c ON p.patient_id = c.patient_id
+             LEFT JOIN paid5_scores s ON p.patient_id = s.patient_id
+             LEFT JOIN follow_up_status fu ON p.patient_id = fu.patient_id
+             ORDER BY p.created_at DESC`
+        );
         rows.forEach(r => {
             if (r.comorbidities && typeof r.comorbidities === 'string') {
                 try { r.comorbidities = JSON.parse(r.comorbidities); } catch(e) {}
             }
+            // Nest paid5 data for frontend compatibility
+            r.paid5 = {
+                total_baseline: r.paid5_total_baseline,
+                total_6month: r.paid5_total_6month,
+                converted_baseline: r.paid5_converted_baseline,
+                converted_6month: r.paid5_converted_6month,
+                distress_baseline: r.paid5_distress_baseline,
+                distress_6month: r.paid5_distress_6month
+            };
+            r.followUp = {
+                status: r.follow_up_status,
+                end_date: r.follow_up_end_date
+            };
         });
         res.json(rows);
     } catch (err) {
@@ -602,6 +630,222 @@ app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// ============================================
+// API: CSV Import Template Download
+// ============================================
+app.get('/api/import/template', (req, res) => {
+    const BOM = '\uFEFF';
+    const headers = [
+        'patient_id', 'enrollment_date', 'study_group', 'gender', 'age',
+        'education_level', 'occupation', 'diabetes_duration_years',
+        'comorbidities', 'diabetes_treatment', 'line_usage',
+        'hba1c_baseline', 'hba1c_6month',
+        'paid5_q1_baseline', 'paid5_q1_6month',
+        'paid5_q2_baseline', 'paid5_q2_6month',
+        'paid5_q3_baseline', 'paid5_q3_6month',
+        'paid5_q4_baseline', 'paid5_q4_6month',
+        'paid5_q5_baseline', 'paid5_q5_6month',
+        'sessions_attended', 'line_engagement', 'line_interaction',
+        'follow_up_status', 'end_date'
+    ];
+    const example = [
+        'DM-001', '2025-01-15', 'experimental', 'female', '55',
+        'primary', 'เกษตรกรรม', '5',
+        'hypertension;dyslipidemia', 'oral', 'regular',
+        '8.5', '7.2',
+        '3', '1', '2', '1', '3', '2', '2', '1', '4', '2',
+        '4_plus', 'regular', 'sometimes',
+        'complete', '2025-07-15'
+    ];
+    const csv = BOM + headers.join(',') + '\n' + example.join(',') + '\n';
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=diabetes_import_template.csv');
+    res.send(csv);
+});
+
+// ============================================
+// API: CSV Import (Admin only)
+// ============================================
+app.post('/api/import/csv', authMiddleware, adminOnly, upload.single('file'), async (req, res) => {
+    if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    try {
+        const content = req.file.buffer.toString('utf-8').replace(/^\uFEFF/, '');
+        const lines = content.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) return res.status(400).json({ error: 'CSV must have header + at least 1 data row' });
+
+        const headers = parseCSVLine(lines[0]);
+        const pidIdx = headers.indexOf('patient_id');
+        if (pidIdx < 0) return res.status(400).json({ error: 'Missing required column: patient_id' });
+
+        let imported = 0;
+        let errors = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            const values = parseCSVLine(lines[i]);
+            if (values.length === 0) continue;
+
+            const row = {};
+            headers.forEach((h, idx) => { row[h] = values[idx] || null; });
+
+            if (!row.patient_id) {
+                errors.push(`Row ${i + 1}: missing patient_id`);
+                continue;
+            }
+
+            try {
+                // Insert patient
+                await query(
+                    `INSERT INTO patients (patient_id, enrollment_date, study_group, gender, age,
+                     education_level, occupation, diabetes_duration_years, comorbidities,
+                     diabetes_treatment, line_usage)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                     enrollment_date=VALUES(enrollment_date), study_group=VALUES(study_group),
+                     gender=VALUES(gender), age=VALUES(age), education_level=VALUES(education_level),
+                     occupation=VALUES(occupation), diabetes_duration_years=VALUES(diabetes_duration_years),
+                     comorbidities=VALUES(comorbidities),
+                     diabetes_treatment=VALUES(diabetes_treatment), line_usage=VALUES(line_usage)`,
+                    [
+                        row.patient_id,
+                        row.enrollment_date || null,
+                        row.study_group || null,
+                        row.gender || null,
+                        row.age ? parseInt(row.age) : null,
+                        row.education_level || null,
+                        row.occupation || null,
+                        row.diabetes_duration_years ? parseFloat(row.diabetes_duration_years) : null,
+                        row.comorbidities ? JSON.stringify(row.comorbidities.split(';').map(s => s.trim())) : '[]',
+                        row.diabetes_treatment || null,
+                        row.line_usage || null
+                    ]
+                );
+
+                // Insert clinical outcomes
+                if (row.hba1c_baseline || row.hba1c_6month) {
+                    await query(
+                        `INSERT INTO clinical_outcomes (patient_id, hba1c_baseline, hba1c_6month)
+                         VALUES (?, ?, ?)
+                         ON DUPLICATE KEY UPDATE hba1c_baseline=VALUES(hba1c_baseline), hba1c_6month=VALUES(hba1c_6month)`,
+                        [
+                            row.patient_id,
+                            row.hba1c_baseline ? parseFloat(row.hba1c_baseline) : null,
+                            row.hba1c_6month ? parseFloat(row.hba1c_6month) : null
+                        ]
+                    );
+                }
+
+                // Insert PAID-5 scores
+                const hasP5 = headers.some(h => h.startsWith('paid5_q'));
+                if (hasP5) {
+                    const p5 = {};
+                    for (let q = 1; q <= 5; q++) {
+                        p5[`q${q}_bl`] = row[`paid5_q${q}_baseline`] ? parseInt(row[`paid5_q${q}_baseline`]) : null;
+                        p5[`q${q}_6m`] = row[`paid5_q${q}_6month`] ? parseInt(row[`paid5_q${q}_6month`]) : null;
+                    }
+                    const totalBL = [p5.q1_bl, p5.q2_bl, p5.q3_bl, p5.q4_bl, p5.q5_bl].filter(v => v != null);
+                    const total6m = [p5.q1_6m, p5.q2_6m, p5.q3_6m, p5.q4_6m, p5.q5_6m].filter(v => v != null);
+                    const sumBL = totalBL.length > 0 ? totalBL.reduce((a, b) => a + b, 0) : null;
+                    const sum6m = total6m.length > 0 ? total6m.reduce((a, b) => a + b, 0) : null;
+                    const convBL = sumBL != null ? (sumBL / 20) * 100 : null;
+                    const conv6m = sum6m != null ? (sum6m / 20) * 100 : null;
+                    const distBL = convBL != null ? (convBL >= 40 ? 'high' : 'low') : null;
+                    const dist6m = conv6m != null ? (conv6m >= 40 ? 'high' : 'low') : null;
+
+                    if (sumBL != null || sum6m != null) {
+                        await query(
+                            `INSERT INTO paid5_scores (patient_id, q1_baseline, q1_6month, q2_baseline, q2_6month,
+                             q3_baseline, q3_6month, q4_baseline, q4_6month, q5_baseline, q5_6month,
+                             total_baseline, total_6month, converted_baseline, converted_6month,
+                             distress_baseline, distress_6month)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                             ON DUPLICATE KEY UPDATE
+                             q1_baseline=VALUES(q1_baseline), q1_6month=VALUES(q1_6month),
+                             q2_baseline=VALUES(q2_baseline), q2_6month=VALUES(q2_6month),
+                             q3_baseline=VALUES(q3_baseline), q3_6month=VALUES(q3_6month),
+                             q4_baseline=VALUES(q4_baseline), q4_6month=VALUES(q4_6month),
+                             q5_baseline=VALUES(q5_baseline), q5_6month=VALUES(q5_6month),
+                             total_baseline=VALUES(total_baseline), total_6month=VALUES(total_6month),
+                             converted_baseline=VALUES(converted_baseline), converted_6month=VALUES(converted_6month),
+                             distress_baseline=VALUES(distress_baseline), distress_6month=VALUES(distress_6month)`,
+                            [
+                                row.patient_id,
+                                p5.q1_bl, p5.q1_6m, p5.q2_bl, p5.q2_6m,
+                                p5.q3_bl, p5.q3_6m, p5.q4_bl, p5.q4_6m,
+                                p5.q5_bl, p5.q5_6m,
+                                sumBL, sum6m, convBL, conv6m, distBL, dist6m
+                            ]
+                        );
+                    }
+                }
+
+                // Insert program participation (experimental only)
+                if (row.study_group === 'experimental' && (row.sessions_attended || row.line_engagement || row.line_interaction)) {
+                    await query(
+                        `INSERT INTO program_participation (patient_id, sessions_attended, line_engagement, line_interaction)
+                         VALUES (?, ?, ?, ?)
+                         ON DUPLICATE KEY UPDATE
+                         sessions_attended=VALUES(sessions_attended), line_engagement=VALUES(line_engagement),
+                         line_interaction=VALUES(line_interaction)`,
+                        [row.patient_id, row.sessions_attended || null, row.line_engagement || null, row.line_interaction || null]
+                    );
+                }
+
+                // Insert follow-up status
+                if (row.follow_up_status) {
+                    await query(
+                        `INSERT INTO follow_up_status (patient_id, status, end_date)
+                         VALUES (?, ?, ?)
+                         ON DUPLICATE KEY UPDATE status=VALUES(status), end_date=VALUES(end_date)`,
+                        [row.patient_id, row.follow_up_status, row.end_date || null]
+                    );
+                }
+
+                imported++;
+            } catch (rowErr) {
+                errors.push(`Row ${i + 1} (${row.patient_id}): ${rowErr.message}`);
+            }
+        }
+
+        res.json({ success: true, imported, total: lines.length - 1, errors });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Helper: parse a single CSV line respecting quoted fields
+function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (inQuotes) {
+            if (ch === '"' && line[i + 1] === '"') {
+                current += '"';
+                i++;
+            } else if (ch === '"') {
+                inQuotes = false;
+            } else {
+                current += ch;
+            }
+        } else {
+            if (ch === '"') {
+                inQuotes = true;
+            } else if (ch === ',') {
+                result.push(current.trim());
+                current = '';
+            } else {
+                current += ch;
+            }
+        }
+    }
+    result.push(current.trim());
+    return result;
+}
 
 // ============================================
 // API: DB Status (Public - needed before login)

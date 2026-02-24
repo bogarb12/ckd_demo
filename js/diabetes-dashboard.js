@@ -45,6 +45,9 @@ const DiabetesDashboard = {
             if (!this.initialized) {
                 this.setupFilter(summaryData);
                 this.setupExport();
+                this.setupImport();
+                this.setupTemplateDownload();
+                this.setupPrintReport();
                 this.initialized = true;
             }
 
@@ -594,7 +597,7 @@ const DiabetesDashboard = {
     // =====================
 
     renderPatientTable(patients, filter) {
-        const tbody = document.querySelector('#dash-patient-table tbody');
+        const tbody = document.getElementById('dash-patient-table');
         if (!tbody) return;
 
         // Apply filter
@@ -914,6 +917,196 @@ const DiabetesDashboard = {
 
         if (typeof DiabetesApp !== 'undefined') {
             DiabetesApp.showToast('ส่งออกข้อมูล CSV สำเร็จ', 'success');
+        }
+    },
+
+    // =====================
+    // CSV Import
+    // =====================
+
+    setupImport() {
+        const importBtn = document.getElementById('btn-import-csv');
+        const fileInput = document.getElementById('csv-file-input');
+        if (!importBtn || !fileInput) return;
+
+        importBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Reset file input so same file can be selected again
+            fileInput.value = '';
+
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                showToast('กรุณาเลือกไฟล์ CSV เท่านั้น', 'error');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
+                const headers = {};
+                if (window.Auth && Auth.getToken()) {
+                    headers['Authorization'] = 'Bearer ' + Auth.getToken();
+                }
+
+                const response = await fetch(baseUrl + '/api/import/csv', {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Import failed');
+                }
+
+                // Show result banner
+                const banner = document.getElementById('import-result');
+                const text = document.getElementById('import-result-text');
+                if (banner && text) {
+                    let msg = 'นำเข้าสำเร็จ ' + result.imported + '/' + result.total + ' รายการ';
+                    if (result.errors && result.errors.length > 0) {
+                        msg += ' (ข้อผิดพลาด ' + result.errors.length + ' รายการ)';
+                    }
+                    text.textContent = msg;
+                    banner.classList.remove('hidden');
+                    setTimeout(() => banner.classList.add('hidden'), 8000);
+                }
+
+                showToast('นำเข้าข้อมูลสำเร็จ ' + result.imported + ' รายการ', 'success');
+
+                // Reload dashboard data
+                hideLoading();
+                await this.init();
+            } catch (err) {
+                hideLoading();
+                console.error('Import error:', err);
+                showToast('เกิดข้อผิดพลาดในการนำเข้า: ' + err.message, 'error');
+            }
+        });
+    },
+
+    // =====================
+    // Template Download
+    // =====================
+
+    setupTemplateDownload() {
+        const btn = document.getElementById('btn-download-template');
+        if (!btn) return;
+
+        btn.addEventListener('click', () => {
+            const baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
+            window.location.href = baseUrl + '/api/import/template';
+        });
+    },
+
+    // =====================
+    // Print Report
+    // =====================
+
+    setupPrintReport() {
+        const btn = document.getElementById('btn-print-report');
+        if (!btn) return;
+
+        btn.addEventListener('click', () => {
+            this.generateReport();
+        });
+    },
+
+    generateReport() {
+        const data = this._cachedSummaryData;
+        if (!data) {
+            showToast('ไม่มีข้อมูลสำหรับพิมพ์รายงาน', 'info');
+            return;
+        }
+
+        const hba1c = data.hba1c || {};
+        const paid5 = data.paid5 || {};
+        const distress = data.distress || {};
+        const today = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        // Build patient table rows
+        let tableRows = '';
+        (data.patients || []).forEach((p, i) => {
+            const genderTh = p.gender === 'male' || p.gender === 'M' ? 'ชาย' : p.gender === 'female' || p.gender === 'F' ? 'หญิง' : p.gender || '-';
+            const groupTh = p.group === 'experimental' ? 'ทดลอง' : p.group === 'control' ? 'ควบคุม' : p.group || '-';
+            const hBL = p.hba1c_baseline != null ? p.hba1c_baseline.toFixed(1) : '-';
+            const h6m = p.hba1c_6month != null ? p.hba1c_6month.toFixed(1) : '-';
+            const pBL = p.paid5_baseline != null ? p.paid5_baseline : '-';
+            const p6m = p.paid5_6month != null ? p.paid5_6month : '-';
+            const dist = p.distress === 'low' ? 'ต่ำ' : p.distress === 'high' ? 'สูง' : '-';
+            tableRows += '<tr><td>' + (i + 1) + '</td><td>' + (p.patient_id || '-') + '</td><td>' + genderTh +
+                '</td><td>' + (p.age || '-') + '</td><td>' + groupTh + '</td><td>' + hBL + '</td><td>' + h6m +
+                '</td><td>' + pBL + '</td><td>' + p6m + '</td><td>' + dist + '</td></tr>';
+        });
+
+        const reportHTML = '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">' +
+            '<title>รายงานผลโปรแกรมโรงเรียนเบาหวาน</title>' +
+            '<style>' +
+            'body{font-family:Athiti,sans-serif;margin:40px;color:#19191B;font-size:14px}' +
+            'h1{font-size:20px;text-align:center;margin-bottom:4px}' +
+            'h2{font-size:16px;margin-top:24px;margin-bottom:8px;border-bottom:2px solid #2A86FF;padding-bottom:4px;color:#2A86FF}' +
+            '.subtitle{text-align:center;color:#61646B;font-size:13px;margin-bottom:24px}' +
+            '.stats{display:flex;gap:16px;margin-bottom:20px}' +
+            '.stat-box{flex:1;background:#F5FAFF;border:1px solid #E5E7EB;border-radius:8px;padding:12px;text-align:center}' +
+            '.stat-box .val{font-size:24px;font-weight:700;color:#2A86FF}' +
+            '.stat-box .lbl{font-size:12px;color:#61646B}' +
+            'table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}' +
+            'th{background:#F5FAFF;padding:6px 4px;text-align:left;border-bottom:2px solid #E5E7EB;font-weight:600;white-space:nowrap}' +
+            'td{padding:5px 4px;border-bottom:1px solid #F3F4F6;white-space:nowrap}' +
+            '.summary-table{width:auto;margin:0 auto}' +
+            '.summary-table td{padding:4px 16px}' +
+            '.footer{margin-top:32px;text-align:center;font-size:11px;color:#AFB1B6;border-top:1px solid #E5E7EB;padding-top:12px}' +
+            '@media print{body{margin:20px}@page{size:A4 landscape;margin:15mm}}' +
+            '</style></head><body>' +
+            '<h1>รายงานผลโปรแกรมโรงเรียนเบาหวาน + LINE</h1>' +
+            '<div class="subtitle">วันที่พิมพ์: ' + today + '</div>' +
+
+            '<h2>สรุปภาพรวม</h2>' +
+            '<div class="stats">' +
+            '<div class="stat-box"><div class="val">' + data.totalPatients + '</div><div class="lbl">ผู้ป่วยทั้งหมด</div></div>' +
+            '<div class="stat-box"><div class="val">' + data.experimental + '</div><div class="lbl">กลุ่มทดลอง</div></div>' +
+            '<div class="stat-box"><div class="val">' + data.control + '</div><div class="lbl">กลุ่มควบคุม</div></div>' +
+            '<div class="stat-box"><div class="val">' + (data.avgHba1c || '-') + '%</div><div class="lbl">HbA1c เฉลี่ย</div></div>' +
+            '</div>' +
+
+            '<h2>ผลลัพธ์ HbA1c เปรียบเทียบ</h2>' +
+            '<table class="summary-table"><tr><th></th><th>Baseline</th><th>6 เดือน</th><th>เปลี่ยนแปลง</th></tr>' +
+            '<tr><td><b>กลุ่มทดลอง</b></td><td>' + (hba1c.expBaseline || '-') + '%</td><td>' + (hba1c.expSixMonth || '-') + '%</td><td style="color:' + (hba1c.expSixMonth < hba1c.expBaseline ? '#16a34a' : '#dc2626') + '">' + (hba1c.expBaseline && hba1c.expSixMonth ? (hba1c.expSixMonth - hba1c.expBaseline).toFixed(2) + '%' : '-') + '</td></tr>' +
+            '<tr><td><b>กลุ่มควบคุม</b></td><td>' + (hba1c.ctrlBaseline || '-') + '%</td><td>' + (hba1c.ctrlSixMonth || '-') + '%</td><td style="color:' + (hba1c.ctrlSixMonth < hba1c.ctrlBaseline ? '#16a34a' : '#dc2626') + '">' + (hba1c.ctrlBaseline && hba1c.ctrlSixMonth ? (hba1c.ctrlSixMonth - hba1c.ctrlBaseline).toFixed(2) + '%' : '-') + '</td></tr></table>' +
+
+            '<h2>ผลลัพธ์ PAID-5 เปรียบเทียบ</h2>' +
+            '<table class="summary-table"><tr><th></th><th>Baseline</th><th>6 เดือน</th><th>เปลี่ยนแปลง</th></tr>' +
+            '<tr><td><b>กลุ่มทดลอง</b></td><td>' + (paid5.expBaseline || '-') + '</td><td>' + (paid5.expSixMonth || '-') + '</td><td>' + (paid5.expBaseline && paid5.expSixMonth ? (paid5.expSixMonth - paid5.expBaseline).toFixed(1) : '-') + '</td></tr>' +
+            '<tr><td><b>กลุ่มควบคุม</b></td><td>' + (paid5.ctrlBaseline || '-') + '</td><td>' + (paid5.ctrlSixMonth || '-') + '</td><td>' + (paid5.ctrlBaseline && paid5.ctrlSixMonth ? (paid5.ctrlSixMonth - paid5.ctrlBaseline).toFixed(1) : '-') + '</td></tr></table>' +
+
+            '<h2>ระดับ Diabetes Distress</h2>' +
+            '<table class="summary-table"><tr><td>Distress ต่ำ (Low)</td><td><b>' + (distress.low || 0) + '</b> ราย</td></tr>' +
+            '<tr><td>Distress สูง (High)</td><td><b>' + (distress.high || 0) + '</b> ราย</td></tr></table>' +
+
+            '<h2>รายชื่อผู้ป่วยทั้งหมด</h2>' +
+            '<table><thead><tr><th>#</th><th>รหัส</th><th>เพศ</th><th>อายุ</th><th>กลุ่ม</th><th>HbA1c BL</th><th>HbA1c 6m</th><th>PAID-5 BL</th><th>PAID-5 6m</th><th>Distress</th></tr></thead><tbody>' +
+            tableRows + '</tbody></table>' +
+
+            '<div class="footer">ระบบติดตามผลโปรแกรมโรงเรียนเบาหวาน + LINE &mdash; Diabetes Tracking System</div>' +
+            '</body></html>';
+
+        const reportWindow = window.open('', '_blank');
+        if (reportWindow) {
+            reportWindow.document.write(reportHTML);
+            reportWindow.document.close();
+            setTimeout(() => reportWindow.print(), 500);
+        } else {
+            showToast('กรุณาอนุญาต popup สำหรับพิมพ์รายงาน', 'error');
         }
     },
 
