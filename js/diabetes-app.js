@@ -617,3 +617,79 @@ window.hideLoading = hideLoading;
 window.initNavigation = initNavigation;
 window.initHome = initHome;
 window.initApp = initApp;
+
+// ============================================================================
+// DiabetesApp Facade
+// Bridges legacy DiabetesApp references in form/questionnaire/dashboard modules
+// to the actual API, LocalDB, and utility functions.
+// ============================================================================
+
+const DiabetesApp = {
+    get dbConnected() {
+        return API.dbConnected;
+    },
+
+    patients: [],
+
+    showLoading: showLoading,
+    hideLoading: hideLoading,
+    showToast: showToast,
+
+    async savePatient(data) {
+        return API.savePatient(data);
+    },
+
+    async loadPatient(id) {
+        return API.getPatient(id);
+    },
+
+    async loadAllPatients() {
+        const patients = await API.getPatients();
+        DiabetesApp.patients = patients || [];
+        return DiabetesApp.patients;
+    },
+
+    loadAllFromLocal() {
+        const patients = LocalDB.getAll();
+        DiabetesApp.patients = patients || [];
+        return DiabetesApp.patients;
+    },
+
+    loadFromLocal(id) {
+        return LocalDB.get(id);
+    },
+
+    populatePatientSelector(selector) {
+        if (!selector) return;
+        // Clear existing options except the first placeholder
+        while (selector.options.length > 1) {
+            selector.remove(1);
+        }
+        DiabetesApp.patients.forEach(function (patient) {
+            var opt = document.createElement('option');
+            opt.value = patient.id || patient.hn || '';
+            opt.textContent = (patient.hn || patient.id || '?') +
+                (patient.name ? ' - ' + patient.name : '') +
+                (patient.group ? ' (' + patient.group + ')' : '');
+            selector.appendChild(opt);
+        });
+    },
+
+    async apiGet(url) {
+        const response = await authFetch(API.baseUrl + url);
+        if (!response.ok) throw new Error('API GET failed: ' + url);
+        return response.json();
+    },
+
+    async apiPost(url, data) {
+        const response = await authFetch(API.baseUrl + url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error('API POST failed: ' + url);
+        return response.json();
+    }
+};
+
+window.DiabetesApp = DiabetesApp;
