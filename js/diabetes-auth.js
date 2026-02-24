@@ -297,6 +297,10 @@ const Auth = {
         return data;
     },
 
+    _usersPage: 1,
+    _usersPageSize: 10,
+    _allUsers: [],
+
     async renderUserList() {
         var container = document.getElementById('users-list');
         if (!container) return;
@@ -304,14 +308,31 @@ const Auth = {
         container.innerHTML = '<div style="text-align:center;padding:20px;color:#AFB1B6">กำลังโหลด...</div>';
 
         var users = await this.loadUsers();
+        this._allUsers = users;
+
         if (users.length === 0) {
             container.innerHTML = '<div style="text-align:center;padding:20px;color:#AFB1B6">ไม่พบผู้ใช้</div>';
             return;
         }
 
+        this._renderUserPage(container);
+    },
+
+    _renderUserPage(container) {
+        if (!container) container = document.getElementById('users-list');
+        if (!container) return;
+
         var self = this;
+        var users = this._allUsers;
+        var totalPages = Math.ceil(users.length / this._usersPageSize);
+        if (this._usersPage > totalPages) this._usersPage = totalPages;
+
+        var startIdx = (this._usersPage - 1) * this._usersPageSize;
+        var endIdx = Math.min(startIdx + this._usersPageSize, users.length);
+        var pageUsers = users.slice(startIdx, endIdx);
+
         var html = '';
-        users.forEach(function(u) {
+        pageUsers.forEach(function(u) {
             var roleBadge = u.role === 'admin'
                 ? '<span class="role-badge role-admin">Admin</span>'
                 : '<span class="role-badge role-user">User</span>';
@@ -331,6 +352,20 @@ const Auth = {
             html += '</div>';
         });
 
+        // Add pagination if needed
+        if (users.length > this._usersPageSize) {
+            html += '<div class="pagination-info" style="margin-top:12px">แสดง ' + (startIdx + 1) + '-' + endIdx + ' จาก ' + users.length + ' ผู้ใช้</div>';
+            html += '<div class="pagination">';
+            html += '<button class="pagination-btn user-pag-btn" data-page="prev"' + (this._usersPage === 1 ? ' disabled' : '') + '>&laquo;</button>';
+
+            for (var i = 1; i <= totalPages; i++) {
+                html += '<button class="pagination-btn user-pag-btn' + (i === this._usersPage ? ' active' : '') + '" data-page="' + i + '">' + i + '</button>';
+            }
+
+            html += '<button class="pagination-btn user-pag-btn" data-page="next"' + (this._usersPage === totalPages ? ' disabled' : '') + '>&raquo;</button>';
+            html += '</div>';
+        }
+
         container.innerHTML = html;
 
         // Bind delete buttons
@@ -345,6 +380,17 @@ const Auth = {
                 } catch (err) {
                     if (window.showToast) window.showToast(err.message, 'error');
                 }
+            });
+        });
+
+        // Bind pagination buttons
+        container.querySelectorAll('.user-pag-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var page = this.getAttribute('data-page');
+                if (page === 'prev') self._usersPage = Math.max(1, self._usersPage - 1);
+                else if (page === 'next') self._usersPage = Math.min(totalPages, self._usersPage + 1);
+                else self._usersPage = parseInt(page);
+                self._renderUserPage(container);
             });
         });
     },

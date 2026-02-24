@@ -3,6 +3,9 @@ const DiabetesDashboard = {
     charts: {},
     currentFilter: 'all',
     initialized: false,
+    currentPage: 1,
+    pageSize: 10,
+    filteredPatients: [],
 
     // =====================
     // Initialization
@@ -606,14 +609,31 @@ const DiabetesDashboard = {
             filtered = filtered.filter(p => p.group === filter);
         }
 
+        // Store filtered patients for pagination
+        this.filteredPatients = filtered;
+
+        // Reset to page 1 when filter changes
+        if (this._lastFilter !== filter) {
+            this.currentPage = 1;
+            this._lastFilter = filter;
+        }
+
         // If no data, show placeholder
         if (filtered.length === 0) {
             tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:#94a3b8;font-family:Athiti,sans-serif;font-size:14px;">ยังไม่มีข้อมูล</td></tr>';
+            this.renderPagination(0);
             return;
         }
 
+        // Pagination calculation
+        const totalPages = Math.ceil(filtered.length / this.pageSize);
+        if (this.currentPage > totalPages) this.currentPage = totalPages;
+        const startIdx = (this.currentPage - 1) * this.pageSize;
+        const endIdx = Math.min(startIdx + this.pageSize, filtered.length);
+        const pageData = filtered.slice(startIdx, endIdx);
+
         let html = '';
-        filtered.forEach(p => {
+        pageData.forEach((p, idx) => {
             // HbA1c change color coding
             const hba1cBL = p.hba1c_baseline;
             const hba1c6m = p.hba1c_6month;
@@ -623,10 +643,8 @@ const DiabetesDashboard = {
 
             if (hba1cBL != null && hba1c6m != null) {
                 if (hba1c6m < hba1cBL) {
-                    // Improved (decreased)
                     hba1c6mStyle = 'color:#16a34a;font-weight:600;';
                 } else if (hba1c6m > hba1cBL) {
-                    // Worsened (increased)
                     hba1c6mStyle = 'color:#dc2626;font-weight:600;';
                 }
             }
@@ -686,6 +704,88 @@ const DiabetesDashboard = {
         });
 
         tbody.innerHTML = html;
+        this.renderPagination(filtered.length);
+    },
+
+    renderPagination(totalItems) {
+        const wrapper = document.querySelector('.data-table-wrapper');
+        if (!wrapper) return;
+
+        // Remove existing pagination
+        const existingPag = wrapper.parentNode.querySelector('.table-pagination-wrap');
+        if (existingPag) existingPag.remove();
+
+        if (totalItems <= this.pageSize) return;
+
+        const totalPages = Math.ceil(totalItems / this.pageSize);
+        const currentPage = this.currentPage;
+
+        let pagHtml = '<div class="table-pagination-wrap">';
+        pagHtml += '<div class="pagination-info">แสดง ' + ((currentPage - 1) * this.pageSize + 1) + '-' + Math.min(currentPage * this.pageSize, totalItems) + ' จาก ' + totalItems + ' รายการ</div>';
+        pagHtml += '<div class="pagination">';
+
+        // Previous button
+        pagHtml += '<button class="pagination-btn" data-page="prev"' + (currentPage === 1 ? ' disabled' : '') + '>&laquo;</button>';
+
+        // Page buttons
+        const maxVisible = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+        if (endPage - startPage < maxVisible - 1) {
+            startPage = Math.max(1, endPage - maxVisible + 1);
+        }
+
+        if (startPage > 1) {
+            pagHtml += '<button class="pagination-btn" data-page="1">1</button>';
+            if (startPage > 2) pagHtml += '<span style="padding:0 4px;color:#AFB1B6">...</span>';
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pagHtml += '<button class="pagination-btn' + (i === currentPage ? ' active' : '') + '" data-page="' + i + '">' + i + '</button>';
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) pagHtml += '<span style="padding:0 4px;color:#AFB1B6">...</span>';
+            pagHtml += '<button class="pagination-btn" data-page="' + totalPages + '">' + totalPages + '</button>';
+        }
+
+        // Next button
+        pagHtml += '<button class="pagination-btn" data-page="next"' + (currentPage === totalPages ? ' disabled' : '') + '>&raquo;</button>';
+
+        pagHtml += '</div>';
+
+        // Page size selector
+        pagHtml += '<div class="pagination-size"><span>แสดง</span><select id="dash-page-size">';
+        [10, 20, 50].forEach(size => {
+            pagHtml += '<option value="' + size + '"' + (size === this.pageSize ? ' selected' : '') + '>' + size + '</option>';
+        });
+        pagHtml += '</select><span>รายการ/หน้า</span></div>';
+        pagHtml += '</div>';
+
+        wrapper.insertAdjacentHTML('afterend', pagHtml);
+
+        // Bind pagination events
+        const pagWrap = wrapper.parentNode.querySelector('.table-pagination-wrap');
+        if (pagWrap) {
+            pagWrap.querySelectorAll('.pagination-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const page = btn.getAttribute('data-page');
+                    if (page === 'prev') this.currentPage = Math.max(1, this.currentPage - 1);
+                    else if (page === 'next') this.currentPage = Math.min(totalPages, this.currentPage + 1);
+                    else this.currentPage = parseInt(page);
+                    this.renderPatientTable(this._cachedSummaryData ? this._cachedSummaryData.patients : this.filteredPatients, this.currentFilter);
+                });
+            });
+
+            const pageSizeSelect = pagWrap.querySelector('#dash-page-size');
+            if (pageSizeSelect) {
+                pageSizeSelect.addEventListener('change', (e) => {
+                    this.pageSize = parseInt(e.target.value);
+                    this.currentPage = 1;
+                    this.renderPatientTable(this._cachedSummaryData ? this._cachedSummaryData.patients : this.filteredPatients, this.currentFilter);
+                });
+            }
+        }
     },
 
     escapeHtml(str) {

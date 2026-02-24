@@ -342,6 +342,7 @@ input[type="text"],
 input[type="number"],
 input[type="date"],
 input[type="email"],
+input[type="password"],
 select,
 textarea {
     width: 100%;
@@ -1445,6 +1446,82 @@ textarea { min-height: 80px; resize: vertical; }
 
 /* Role hidden */
 .role-hidden { display: none !important; }
+
+/* ============ Pagination ============ */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 16px;
+    padding: 12px 0;
+    flex-wrap: wrap;
+}
+
+.pagination-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 10px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.pagination-btn:hover {
+    border-color: var(--primary);
+    background: var(--primary-subtle);
+    color: var(--primary);
+}
+
+.pagination-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    font-weight: 700;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--text-muted);
+}
+
+.pagination-info {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: 4px;
+}
+
+.pagination-size {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.pagination-size select {
+    min-height: 36px;
+    width: auto;
+    min-width: 70px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+}
 
 /* Print */
 @media print {
