@@ -1142,7 +1142,7 @@ textarea { min-height: 80px; resize: vertical; }
 
     .bmi-inputs { grid-template-columns: 1fr 1fr auto; }
 
-    .video-links-container { grid-template-columns: 1fr 1fr; }
+    .video-links-container { grid-template-columns: 1fr; }
 
     .header-logo h1 { font-size: 1.15rem; }
 
