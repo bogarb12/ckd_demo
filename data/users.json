@@ -1,0 +1,9 @@
+[
+  {
+    "username": "admin",
+    "password": "$2b$10$o/5uRv0M5vhCnuBQj3fx..u6nHiGjDvxYS45WbOj36LRVmdfSqN0O",
+    "role": "admin",
+    "displayName": "ผู้ดูแลระบบ",
+    "createdAt": "2026-02-24T03:34:46.265Z"
+  }
+]
