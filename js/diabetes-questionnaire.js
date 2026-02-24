@@ -312,7 +312,7 @@ const DiabetesQuestionnaire = {
 
     async save() {
         const selectValue = document.getElementById('quest-patient-select')?.value;
-        const patientId = selectValue || 'anonymous_' + Date.now();
+        const patientId = selectValue || '';
 
         const healthLiteracy = this.collectHealthLiteracy();
         const selfCare = this.collectSelfCare();
@@ -333,6 +333,16 @@ const DiabetesQuestionnaire = {
             selfCare,
             assessment_date: new Date().toISOString()
         };
+
+        // If no patient selected ("ไม่ระบุผู้ป่วย"), save to localStorage only
+        if (!patientId) {
+            const anonKey = 'anonymous_' + Date.now();
+            this._saveToLocalStorage(anonKey, questionnaireData);
+            if (typeof DiabetesApp !== 'undefined') {
+                DiabetesApp.showToast('บันทึกแบบประเมินสำเร็จ (ไม่ระบุผู้ป่วย)', 'success');
+            }
+            return;
+        }
 
         if (typeof DiabetesApp !== 'undefined' && DiabetesApp.dbConnected) {
             // Save via API
