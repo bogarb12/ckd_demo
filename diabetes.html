@@ -7,6 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Athiti:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="stylesheet" href="css/diabetes.css">
 </head>
 <body>
@@ -79,7 +81,7 @@
 <!-- ============================================ -->
 <div class="tab-content active" id="tab-home">
     <div class="card welcome-card">
-        <div class="welcome-icon">🏥</div>
+        <div class="welcome-icon"><i class="fa-solid fa-hospital"></i></div>
         <h2>ระบบติดตามผลโปรแกรมโรงเรียนเบาหวาน + LINE</h2>
         <p>งานวิจัย RCT: ผลของโปรแกรมโรงเรียนเบาหวานแบบกลุ่มร่วมกับการติดตามผ่าน LINE ต่อระดับ HbA1c และภาวะความเครียดจากโรคเบาหวานในผู้ป่วยเบาหวานชนิดที่ 2 ในคลินิกปฐมภูมิ</p>
     </div>
@@ -104,7 +106,7 @@
     </div>
 
     <div class="card">
-        <div class="card-header"><span class="icon">📋</span> เกี่ยวกับระบบ</div>
+        <div class="card-header"><span class="icon"><i class="fa-solid fa-clipboard-list"></i></span> เกี่ยวกับระบบ</div>
         <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.8">
             ระบบนี้ใช้สำหรับเก็บข้อมูลและติดตามผลการวิจัยในผู้ป่วยเบาหวานชนิดที่ 2 ประกอบด้วย:
         </p>
@@ -162,7 +164,7 @@
     <!-- ===== Section 1: ข้อมูลพื้นฐาน ===== -->
     <div class="step-content active" data-step="1">
         <div class="card">
-            <div class="card-header"><span class="icon">👤</span> ส่วนที่ 1: ข้อมูลพื้นฐาน</div>
+            <div class="card-header"><span class="icon"><i class="fa-solid fa-user"></i></span> ส่วนที่ 1: ข้อมูลพื้นฐาน</div>
 
             <div class="form-group">
                 <label>รหัสผู้เข้าร่วม *</label>
@@ -268,7 +270,7 @@
     <!-- ===== Section 2: HbA1c ===== -->
     <div class="step-content" data-step="2">
         <div class="card">
-            <div class="card-header"><span class="icon">🔬</span> ส่วนที่ 2: ผลลัพธ์ทางคลินิก (HbA1c)</div>
+            <div class="card-header"><span class="icon"><i class="fa-solid fa-flask"></i></span> ส่วนที่ 2: ผลลัพธ์ทางคลินิก (HbA1c)</div>
 
             <div class="form-group">
                 <label>HbA1c Baseline (%)</label>
@@ -291,7 +293,7 @@
     <!-- ===== Section 3: PAID-5 ===== -->
     <div class="step-content" data-step="3">
         <div class="card">
-            <div class="card-header"><span class="icon">📝</span> ส่วนที่ 3: PAID-5 แบบประเมินความเครียดจากเบาหวาน</div>
+            <div class="card-header"><span class="icon"><i class="fa-solid fa-file-pen"></i></span> ส่วนที่ 3: PAID-5 แบบประเมินความเครียดจากเบาหวาน</div>
             <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px">
                 คะแนน: 0 = ไม่เป็นปัญหา, 1 = เล็กน้อย, 2 = ปานกลาง, 3 = ค่อนข้างมาก, 4 = มาก
             </p>
@@ -372,7 +374,7 @@
     <!-- ===== Section 4: การเข้าร่วมโปรแกรม ===== -->
     <div class="step-content" data-step="4">
         <div class="card" id="section-participation">
-            <div class="card-header"><span class="icon">📊</span> ส่วนที่ 4: การเข้าร่วมโปรแกรม</div>
+            <div class="card-header"><span class="icon"><i class="fa-solid fa-chart-column"></i></span> ส่วนที่ 4: การเข้าร่วมโปรแกรม</div>
             <div class="notice-banner info" id="participation-notice" style="display:none">
                 ส่วนนี้เฉพาะกลุ่มทดลอง (DSME + LINE) เท่านั้น
             </div>
@@ -403,7 +405,7 @@
                 </div>
             </div>
             <div id="participation-control-msg" class="empty-state" style="display:none">
-                <div class="empty-icon">ℹ️</div>
+                <div class="empty-icon"><i class="fa-solid fa-circle-info"></i></div>
                 <p>ส่วนนี้ไม่จำเป็นสำหรับกลุ่มควบคุม<br>กรุณาข้ามไปส่วนถัดไป</p>
             </div>
         </div>
@@ -412,7 +414,7 @@
     <!-- ===== Section 5: เหตุการณ์ไม่พึงประสงค์ ===== -->
     <div class="step-content" data-step="5">
         <div class="card">
-            <div class="card-header"><span class="icon">⚠️</span> ส่วนที่ 5: เหตุการณ์ไม่พึงประสงค์</div>
+            <div class="card-header"><span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span> ส่วนที่ 5: เหตุการณ์ไม่พึงประสงค์</div>
             <div class="form-group">
                 <label>มีเหตุการณ์ไม่พึงประสงค์หรือไม่</label>
                 <div class="radio-group">
@@ -436,7 +438,7 @@
     <!-- ===== Section 6: สถานะการติดตาม ===== -->
     <div class="step-content" data-step="6">
         <div class="card">
-            <div class="card-header"><span class="icon">📌</span> ส่วนที่ 6: สถานะการติดตาม</div>
+            <div class="card-header"><span class="icon"><i class="fa-solid fa-thumbtack"></i></span> ส่วนที่ 6: สถานะการติดตาม</div>
             <div class="form-group">
                 <label>สถานะ</label>
                 <div class="radio-group">
@@ -493,7 +495,7 @@
 
     <!-- Part 1: Health Literacy -->
     <div id="health-literacy-section">
-        <div class="section-title">📚 ส่วนที่ 1: ความรอบรู้ด้านสุขภาพ</div>
+        <div class="section-title"><i class="fa-solid fa-book-open"></i> ส่วนที่ 1: ความรอบรู้ด้านสุขภาพ</div>
         <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px">
             คะแนน: 1 = ง่ายมาก, 2 = ง่าย, 3 = ปานกลาง, 4 = ยาก, 5 = ยากมาก
         </p>
@@ -520,7 +522,7 @@
 
     <!-- Part 2: Self-care Behavior -->
     <div id="self-care-section">
-        <div class="section-title">💪 ส่วนที่ 2: พฤติกรรมการดูแลตนเอง</div>
+        <div class="section-title"><i class="fa-solid fa-dumbbell"></i> ส่วนที่ 2: พฤติกรรมการดูแลตนเอง</div>
         <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px">
             คะแนน: 1 = ไม่เคยทำ, 2 = ทำบางครั้ง, 3 = ทำบ่อยครั้ง, 4 = ทำทุกวัน/ทุกครั้ง
         </p>
@@ -555,21 +557,21 @@
 <!-- TAB 4: สื่อความรู้ (Education) -->
 <!-- ============================================ -->
 <div class="tab-content" id="tab-education">
-    <div class="section-title">📖 สื่อความรู้เบาหวาน</div>
+    <div class="section-title"><i class="fa-solid fa-book-medical"></i> สื่อความรู้เบาหวาน</div>
 
     <!-- Category Pills -->
     <div class="category-pills">
         <button class="category-pill active" data-category="nutrition">
-            <span class="cat-icon">🍽️</span> อาหาร
+            <span class="cat-icon"><i class="fa-solid fa-utensils"></i></span> อาหาร
         </button>
         <button class="category-pill" data-category="exercise">
-            <span class="cat-icon">🏃</span> ออกกำลังกาย
+            <span class="cat-icon"><i class="fa-solid fa-person-running"></i></span> ออกกำลังกาย
         </button>
         <button class="category-pill" data-category="medication">
-            <span class="cat-icon">💊</span> ยาเบาหวาน
+            <span class="cat-icon"><i class="fa-solid fa-pills"></i></span> ยาเบาหวาน
         </button>
         <button class="category-pill" data-category="foot">
-            <span class="cat-icon">🦶</span> เท้าเบาหวาน
+            <span class="cat-icon"><i class="fa-solid fa-shoe-prints"></i></span> เท้าเบาหวาน
         </button>
     </div>
 
@@ -585,7 +587,7 @@
 
     <!-- BMI Calculator -->
     <div class="bmi-calculator">
-        <div class="card-header"><span class="icon">⚖️</span> เครื่องคำนวณ BMI</div>
+        <div class="card-header"><span class="icon"><i class="fa-solid fa-scale-balanced"></i></span> เครื่องคำนวณ BMI</div>
         <div class="bmi-inputs">
             <div class="form-group">
                 <label>น้ำหนัก (กก.)</label>
@@ -619,10 +621,10 @@
 <!-- TAB 5: Dashboard -->
 <!-- ============================================ -->
 <div class="tab-content" id="tab-dashboard">
-    <div class="section-title">📊 Dashboard ภาพรวมข้อมูล</div>
+    <div class="section-title"><i class="fa-solid fa-chart-column"></i> Dashboard ภาพรวมข้อมูล</div>
 
     <div class="notice-banner warning hidden" id="demo-notice">
-        ⚠️ ไม่ได้เชื่อมต่อฐานข้อมูล - แสดงข้อมูลตัวอย่าง (Demo)
+        <i class="fa-solid fa-triangle-exclamation"></i> ไม่ได้เชื่อมต่อฐานข้อมูล - แสดงข้อมูลตัวอย่าง (Demo)
     </div>
 
     <!-- Summary Stats -->
@@ -703,11 +705,11 @@
 <!-- TAB 6: จัดการผู้ใช้ (Admin only) -->
 <!-- ============================================ -->
 <div class="tab-content" id="tab-users" data-role="admin">
-    <div class="section-title">&#128101; จัดการผู้ใช้งาน</div>
+    <div class="section-title"><i class="fa-solid fa-users"></i> จัดการผู้ใช้งาน</div>
 
     <!-- Add User Form -->
     <div class="card">
-        <div class="card-header"><span class="icon">&#10133;</span> เพิ่มผู้ใช้ใหม่</div>
+        <div class="card-header"><span class="icon"><i class="fa-solid fa-user-plus"></i></span> เพิ่มผู้ใช้ใหม่</div>
         <div class="form-group">
             <label>ชื่อผู้ใช้ (username) *</label>
             <input type="text" id="new-username" placeholder="เช่น nurse01">
@@ -735,7 +737,7 @@
 
     <!-- User List -->
     <div class="card">
-        <div class="card-header"><span class="icon">&#128203;</span> รายชื่อผู้ใช้งาน</div>
+        <div class="card-header"><span class="icon"><i class="fa-solid fa-rectangle-list"></i></span> รายชื่อผู้ใช้งาน</div>
         <div id="users-list">
             <div style="text-align:center;padding:20px;color:#AFB1B6">กำลังโหลด...</div>
         </div>

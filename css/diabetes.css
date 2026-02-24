@@ -250,6 +250,20 @@ body {
 
 .card-header .icon {
     font-size: 1.2rem;
+    color: var(--primary);
+}
+
+.section-title > .fa-solid,
+.section-title > i {
+    color: var(--primary);
+}
+
+.welcome-icon .fa-solid {
+    color: var(--primary);
+}
+
+.video-link-icon .fa-solid {
+    color: var(--primary);
 }
 
 /* ============ Stat Cards — NOAH primary-subtle BG ============ */
@@ -1145,7 +1159,7 @@ textarea { min-height: 80px; resize: vertical; }
 
     .tab-content {
         padding: 24px;
-        padding-top: 24px;
+        padding-top: 97px; /* 73px fixed header + 24px spacing */
     }
 
     .stat-grid { grid-template-columns: repeat(4, 1fr); }
