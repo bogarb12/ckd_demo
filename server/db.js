@@ -1,7 +1,7 @@
 const mariadb = require('mariadb');
 require('dotenv').config();
 
-const pool = mariadb.createPool({
+const poolConfig = {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT) || 3306,
     user: process.env.DB_USER || 'root',
@@ -9,7 +9,11 @@ const pool = mariadb.createPool({
     database: process.env.DB_NAME || 'diabetes_tracking',
     connectionLimit: 10,
     charset: 'utf8mb4'
-});
+};
+if (process.env.DB_SOCKET) {
+    poolConfig.socketPath = process.env.DB_SOCKET;
+}
+const pool = mariadb.createPool(poolConfig);
 
 async function query(sql, params) {
     let conn;
