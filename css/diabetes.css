@@ -519,7 +519,8 @@ textarea { min-height: 80px; resize: vertical; }
     display: block;
 }
 
-.scale-options label.selected {
+.scale-options label.selected,
+.scale-options label:has(input:checked) {
     background: var(--primary);
     color: white;
     border-color: var(--primary);

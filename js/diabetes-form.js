@@ -13,6 +13,7 @@ const DiabetesForm = {
         this.setupStepNavigation();
         this.setupConditionalFields();
         this.setupComorbidityLogic();
+        this.setupScaleOptions();
         this.setupPAID5Calculation();
         this.setupHbA1cCalculation();
         this.loadPatientList();
@@ -364,6 +365,25 @@ const DiabetesForm = {
 
                 // Update "other" text field visibility
                 this.updateComorbidityOtherVisibility();
+            });
+        });
+    },
+
+    // =====================
+    // Scale Options - Toggle selected class on labels
+    // =====================
+
+    setupScaleOptions() {
+        document.querySelectorAll('.scale-options label').forEach(function(label) {
+            label.addEventListener('click', function() {
+                // Remove selected from sibling labels in the same group
+                var parent = label.parentElement;
+                if (parent) {
+                    parent.querySelectorAll('label').forEach(function(sib) {
+                        sib.classList.remove('selected');
+                    });
+                }
+                label.classList.add('selected');
             });
         });
     },
@@ -914,6 +934,10 @@ const DiabetesForm = {
             });
         }
 
+        // Clear selected class from scale-options labels
+        const selectedLabels = document.querySelectorAll('.scale-options label.selected');
+        selectedLabels.forEach(function(label) { label.classList.remove('selected'); });
+
         // Reset state
         this.isExperimentalGroup = false;
         this.formData = {};
@@ -985,6 +1009,14 @@ const DiabetesForm = {
         const radio = document.querySelector('input[name="' + name + '"][value="' + value + '"]');
         if (radio) {
             radio.checked = true;
+            // Update selected class on scale-options labels
+            var label = radio.closest('label');
+            if (label && label.parentElement && label.parentElement.classList.contains('scale-options')) {
+                label.parentElement.querySelectorAll('label').forEach(function(sib) {
+                    sib.classList.remove('selected');
+                });
+                label.classList.add('selected');
+            }
         }
     },
 
