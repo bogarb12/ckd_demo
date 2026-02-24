@@ -540,10 +540,10 @@
     <div class="card" style="padding:12px 16px">
         <div class="form-group" style="margin-bottom:0">
             <label>เลือกผู้ป่วย</label>
-            <select id="q-patient-select">
-                <option value="">-- เลือกผู้ป่วย --</option>
+            <select id="quest-patient-select">
+                <option value="" selected>ไม่ระบุผู้ป่วย</option>
             </select>
-            <div class="hint">รหัสผู้ป่วย: <strong id="q-patient-id-display">-</strong></div>
+            <div class="hint">รหัสผู้ป่วย: <strong id="q-patient-id-display">ไม่ระบุ</strong></div>
         </div>
     </div>
 
@@ -601,7 +601,7 @@
         </div>
     </div>
 
-    <button class="btn btn-success btn-lg mt-2" id="btn-save-questionnaire">
+    <button class="btn btn-success btn-lg mt-2" id="quest-save-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
         บันทึกแบบประเมิน
     </button>

@@ -51,19 +51,18 @@ const DiabetesQuestionnaire = {
         const select = document.getElementById('quest-patient-select');
         if (!select) return;
 
-        // Clear existing options except placeholder
+        // Clear existing options except the "ไม่ระบุผู้ป่วย" default
         while (select.options.length > 1) {
             select.remove(1);
         }
 
-        // Add placeholder if none exists
+        // Add default "ไม่ระบุผู้ป่วย" option if none exists
         if (select.options.length === 0) {
-            const placeholder = document.createElement('option');
-            placeholder.value = '';
-            placeholder.textContent = '-- เลือกผู้ป่วย --';
-            placeholder.disabled = true;
-            placeholder.selected = true;
-            select.appendChild(placeholder);
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = 'ไม่ระบุผู้ป่วย';
+            defaultOpt.selected = true;
+            select.appendChild(defaultOpt);
         }
 
         // Populate from DiabetesApp.patients
@@ -85,9 +84,15 @@ const DiabetesQuestionnaire = {
             });
         }
 
+        // Update patient ID display
+        const idDisplay = document.getElementById('q-patient-id-display');
+
         // Change handler - load existing questionnaire data for selected patient
         select.addEventListener('change', async () => {
             const patientId = select.value;
+            if (idDisplay) {
+                idDisplay.textContent = patientId || 'ไม่ระบุ';
+            }
             if (patientId) {
                 this.reset();
                 await this.loadPatientData(patientId);
@@ -306,13 +311,8 @@ const DiabetesQuestionnaire = {
     // =====================
 
     async save() {
-        const patientId = document.getElementById('quest-patient-select')?.value;
-        if (!patientId) {
-            if (typeof DiabetesApp !== 'undefined') {
-                DiabetesApp.showToast('กรุณาเลือกผู้ป่วยก่อนบันทึก', 'error');
-            }
-            return;
-        }
+        const selectValue = document.getElementById('quest-patient-select')?.value;
+        const patientId = selectValue || 'anonymous_' + Date.now();
 
         const healthLiteracy = this.collectHealthLiteracy();
         const selfCare = this.collectSelfCare();
