@@ -822,6 +822,20 @@ textarea { min-height: 80px; resize: vertical; }
 .bmi-row.obese1 { background: #fff4e0; }
 .bmi-row.obese2 { background: var(--danger-light); }
 
+/* ============ Action Grid (Dashboard buttons) ============ */
+.action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.action-grid .btn {
+    width: 100%;
+    font-size: 0.8rem;
+    padding: 10px 8px;
+    white-space: nowrap;
+}
+
 /* ============ Dashboard — NOAH chart containers ============ */
 .chart-container {
     background: var(--surface);

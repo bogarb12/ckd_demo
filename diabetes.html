@@ -650,18 +650,18 @@
     <!-- Import / Export / Report Actions -->
     <div class="card" style="padding:14px 16px">
         <div class="card-header" style="margin-bottom:8px"><span class="icon"><i class="fa-solid fa-database"></i></span> จัดการข้อมูล</div>
-        <div class="filter-row" style="margin-bottom:0;flex-wrap:wrap;gap:8px">
-            <button class="btn btn-outline" id="btn-download-template" style="flex:1;min-width:140px">
+        <div class="action-grid">
+            <button class="btn btn-outline" id="btn-download-template">
                 <i class="fa-solid fa-file-arrow-down"></i> ดาวน์โหลดเทมเพลต
             </button>
-            <button class="btn btn-primary" id="btn-import-csv" style="flex:1;min-width:140px">
+            <button class="btn btn-primary" id="btn-import-csv">
                 <i class="fa-solid fa-file-import"></i> นำเข้าข้อมูล CSV
             </button>
             <input type="file" id="csv-file-input" accept=".csv" style="display:none">
-            <button class="btn btn-success" id="btn-export-csv" style="flex:1;min-width:140px">
+            <button class="btn btn-success" id="btn-export-csv">
                 <i class="fa-solid fa-file-export"></i> ส่งออก CSV
             </button>
-            <button class="btn btn-outline" id="btn-print-report" style="flex:1;min-width:140px;border-color:#544fc5;color:#544fc5">
+            <button class="btn btn-outline" id="btn-print-report" style="border-color:#544fc5;color:#544fc5">
                 <i class="fa-solid fa-print"></i> พิมพ์รายงาน
             </button>
         </div>
