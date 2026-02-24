@@ -86,22 +86,13 @@
         <p>งานวิจัย RCT: ผลของโปรแกรมโรงเรียนเบาหวานแบบกลุ่มร่วมกับการติดตามผ่าน LINE ต่อระดับ HbA1c และภาวะความเครียดจากโรคเบาหวานในผู้ป่วยเบาหวานชนิดที่ 2 ในคลินิกปฐมภูมิ</p>
     </div>
 
-    <div class="stat-grid" id="home-stats">
-        <div class="stat-card">
-            <div class="stat-value" id="home-total">0</div>
-            <div class="stat-label">ผู้ป่วยทั้งหมด</div>
-        </div>
-        <div class="stat-card accent">
-            <div class="stat-value" id="home-experimental">0</div>
-            <div class="stat-label">กลุ่มทดลอง</div>
-        </div>
-        <div class="stat-card success">
-            <div class="stat-value" id="home-control">0</div>
-            <div class="stat-label">กลุ่มควบคุม</div>
-        </div>
-        <div class="stat-card warning">
-            <div class="stat-value" id="home-complete">0</div>
-            <div class="stat-label">ติดตามครบ</div>
+    <div class="home-admin-chart" id="home-stats" data-role="admin" style="display:none">
+        <div class="card-header"><span class="icon"><i class="fa-solid fa-chart-pie"></i></span> สรุปจำนวนผู้ป่วย</div>
+        <div class="home-chart-row">
+            <div class="home-chart-canvas-wrap">
+                <canvas id="home-patient-chart"></canvas>
+            </div>
+            <div class="home-chart-legend" id="home-chart-legend"></div>
         </div>
     </div>
 

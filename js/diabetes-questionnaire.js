@@ -39,6 +39,7 @@ const DiabetesQuestionnaire = {
     init() {
         this.setupPatientSelector();
         this.setupAutoCalculation();
+        this.setupLikertColors();
         this.setupSaveButton();
     },
 
@@ -163,6 +164,40 @@ const DiabetesQuestionnaire = {
         const scores = Object.values(data).filter(v => v !== null);
         data.total_score = scores.length === 12 ? scores.reduce((a, b) => a + b, 0) : null;
         return data;
+    },
+
+    // =====================
+    // Likert Color-Coded Labels
+    // =====================
+
+    setupLikertColors() {
+        // Assign level classes to all likert labels based on their radio value
+        document.querySelectorAll('.likert-options').forEach(function(group) {
+            // Detect self-care questions (sc_q*) → reversed color scale
+            var firstRadio = group.querySelector('input[type="radio"]');
+            if (firstRadio && firstRadio.name && firstRadio.name.indexOf('sc_q') === 0) {
+                group.classList.add('likert-reverse');
+            }
+            group.querySelectorAll('label').forEach(function(label) {
+                var radio = label.querySelector('input[type="radio"]');
+                if (radio) {
+                    label.classList.add('level-' + radio.value);
+                }
+            });
+        });
+
+        // Add click handler to toggle selected class with color
+        document.querySelectorAll('.likert-options label').forEach(function(label) {
+            label.addEventListener('click', function() {
+                var parent = label.parentElement;
+                if (parent) {
+                    parent.querySelectorAll('label').forEach(function(sib) {
+                        sib.classList.remove('selected');
+                    });
+                }
+                label.classList.add('selected');
+            });
+        });
     },
 
     // =====================
@@ -428,7 +463,10 @@ const DiabetesQuestionnaire = {
 
             if (val != null) {
                 const radio = document.querySelector(`input[name="hl_q${i}"][value="${val}"]`);
-                if (radio) radio.checked = true;
+                if (radio) {
+                    radio.checked = true;
+                    this._applyLikertSelected(radio);
+                }
             }
         }
         this.updateHealthLiteracyScore();
@@ -453,10 +491,23 @@ const DiabetesQuestionnaire = {
 
             if (val != null) {
                 const radio = document.querySelector(`input[name="sc_q${i}"][value="${val}"]`);
-                if (radio) radio.checked = true;
+                if (radio) {
+                    radio.checked = true;
+                    this._applyLikertSelected(radio);
+                }
             }
         }
         this.updateSelfCareScore();
+    },
+
+    _applyLikertSelected(radio) {
+        var label = radio.closest('label');
+        if (label && label.parentElement && label.parentElement.classList.contains('likert-options')) {
+            label.parentElement.querySelectorAll('label').forEach(function(sib) {
+                sib.classList.remove('selected');
+            });
+            label.classList.add('selected');
+        }
     },
 
     // =====================
@@ -467,6 +518,11 @@ const DiabetesQuestionnaire = {
         // Uncheck all health literacy and self-care radio buttons
         document.querySelectorAll('input[name^="hl_q"], input[name^="sc_q"]').forEach(radio => {
             radio.checked = false;
+        });
+
+        // Clear likert selected classes
+        document.querySelectorAll('.likert-options label.selected').forEach(function(label) {
+            label.classList.remove('selected');
         });
 
         // Reset Health Literacy score display

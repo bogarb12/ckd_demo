@@ -527,6 +527,8 @@ function initNavigation() {
 // Home Tab Init
 // ============================================================================
 
+var homePatientChart = null;
+
 async function initHome() {
     var dotEl = document.getElementById('db-dot');
     var textEl = document.getElementById('db-text');
@@ -542,14 +544,78 @@ async function initHome() {
 
     try {
         var summary = await API.getStatsCounts();
+        var experimental = summary.experimental || 0;
+        var control = summary.control || 0;
+        var total = summary.totalPatients || summary.total || 0;
+        var followUp = summary.followUpComplete || 0;
 
-        var totalEl = document.getElementById('home-total');
-        var expEl = document.getElementById('home-experimental');
-        var ctrlEl = document.getElementById('home-control');
+        // Render doughnut chart (admin-only section)
+        var canvas = document.getElementById('home-patient-chart');
+        if (canvas && typeof Chart !== 'undefined') {
+            if (homePatientChart) homePatientChart.destroy();
 
-        if (totalEl) totalEl.textContent = summary.totalPatients || summary.total || 0;
-        if (expEl) expEl.textContent = summary.experimental || 0;
-        if (ctrlEl) ctrlEl.textContent = summary.control || 0;
+            var colors = ['rgba(44,175,254,0.85)', 'rgba(254,106,53,0.85)', 'rgba(0,226,114,0.85)'];
+            var labels = ['กลุ่มทดลอง', 'กลุ่มควบคุม', 'ติดตามครบ'];
+            var values = [experimental, control, followUp];
+
+            homePatientChart = new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    cutout: '62%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    return ctx.label + ': ' + ctx.parsed + ' คน';
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'centerText',
+                    afterDraw: function(chart) {
+                        var ctx = chart.ctx;
+                        var centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+                        var centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+                        ctx.save();
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.font = 'bold 1.5rem Athiti, sans-serif';
+                        ctx.fillStyle = '#1a1a2e';
+                        ctx.fillText(total, centerX, centerY - 8);
+                        ctx.font = '0.65rem Athiti, sans-serif';
+                        ctx.fillStyle = '#61646B';
+                        ctx.fillText('ทั้งหมด', centerX, centerY + 14);
+                        ctx.restore();
+                    }
+                }]
+            });
+
+            // Build legend
+            var legendEl = document.getElementById('home-chart-legend');
+            if (legendEl) {
+                legendEl.innerHTML = labels.map(function(label, i) {
+                    return '<div class="home-legend-item">' +
+                        '<span class="home-legend-dot" style="background:' + colors[i] + '"></span>' +
+                        '<span class="home-legend-label">' + label + '</span>' +
+                        '<span class="home-legend-value" style="color:' + colors[i] + '">' + values[i] + '</span>' +
+                        '</div>';
+                }).join('');
+            }
+        }
     } catch (e) {
         console.error('initHome error:', e);
     }
