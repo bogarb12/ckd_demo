@@ -65,24 +65,31 @@ const DiabetesQuestionnaire = {
             select.appendChild(defaultOpt);
         }
 
-        // Populate from DiabetesApp.patients
-        if (typeof DiabetesApp !== 'undefined' && Array.isArray(DiabetesApp.patients)) {
-            DiabetesApp.patients.forEach(patient => {
-                const option = document.createElement('option');
-                option.value = patient.patient_id;
-                const name = patient.name || patient.patient_name || '';
-                const group = patient.group || patient.enrollment_group || '';
-                let label = patient.patient_id;
-                if (name) {
-                    label += ` - ${name}`;
-                }
-                if (group) {
-                    label += ` (${group})`;
-                }
-                option.textContent = label;
-                select.appendChild(option);
-            });
+        // Populate from DiabetesApp.patients (API) or localStorage
+        let patients = [];
+        if (typeof DiabetesApp !== 'undefined' && Array.isArray(DiabetesApp.patients) && DiabetesApp.patients.length > 0) {
+            patients = DiabetesApp.patients;
+        } else if (typeof LocalDB !== 'undefined') {
+            patients = LocalDB.getAll() || [];
         }
+
+        patients.forEach(patient => {
+            const pid = patient.patient_id || patient.id || patient.hn || '';
+            if (!pid) return;
+            const option = document.createElement('option');
+            option.value = pid;
+            const name = patient.name || patient.patient_name || '';
+            const group = patient.group || patient.enrollment_group || '';
+            let label = pid;
+            if (name) {
+                label += ` - ${name}`;
+            }
+            if (group) {
+                label += ` (${group})`;
+            }
+            option.textContent = label;
+            select.appendChild(option);
+        });
 
         // Update patient ID display
         const idDisplay = document.getElementById('q-patient-id-display');

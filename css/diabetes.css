@@ -1253,8 +1253,9 @@ textarea { min-height: 80px; resize: vertical; }
     .bottom-nav-btn { font-size: 0.7rem; }
     .bottom-nav-btn svg { width: 24px; height: 24px; }
 
-    .question-card { display: flex; align-items: flex-start; gap: 12px; }
-    .question-card .likert-options { min-width: 300px; }
+    .question-card { display: flex; align-items: center; gap: 12px; }
+    .question-card .q-text { flex: 1; margin-bottom: 0; }
+    .question-card .likert-options { flex: 0 0 340px; }
 }
 
 /* Desktop (1024px+) */
