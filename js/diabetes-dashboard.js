@@ -123,12 +123,14 @@ const DiabetesDashboard = {
     // =====================
 
     buildSummaryFromPatients(patients) {
-        const experimental = patients.filter(p =>
-            p.study_group === 'experimental' || p.enrollment_group === 'experimental'
-        );
-        const control = patients.filter(p =>
-            p.study_group === 'control' || p.enrollment_group === 'control'
-        );
+        const experimental = patients.filter(p => {
+            const g = (p.study_group || p.enrollment_group || '').toLowerCase();
+            return g === 'experimental' || g === 'intervention' || g === '1';
+        });
+        const control = patients.filter(p => {
+            const g = (p.study_group || p.enrollment_group || '').toLowerCase();
+            return g === 'control' || g === '0' || g === '2';
+        });
 
         // Calculate average HbA1c across all patients
         const allHba1c = patients

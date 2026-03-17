@@ -818,7 +818,7 @@ app.post('/api/import/csv', upload.single('file'), async (req, res) => {
         return rawHeaders.map(raw => {
             const h = raw.trim();
             if (/^ID$/i.test(h)) return 'ID';
-            if (/^Group/i.test(h)) return 'Group';
+            if (/^Group/i.test(h) || h === 'กลุ่ม' || h === 'กลุ่มศึกษา' || /^study.?group/i.test(h)) return 'Group';
             if (/^Sex/i.test(h)) return 'Sex';
             if (h === 'ชื่อ') return 'first_name';
             if (h === 'นามสกุล') return 'last_name';
@@ -865,7 +865,9 @@ app.post('/api/import/csv', upload.single('file'), async (req, res) => {
         if (lines.length < 2) return res.status(400).json({ error: 'CSV must have header + at least 1 data row' });
 
         const rawHeaders = parseCSVLine(lines[0]);
+        console.log('CSV raw headers:', rawHeaders);
         const headers = normalizeHeaders(rawHeaders);
+        console.log('CSV normalized headers:', headers);
         const idIdx = headers.indexOf('ID');
         if (idIdx < 0) return res.status(400).json({ error: 'Missing required column: ID (patient_id)' });
 
@@ -884,10 +886,15 @@ app.post('/api/import/csv', upload.single('file'), async (req, res) => {
                 continue;
             }
 
-            // Map Group: 1=experimental, 0=control
+            // Map Group: 1=experimental, 0=control (handle various formats)
             let studyGroup = null;
-            if (row.Group === '1') studyGroup = 'experimental';
-            else if (row.Group === '0') studyGroup = 'control';
+            const groupVal = (row.Group || '').toString().trim().toLowerCase();
+            if (groupVal === '1' || groupVal === 'experimental' || groupVal === 'intervention' || groupVal === 'exp' || groupVal === 'ทดลอง' || groupVal === 'กลุ่มทดลอง') {
+                studyGroup = 'experimental';
+            } else if (groupVal === '0' || groupVal === '2' || groupVal === 'control' || groupVal === 'ctrl' || groupVal === 'ควบคุม' || groupVal === 'กลุ่มควบคุม') {
+                studyGroup = 'control';
+            }
+            if (i <= 3) console.log(`CSV Row ${i+1}: Group raw="${row.Group}" → studyGroup="${studyGroup}"`);
 
             // Map Sex: 1=male, 2=female, 3=other
             let gender = null;
@@ -1102,7 +1109,14 @@ app.post('/api/import/csv', upload.single('file'), async (req, res) => {
             }
         }
 
-        res.json({ success: true, imported, total: lines.length - 1, errors });
+        // Report group distribution after import
+        let groupDist = {};
+        try {
+            const gRows = await query('SELECT study_group, COUNT(*) as cnt FROM patients GROUP BY study_group');
+            gRows.forEach(r => { groupDist[r.study_group || 'null'] = Number(r.cnt); });
+        } catch(e) {}
+        console.log('Import complete. Group distribution:', groupDist);
+        res.json({ success: true, imported, total: lines.length - 1, errors, groupDistribution: groupDist });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
