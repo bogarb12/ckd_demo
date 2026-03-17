@@ -965,6 +965,34 @@
         </div>
     </div>
 
+    <!-- Debug: ทดสอบว่าปุ่มถูก bind หรือไม่ -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var ids = ['btn-download-template','btn-import-csv','btn-export-csv','btn-print-report'];
+        ids.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (!el) {
+                console.error('DEBUG: ไม่พบปุ่ม #' + id);
+            } else {
+                console.log('DEBUG: พบปุ่ม #' + id, 'disabled=' + el.disabled, 'pointer-events=' + getComputedStyle(el).pointerEvents, 'parent.display=' + getComputedStyle(el.parentElement).display);
+                // ทดสอบ click
+                el.addEventListener('click', function() {
+                    console.log('DEBUG: คลิกปุ่ม #' + id + ' สำเร็จ!');
+                });
+            }
+        });
+
+        // ตรวจสอบว่า DiabetesDashboard.init ถูกเรียกหรือไม่
+        console.log('DEBUG: DiabetesDashboard exists?', typeof DiabetesDashboard !== 'undefined');
+        console.log('DEBUG: DiabetesDashboard.initialized?', typeof DiabetesDashboard !== 'undefined' && DiabetesDashboard.initialized);
+    });
+
+    // ตรวจสอบ JS errors ทั้งหมด
+    window.addEventListener('error', function(e) {
+        console.error('DEBUG GLOBAL ERROR:', e.message, 'at', e.filename, 'line', e.lineno);
+    });
+    </script>
+
     <!-- Import Result Banner (clickable to show detail) -->
     <div class="notice-banner info hidden" id="import-result" style="margin-bottom:12px;cursor:pointer" title="คลิกเพื่อดูรายละเอียด">
         <i class="fa-solid fa-circle-check"></i> <span id="import-result-text"></span>
