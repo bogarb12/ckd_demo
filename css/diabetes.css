@@ -1025,6 +1025,16 @@ textarea { min-height: 80px; resize: vertical; }
 
 .data-table .text-center { text-align: center; }
 
+/* Admin-only column (hidden by default, shown via JS for admin) */
+.admin-only-col { display: none; }
+
+/* 2-column chart grid responsive */
+@media (max-width: 599px) {
+    div[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
 /* ============ Buttons — NOAH flat style ============ */
 .btn {
     display: inline-flex;

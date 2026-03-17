@@ -925,7 +925,7 @@
         <i class="fa-solid fa-triangle-exclamation"></i> ไม่ได้เชื่อมต่อฐานข้อมูล - แสดงข้อมูลตัวอย่าง (Demo)
     </div>
 
-    <!-- Summary Stats -->
+    <!-- Summary Stats Row 1 -->
     <div class="stat-grid">
         <div class="stat-card">
             <div class="stat-value" id="dash-total">0</div>
@@ -942,6 +942,25 @@
         <div class="stat-card warning">
             <div class="stat-value" id="dash-avg-hba1c">-</div>
             <div class="stat-label">HbA1c เฉลี่ย</div>
+        </div>
+    </div>
+    <!-- Summary Stats Row 2 - Clinical -->
+    <div class="stat-grid" style="margin-top:8px">
+        <div class="stat-card" style="border-left:3px solid #8b5cf6">
+            <div class="stat-value" id="dash-avg-bmi">-</div>
+            <div class="stat-label">BMI เฉลี่ย</div>
+        </div>
+        <div class="stat-card" style="border-left:3px solid #f59e0b">
+            <div class="stat-value" id="dash-avg-fbs">-</div>
+            <div class="stat-label">FBS เฉลี่ย (mg/dL)</div>
+        </div>
+        <div class="stat-card" style="border-left:3px solid #06b6d4">
+            <div class="stat-value" id="dash-avg-gfr">-</div>
+            <div class="stat-label">GFR เฉลี่ย (mL/min)</div>
+        </div>
+        <div class="stat-card" style="border-left:3px solid #10b981">
+            <div class="stat-value" id="dash-follow-up">-</div>
+            <div class="stat-label">อัตราติดตาม (%)</div>
         </div>
     </div>
 
@@ -964,34 +983,6 @@
             </button>
         </div>
     </div>
-
-    <!-- Debug: ทดสอบว่าปุ่มถูก bind หรือไม่ -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var ids = ['btn-download-template','btn-import-csv','btn-export-csv','btn-print-report'];
-        ids.forEach(function(id) {
-            var el = document.getElementById(id);
-            if (!el) {
-                console.error('DEBUG: ไม่พบปุ่ม #' + id);
-            } else {
-                console.log('DEBUG: พบปุ่ม #' + id, 'disabled=' + el.disabled, 'pointer-events=' + getComputedStyle(el).pointerEvents, 'parent.display=' + getComputedStyle(el.parentElement).display);
-                // ทดสอบ click
-                el.addEventListener('click', function() {
-                    console.log('DEBUG: คลิกปุ่ม #' + id + ' สำเร็จ!');
-                });
-            }
-        });
-
-        // ตรวจสอบว่า DiabetesDashboard.init ถูกเรียกหรือไม่
-        console.log('DEBUG: DiabetesDashboard exists?', typeof DiabetesDashboard !== 'undefined');
-        console.log('DEBUG: DiabetesDashboard.initialized?', typeof DiabetesDashboard !== 'undefined' && DiabetesDashboard.initialized);
-    });
-
-    // ตรวจสอบ JS errors ทั้งหมด
-    window.addEventListener('error', function(e) {
-        console.error('DEBUG GLOBAL ERROR:', e.message, 'at', e.filename, 'line', e.lineno);
-    });
-    </script>
 
     <!-- Import Result Banner (clickable to show detail) -->
     <div class="notice-banner info hidden" id="import-result" style="margin-bottom:12px;cursor:pointer" title="คลิกเพื่อดูรายละเอียด">
@@ -1046,17 +1037,48 @@
         <canvas id="chart-distress" height="220"></canvas>
     </div>
 
+    <!-- New Charts Row -->
+    <div class="chart-container">
+        <div class="chart-title">ความรอบรู้ด้านสุขภาพ (Health Literacy) Baseline vs 6 เดือน</div>
+        <canvas id="chart-health-literacy" height="250"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-title">พฤติกรรมการดูแลตนเอง (Self-care) Baseline vs 6 เดือน</div>
+        <canvas id="chart-self-care" height="250"></canvas>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="chart-container">
+            <div class="chart-title">การกระจาย BMI</div>
+            <canvas id="chart-bmi" height="220"></canvas>
+        </div>
+        <div class="chart-container">
+            <div class="chart-title">โรคร่วม (Comorbidities)</div>
+            <canvas id="chart-comorbidity" height="220"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-title">การกระจายอายุผู้ป่วย</div>
+        <canvas id="chart-age" height="220"></canvas>
+    </div>
+
     <!-- Patient Table -->
     <div class="data-table-wrapper mt-2">
         <table class="data-table">
             <thead>
                 <tr>
                     <th>รหัส</th>
+                    <th class="admin-only-col" style="display:none">ชื่อ-สกุล</th>
                     <th>เพศ</th>
                     <th>อายุ</th>
                     <th>กลุ่ม</th>
+                    <th>BMI</th>
                     <th>HbA1c BL</th>
                     <th>HbA1c 6m</th>
+                    <th>FBS</th>
+                    <th>GFR</th>
                     <th>PAID-5 BL</th>
                     <th>PAID-5 6m</th>
                     <th>Distress</th>
@@ -1064,7 +1086,7 @@
                 </tr>
             </thead>
             <tbody id="dash-patient-table">
-                <tr><td colspan="10" class="text-center text-muted" style="padding:24px">กำลังโหลดข้อมูล...</td></tr>
+                <tr><td colspan="14" class="text-center text-muted" style="padding:24px">กำลังโหลดข้อมูล...</td></tr>
             </tbody>
         </table>
     </div>
@@ -1428,7 +1450,7 @@
 <script src="js/diabetes-form.js?v=20260317"></script>
 <script src="js/diabetes-questionnaire.js?v=20260317"></script>
 <script src="js/diabetes-education.js?v=20260317"></script>
-<script src="js/diabetes-dashboard.js?v=20260317e"></script>
+<script src="js/diabetes-dashboard.js?v=20260317f"></script>
 <script src="js/diabetes-tracking.js?v=20260317"></script>
 <script src="js/diabetes-linebot.js?v=20260317"></script>
 

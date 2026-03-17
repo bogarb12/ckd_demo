@@ -34,6 +34,11 @@ const DiabetesDashboard = {
         if (authOverlay) authOverlay.classList.add('hidden');
         if (dashContent) dashContent.style.display = '';
 
+        // Show admin-only columns (patient name)
+        document.querySelectorAll('.admin-only-col').forEach(el => {
+            el.style.display = '';
+        });
+
         try {
             // Load patient data from server API
             let patients = [];
@@ -62,6 +67,11 @@ const DiabetesDashboard = {
             this.createHbA1cChart(summaryData);
             this.createPAID5Chart(summaryData);
             this.createDistressChart(summaryData);
+            this.createHealthLiteracyChart(summaryData);
+            this.createSelfCareChart(summaryData);
+            this.createBMIChart(summaryData);
+            this.createComorbidityChart(summaryData);
+            this.createAgeChart(summaryData);
 
             // Render patient table
             this.renderPatientTable(summaryData.patients, this.currentFilter);
@@ -85,6 +95,11 @@ const DiabetesDashboard = {
             this.createHbA1cChart(demoData);
             this.createPAID5Chart(demoData);
             this.createDistressChart(demoData);
+            this.createHealthLiteracyChart(demoData);
+            this.createSelfCareChart(demoData);
+            this.createBMIChart(demoData);
+            this.createComorbidityChart(demoData);
+            this.createAgeChart(demoData);
             this.renderPatientTable(demoData.patients, 'all');
         }
 
@@ -187,11 +202,82 @@ const DiabetesDashboard = {
             else if (level === 'high') highDistress++;
         });
 
+        // BMI, FBS, GFR averages
+        const allBmi = patients.map(p => toNum(p.bmi)).filter(v => !isNaN(v));
+        const avgBmi = allBmi.length > 0 ? (allBmi.reduce((a, b) => a + b, 0) / allBmi.length).toFixed(1) : '-';
+        const allFbs = patients.map(p => toNum(p.fbs)).filter(v => !isNaN(v));
+        const avgFbs = allFbs.length > 0 ? (allFbs.reduce((a, b) => a + b, 0) / allFbs.length).toFixed(0) : '-';
+        const allGfr = patients.map(p => toNum(p.gfr)).filter(v => !isNaN(v));
+        const avgGfr = allGfr.length > 0 ? (allGfr.reduce((a, b) => a + b, 0) / allGfr.length).toFixed(1) : '-';
+
+        // Follow-up rate
+        const completedCount = patients.filter(p => p.followUp && (p.followUp.status === 'complete' || p.followUp.status === 'completed')).length;
+        const lostCount = patients.filter(p => p.followUp && (p.followUp.status === 'lost' || p.followUp.status === 'withdrawn')).length;
+        const followUpRate = patients.length > 0 ? (((patients.length - lostCount) / patients.length) * 100).toFixed(0) : '-';
+
+        // Health Literacy by group
+        const getHL = (p, period) => {
+            if (!p.healthLiteracy) return null;
+            const v = toNum(p.healthLiteracy[`total_${period}`]);
+            return isNaN(v) ? null : v;
+        };
+        const expHLBL = experimental.map(p => getHL(p, 'baseline')).filter(v => v != null);
+        const expHL6m = experimental.map(p => getHL(p, '6month')).filter(v => v != null);
+        const ctrlHLBL = control.map(p => getHL(p, 'baseline')).filter(v => v != null);
+        const ctrlHL6m = control.map(p => getHL(p, '6month')).filter(v => v != null);
+
+        // Self-care by group
+        const getSC = (p, period) => {
+            if (!p.selfCare) return null;
+            const v = toNum(p.selfCare[`total_${period}`]);
+            return isNaN(v) ? null : v;
+        };
+        const expSCBL = experimental.map(p => getSC(p, 'baseline')).filter(v => v != null);
+        const expSC6m = experimental.map(p => getSC(p, '6month')).filter(v => v != null);
+        const ctrlSCBL = control.map(p => getSC(p, 'baseline')).filter(v => v != null);
+        const ctrlSC6m = control.map(p => getSC(p, '6month')).filter(v => v != null);
+
+        // BMI distribution
+        const bmiDist = { underweight: 0, normal: 0, overweight: 0, obese1: 0, obese2: 0 };
+        allBmi.forEach(b => {
+            if (b < 18.5) bmiDist.underweight++;
+            else if (b < 23) bmiDist.normal++;
+            else if (b < 25) bmiDist.overweight++;
+            else if (b < 30) bmiDist.obese1++;
+            else bmiDist.obese2++;
+        });
+
+        // Comorbidity counts
+        const comorbCounts = { hypertension: 0, dyslipidemia: 0, cvd: 0, ckd: 0, gout: 0 };
+        patients.forEach(p => {
+            if (parseInt(p.d1)) comorbCounts.hypertension++;
+            if (parseInt(p.d2)) comorbCounts.dyslipidemia++;
+            if (parseInt(p.d3)) comorbCounts.cvd++;
+            if (parseInt(p.d4)) comorbCounts.ckd++;
+            if (parseInt(p.d5)) comorbCounts.gout++;
+        });
+
+        // Age distribution
+        const ageDist = { '<40': 0, '40-49': 0, '50-59': 0, '60-69': 0, '70+': 0 };
+        patients.forEach(p => {
+            const a = toNum(p.age);
+            if (isNaN(a)) return;
+            if (a < 40) ageDist['<40']++;
+            else if (a < 50) ageDist['40-49']++;
+            else if (a < 60) ageDist['50-59']++;
+            else if (a < 70) ageDist['60-69']++;
+            else ageDist['70+']++;
+        });
+
         return {
             totalPatients: patients.length,
             experimental: experimental.length,
             control: control.length,
             avgHba1c: avgHba1c,
+            avgBmi: avgBmi,
+            avgFbs: avgFbs,
+            avgGfr: avgGfr,
+            followUpRate: followUpRate,
             hba1c: {
                 expBaseline: avg(expBaseline),
                 expSixMonth: avg(expSixMonth),
@@ -204,10 +290,18 @@ const DiabetesDashboard = {
                 ctrlBaseline: avg(ctrlPaid5BL),
                 ctrlSixMonth: avg(ctrlPaid5_6m)
             },
-            distress: {
-                low: lowDistress,
-                high: highDistress
+            healthLiteracy: {
+                expBaseline: avg(expHLBL), expSixMonth: avg(expHL6m),
+                ctrlBaseline: avg(ctrlHLBL), ctrlSixMonth: avg(ctrlHL6m)
             },
+            selfCare: {
+                expBaseline: avg(expSCBL), expSixMonth: avg(expSC6m),
+                ctrlBaseline: avg(ctrlSCBL), ctrlSixMonth: avg(ctrlSC6m)
+            },
+            distress: { low: lowDistress, high: highDistress },
+            bmiDist: bmiDist,
+            comorbCounts: comorbCounts,
+            ageDist: ageDist,
             patients: patients.map(p => this.normalizePatientForTable(p))
         };
     },
@@ -238,11 +332,16 @@ const DiabetesDashboard = {
 
         return {
             patient_id: p.patient_id || '-',
+            first_name: p.first_name || '',
+            last_name: p.last_name || '',
             gender: p.gender || '-',
             age: p.age != null ? p.age : '-',
             group: p.study_group || p.enrollment_group || '-',
+            bmi: p.bmi != null ? parseFloat(p.bmi) : null,
             hba1c_baseline: p.hba1c_baseline != null ? parseFloat(p.hba1c_baseline) : null,
             hba1c_6month: p.hba1c_6month != null ? parseFloat(p.hba1c_6month) : null,
+            fbs: p.fbs != null ? parseFloat(p.fbs) : null,
+            gfr: p.gfr != null ? parseFloat(p.gfr) : null,
             paid5_baseline: getConverted('baseline'),
             paid5_6month: getConverted('6month'),
             distress: getDistress(),
@@ -271,6 +370,16 @@ const DiabetesDashboard = {
                 avgEl.textContent = '-';
             }
         }
+
+        // Row 2 cards
+        const bmiEl = document.getElementById('dash-avg-bmi');
+        const fbsEl = document.getElementById('dash-avg-fbs');
+        const gfrEl = document.getElementById('dash-avg-gfr');
+        const fuEl = document.getElementById('dash-follow-up');
+        if (bmiEl) bmiEl.textContent = data.avgBmi || '-';
+        if (fbsEl) fbsEl.textContent = data.avgFbs || '-';
+        if (gfrEl) gfrEl.textContent = data.avgGfr || '-';
+        if (fuEl) fuEl.textContent = data.followUpRate || '-';
     },
 
     // =====================
@@ -646,6 +755,197 @@ const DiabetesDashboard = {
     },
 
     // =====================
+    // Health Literacy Chart
+    // =====================
+
+    createHealthLiteracyChart(data) {
+        const canvas = document.getElementById('chart-health-literacy');
+        if (!canvas) return;
+        if (this.charts.healthLiteracy) { this.charts.healthLiteracy.destroy(); this.charts.healthLiteracy = null; }
+
+        const hl = data.healthLiteracy || {};
+        this.charts.healthLiteracy = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: ['Baseline', '6 เดือน'],
+                datasets: [
+                    {
+                        label: 'กลุ่มทดลอง (Experimental)',
+                        data: [hl.expBaseline || 0, hl.expSixMonth || 0],
+                        backgroundColor: ['rgba(69,117,243,0.7)', 'rgba(69,117,243,0.7)'],
+                        borderColor: '#4575F3', borderWidth: 1, borderRadius: 4
+                    },
+                    {
+                        label: 'กลุ่มควบคุม (Control)',
+                        data: [hl.ctrlBaseline || 0, hl.ctrlSixMonth || 0],
+                        backgroundColor: ['rgba(254,106,53,0.7)', 'rgba(254,106,53,0.7)'],
+                        borderColor: '#FE6A35', borderWidth: 1, borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 50, title: { display: true, text: 'คะแนน (10-50)', font: { family: 'Athiti' } },
+                         ticks: { font: { family: 'Athiti' } } },
+                    x: { ticks: { font: { family: 'Athiti', size: 13 } } }
+                },
+                plugins: {
+                    legend: { labels: { font: { family: 'Athiti', size: 12 }, usePointStyle: true, pointStyle: 'rect' } },
+                    tooltip: { titleFont: { family: 'Athiti' }, bodyFont: { family: 'Athiti' },
+                        callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + ' คะแนน' } }
+                }
+            }
+        });
+    },
+
+    // =====================
+    // Self-care Chart
+    // =====================
+
+    createSelfCareChart(data) {
+        const canvas = document.getElementById('chart-self-care');
+        if (!canvas) return;
+        if (this.charts.selfCare) { this.charts.selfCare.destroy(); this.charts.selfCare = null; }
+
+        const sc = data.selfCare || {};
+        this.charts.selfCare = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: ['Baseline', '6 เดือน'],
+                datasets: [
+                    {
+                        label: 'กลุ่มทดลอง (Experimental)',
+                        data: [sc.expBaseline || 0, sc.expSixMonth || 0],
+                        backgroundColor: ['rgba(69,117,243,0.7)', 'rgba(69,117,243,0.7)'],
+                        borderColor: '#4575F3', borderWidth: 1, borderRadius: 4
+                    },
+                    {
+                        label: 'กลุ่มควบคุม (Control)',
+                        data: [sc.ctrlBaseline || 0, sc.ctrlSixMonth || 0],
+                        backgroundColor: ['rgba(254,106,53,0.7)', 'rgba(254,106,53,0.7)'],
+                        borderColor: '#FE6A35', borderWidth: 1, borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 48, title: { display: true, text: 'คะแนน (12-48)', font: { family: 'Athiti' } },
+                         ticks: { font: { family: 'Athiti' } } },
+                    x: { ticks: { font: { family: 'Athiti', size: 13 } } }
+                },
+                plugins: {
+                    legend: { labels: { font: { family: 'Athiti', size: 12 }, usePointStyle: true, pointStyle: 'rect' } },
+                    tooltip: { titleFont: { family: 'Athiti' }, bodyFont: { family: 'Athiti' },
+                        callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + ' คะแนน' } }
+                }
+            }
+        });
+    },
+
+    // =====================
+    // BMI Distribution Chart
+    // =====================
+
+    createBMIChart(data) {
+        const canvas = document.getElementById('chart-bmi');
+        if (!canvas) return;
+        if (this.charts.bmi) { this.charts.bmi.destroy(); this.charts.bmi = null; }
+
+        const dist = data.bmiDist || {};
+        this.charts.bmi = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['ผอม (<18.5)', 'ปกติ (18.5-22.9)', 'น้ำหนักเกิน (23-24.9)', 'อ้วนระดับ 1 (25-29.9)', 'อ้วนระดับ 2 (≥30)'],
+                datasets: [{
+                    data: [dist.underweight || 0, dist.normal || 0, dist.overweight || 0, dist.obese1 || 0, dist.obese2 || 0],
+                    backgroundColor: ['rgba(56,189,248,0.8)', 'rgba(0,226,114,0.8)', 'rgba(251,191,36,0.8)', 'rgba(251,146,60,0.8)', 'rgba(250,75,66,0.8)'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '50%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { family: 'Athiti', size: 11 }, usePointStyle: true, pointStyle: 'circle', padding: 8 } },
+                    tooltip: { titleFont: { family: 'Athiti' }, bodyFont: { family: 'Athiti' } }
+                }
+            }
+        });
+    },
+
+    // =====================
+    // Comorbidity Chart
+    // =====================
+
+    createComorbidityChart(data) {
+        const canvas = document.getElementById('chart-comorbidity');
+        if (!canvas) return;
+        if (this.charts.comorbidity) { this.charts.comorbidity.destroy(); this.charts.comorbidity = null; }
+
+        const c = data.comorbCounts || {};
+        this.charts.comorbidity = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: ['ความดันสูง', 'ไขมันสูง', 'หัวใจ', 'ไต', 'เกาต์'],
+                datasets: [{
+                    label: 'จำนวนผู้ป่วย',
+                    data: [c.hypertension || 0, c.dyslipidemia || 0, c.cvd || 0, c.ckd || 0, c.gout || 0],
+                    backgroundColor: ['rgba(139,92,246,0.7)', 'rgba(245,158,11,0.7)', 'rgba(239,68,68,0.7)', 'rgba(6,182,212,0.7)', 'rgba(16,185,129,0.7)'],
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Athiti' } } },
+                    y: { ticks: { font: { family: 'Athiti', size: 12 } } }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { titleFont: { family: 'Athiti' }, bodyFont: { family: 'Athiti' } }
+                }
+            }
+        });
+    },
+
+    // =====================
+    // Age Distribution Chart
+    // =====================
+
+    createAgeChart(data) {
+        const canvas = document.getElementById('chart-age');
+        if (!canvas) return;
+        if (this.charts.age) { this.charts.age.destroy(); this.charts.age = null; }
+
+        const a = data.ageDist || {};
+        this.charts.age = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: ['<40 ปี', '40-49 ปี', '50-59 ปี', '60-69 ปี', '70+ ปี'],
+                datasets: [{
+                    label: 'จำนวนผู้ป่วย',
+                    data: [a['<40'] || 0, a['40-49'] || 0, a['50-59'] || 0, a['60-69'] || 0, a['70+'] || 0],
+                    backgroundColor: 'rgba(69,117,243,0.6)',
+                    borderColor: '#4575F3', borderWidth: 1, borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Athiti' } },
+                         title: { display: true, text: 'จำนวน (ราย)', font: { family: 'Athiti' } } },
+                    x: { ticks: { font: { family: 'Athiti', size: 12 } } }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { titleFont: { family: 'Athiti' }, bodyFont: { family: 'Athiti' } }
+                }
+            }
+        });
+    },
+
+    // =====================
     // Patient Table
     // =====================
 
@@ -670,7 +970,7 @@ const DiabetesDashboard = {
 
         // If no data, show placeholder
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:#94a3b8;font-family:Athiti,sans-serif;font-size:14px;">ยังไม่มีข้อมูล</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:32px;color:#94a3b8;font-family:Athiti,sans-serif;font-size:14px;">ยังไม่มีข้อมูล</td></tr>';
             this.renderPagination(0);
             return;
         }
@@ -739,13 +1039,48 @@ const DiabetesDashboard = {
                 statusStyle = 'color:#dc2626;';
             }
 
+            // BMI color coding (Asian criteria)
+            const bmiVal = p.bmi;
+            let bmiDisplay = bmiVal != null && !isNaN(bmiVal) ? bmiVal.toFixed(1) : '-';
+            let bmiStyle = '';
+            if (bmiVal != null) {
+                if (bmiVal >= 30) bmiStyle = 'color:#dc2626;font-weight:600;';
+                else if (bmiVal >= 25) bmiStyle = 'color:#f59e0b;font-weight:600;';
+                else if (bmiVal >= 23) bmiStyle = 'color:#ea580c;';
+            }
+
+            // FBS color coding
+            const fbsVal = p.fbs;
+            let fbsDisplay = fbsVal != null && !isNaN(fbsVal) ? fbsVal.toFixed(0) : '-';
+            let fbsStyle = '';
+            if (fbsVal != null) {
+                if (fbsVal > 130) fbsStyle = 'color:#dc2626;font-weight:600;';
+                else if (fbsVal >= 100) fbsStyle = 'color:#f59e0b;';
+            }
+
+            // GFR color coding
+            const gfrVal = p.gfr;
+            let gfrDisplay = gfrVal != null && !isNaN(gfrVal) ? gfrVal.toFixed(0) : '-';
+            let gfrStyle = '';
+            if (gfrVal != null) {
+                if (gfrVal < 30) gfrStyle = 'color:#dc2626;font-weight:600;';
+                else if (gfrVal < 60) gfrStyle = 'color:#f59e0b;font-weight:600;';
+            }
+
+            // Name (admin only)
+            const nameDisplay = [p.first_name, p.last_name].filter(Boolean).join(' ') || '-';
+
             html += '<tr>';
             html += '<td style="font-weight:500;">' + this.escapeHtml(p.patient_id) + '</td>';
+            html += '<td class="admin-only-col" style="display:none">' + this.escapeHtml(nameDisplay) + '</td>';
             html += '<td>' + genderDisplay + '</td>';
             html += '<td>' + (p.age !== '-' ? p.age : '-') + '</td>';
             html += '<td>' + groupDisplay + '</td>';
+            html += '<td style="' + bmiStyle + '">' + bmiDisplay + '</td>';
             html += '<td>' + hba1cBLDisplay + '</td>';
             html += '<td style="' + hba1c6mStyle + '">' + hba1c6mDisplay + '</td>';
+            html += '<td style="' + fbsStyle + '">' + fbsDisplay + '</td>';
+            html += '<td style="' + gfrStyle + '">' + gfrDisplay + '</td>';
             html += '<td>' + paid5BLDisplay + '</td>';
             html += '<td>' + paid56mDisplay + '</td>';
             html += '<td style="' + distressStyle + '">' + distressDisplay + '</td>';
@@ -868,11 +1203,21 @@ const DiabetesDashboard = {
                     this.createHbA1cChart(data);
                     this.createPAID5Chart(data);
                     this.createDistressChart(data);
+                    this.createHealthLiteracyChart(data);
+                    this.createSelfCareChart(data);
+                    this.createBMIChart(data);
+                    this.createComorbidityChart(data);
+                    this.createAgeChart(data);
                 } else {
                     const filteredData = this.getFilteredChartData(data, this.currentFilter);
                     this.createHbA1cChart(filteredData);
                     this.createPAID5Chart(filteredData);
                     this.createDistressChart(filteredData);
+                    this.createHealthLiteracyChart(filteredData);
+                    this.createSelfCareChart(filteredData);
+                    this.createBMIChart(filteredData);
+                    this.createComorbidityChart(filteredData);
+                    this.createAgeChart(filteredData);
                 }
             }
         });
@@ -1574,6 +1919,10 @@ const DiabetesDashboard = {
             experimental: expCount,
             control: ctrlCount,
             avgHba1c: avgHba1c,
+            avgBmi: '26.3',
+            avgFbs: '142',
+            avgGfr: '72.5',
+            followUpRate: '92',
             hba1c: {
                 expBaseline: avg(expHba1cBL),
                 expSixMonth: avg(expHba1c6m),
@@ -1586,10 +1935,15 @@ const DiabetesDashboard = {
                 ctrlBaseline: avg(ctrlPaid5BL),
                 ctrlSixMonth: avg(ctrlPaid56m)
             },
+            healthLiteracy: { expBaseline: 28, expSixMonth: 35, ctrlBaseline: 27, ctrlSixMonth: 29 },
+            selfCare: { expBaseline: 24, expSixMonth: 34, ctrlBaseline: 25, ctrlSixMonth: 27 },
             distress: {
                 low: expLowDistress + ctrlLowDistress,
                 high: expHighDistress + ctrlHighDistress
             },
+            bmiDist: { underweight: 2, normal: 12, overweight: 16, obese1: 22, obese2: 8 },
+            comorbCounts: { hypertension: 38, dyslipidemia: 28, cvd: 8, ckd: 5, gout: 12 },
+            ageDist: { '<40': 3, '40-49': 10, '50-59': 22, '60-69': 18, '70+': 7 },
             patients: patients
         };
     }
