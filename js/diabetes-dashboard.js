@@ -133,26 +133,27 @@ const DiabetesDashboard = {
         });
 
         // Calculate average HbA1c across all patients
+        const toNum = v => v != null ? parseFloat(v) : NaN;
         const allHba1c = patients
-            .map(p => p.hba1c_baseline)
-            .filter(v => v != null && !isNaN(v));
+            .map(p => toNum(p.hba1c_baseline))
+            .filter(v => !isNaN(v));
         const avgHba1c = allHba1c.length > 0
             ? (allHba1c.reduce((a, b) => a + b, 0) / allHba1c.length).toFixed(1)
             : '-';
 
         // HbA1c averages by group
-        const expBaseline = experimental.map(p => p.hba1c_baseline).filter(v => v != null && !isNaN(v));
-        const expSixMonth = experimental.map(p => p.hba1c_6month).filter(v => v != null && !isNaN(v));
-        const ctrlBaseline = control.map(p => p.hba1c_baseline).filter(v => v != null && !isNaN(v));
-        const ctrlSixMonth = control.map(p => p.hba1c_6month).filter(v => v != null && !isNaN(v));
+        const expBaseline = experimental.map(p => toNum(p.hba1c_baseline)).filter(v => !isNaN(v));
+        const expSixMonth = experimental.map(p => toNum(p.hba1c_6month)).filter(v => !isNaN(v));
+        const ctrlBaseline = control.map(p => toNum(p.hba1c_baseline)).filter(v => !isNaN(v));
+        const ctrlSixMonth = control.map(p => toNum(p.hba1c_6month)).filter(v => !isNaN(v));
 
         const avg = arr => arr.length > 0 ? parseFloat((arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2)) : 0;
 
         // PAID-5 converted scores by group (fallback: calculate from total if converted missing)
         const getConverted = (p, period) => {
             if (!p.paid5) return null;
-            if (p.paid5[`converted_${period}`] != null) return p.paid5[`converted_${period}`];
-            if (p.paid5[`total_${period}`] != null) return p.paid5[`total_${period}`] * 5;
+            if (p.paid5[`converted_${period}`] != null) return parseFloat(p.paid5[`converted_${period}`]);
+            if (p.paid5[`total_${period}`] != null) return parseFloat(p.paid5[`total_${period}`]) * 5;
             return null;
         };
 
@@ -204,8 +205,8 @@ const DiabetesDashboard = {
     normalizePatientForTable(p) {
         const getConverted = (period) => {
             if (!p.paid5) return null;
-            if (p.paid5[`converted_${period}`] != null) return p.paid5[`converted_${period}`];
-            if (p.paid5[`total_${period}`] != null) return p.paid5[`total_${period}`] * 5;
+            if (p.paid5[`converted_${period}`] != null) return parseFloat(p.paid5[`converted_${period}`]);
+            if (p.paid5[`total_${period}`] != null) return parseFloat(p.paid5[`total_${period}`]) * 5;
             return null;
         };
 
@@ -674,10 +675,10 @@ const DiabetesDashboard = {
         let html = '';
         pageData.forEach((p, idx) => {
             // HbA1c change color coding
-            const hba1cBL = p.hba1c_baseline;
-            const hba1c6m = p.hba1c_6month;
-            let hba1cBLDisplay = hba1cBL != null ? hba1cBL.toFixed(1) : '-';
-            let hba1c6mDisplay = hba1c6m != null ? hba1c6m.toFixed(1) : '-';
+            const hba1cBL = p.hba1c_baseline != null ? parseFloat(p.hba1c_baseline) : null;
+            const hba1c6m = p.hba1c_6month != null ? parseFloat(p.hba1c_6month) : null;
+            let hba1cBLDisplay = hba1cBL != null && !isNaN(hba1cBL) ? hba1cBL.toFixed(1) : '-';
+            let hba1c6mDisplay = hba1c6m != null && !isNaN(hba1c6m) ? hba1c6m.toFixed(1) : '-';
             let hba1c6mStyle = '';
 
             if (hba1cBL != null && hba1c6m != null) {
@@ -1373,8 +1374,8 @@ const DiabetesDashboard = {
         (data.patients || []).forEach((p, i) => {
             const genderTh = p.gender === 'male' || p.gender === 'M' ? 'ชาย' : p.gender === 'female' || p.gender === 'F' ? 'หญิง' : p.gender || '-';
             const groupTh = p.group === 'experimental' ? 'ทดลอง' : p.group === 'control' ? 'ควบคุม' : p.group || '-';
-            const hBL = p.hba1c_baseline != null ? p.hba1c_baseline.toFixed(1) : '-';
-            const h6m = p.hba1c_6month != null ? p.hba1c_6month.toFixed(1) : '-';
+            const hBL = p.hba1c_baseline != null ? parseFloat(p.hba1c_baseline).toFixed(1) : '-';
+            const h6m = p.hba1c_6month != null ? parseFloat(p.hba1c_6month).toFixed(1) : '-';
             const pBL = p.paid5_baseline != null ? p.paid5_baseline : '-';
             const p6m = p.paid5_6month != null ? p.paid5_6month : '-';
             const dist = p.distress === 'low' ? 'ต่ำ' : p.distress === 'high' ? 'สูง' : '-';
