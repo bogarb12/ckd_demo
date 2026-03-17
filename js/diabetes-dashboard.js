@@ -87,6 +87,16 @@ const DiabetesDashboard = {
             this.createDistressChart(demoData);
             this.renderPatientTable(demoData.patients, 'all');
         }
+
+        // Always setup buttons (even if data loading fails)
+        if (!this.initialized) {
+            this.setupFilter(this._cachedSummaryData || this.getDemoData());
+            this.setupExport();
+            this.setupImport();
+            this.setupTemplateDownload();
+            this.setupPrintReport();
+            this.initialized = true;
+        }
     },
 
     // =====================
