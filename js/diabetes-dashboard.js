@@ -148,10 +148,12 @@ const DiabetesDashboard = {
 
         const avg = arr => arr.length > 0 ? parseFloat((arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2)) : 0;
 
-        // PAID-5 converted scores by group
+        // PAID-5 converted scores by group (fallback: calculate from total if converted missing)
         const getConverted = (p, period) => {
             if (!p.paid5) return null;
-            return p.paid5[`converted_${period}`] != null ? p.paid5[`converted_${period}`] : null;
+            if (p.paid5[`converted_${period}`] != null) return p.paid5[`converted_${period}`];
+            if (p.paid5[`total_${period}`] != null) return p.paid5[`total_${period}`] * 5;
+            return null;
         };
 
         const expPaid5BL = experimental.map(p => getConverted(p, 'baseline')).filter(v => v != null);
@@ -159,12 +161,17 @@ const DiabetesDashboard = {
         const ctrlPaid5BL = control.map(p => getConverted(p, 'baseline')).filter(v => v != null);
         const ctrlPaid5_6m = control.map(p => getConverted(p, '6month')).filter(v => v != null);
 
-        // Distress levels (from latest available - prefer 6month, fallback to baseline)
+        // Distress levels (from latest available - prefer 6month, fallback to baseline, then calculate)
         let lowDistress = 0;
         let highDistress = 0;
         patients.forEach(p => {
             if (!p.paid5) return;
-            const level = p.paid5.distress_6month || p.paid5.distress_baseline;
+            let level = p.paid5.distress_6month || p.paid5.distress_baseline;
+            if (!level) {
+                // Fallback: calculate from converted or total
+                const conv = getConverted(p, '6month') || getConverted(p, 'baseline');
+                if (conv != null) level = conv >= 40 ? 'high' : 'low';
+            }
             if (level === 'low') lowDistress++;
             else if (level === 'high') highDistress++;
         });
@@ -197,12 +204,20 @@ const DiabetesDashboard = {
     normalizePatientForTable(p) {
         const getConverted = (period) => {
             if (!p.paid5) return null;
-            return p.paid5[`converted_${period}`] != null ? p.paid5[`converted_${period}`] : null;
+            if (p.paid5[`converted_${period}`] != null) return p.paid5[`converted_${period}`];
+            if (p.paid5[`total_${period}`] != null) return p.paid5[`total_${period}`] * 5;
+            return null;
         };
 
         const getDistress = () => {
             if (!p.paid5) return null;
-            return p.paid5.distress_6month || p.paid5.distress_baseline || null;
+            if (p.paid5.distress_6month || p.paid5.distress_baseline) {
+                return p.paid5.distress_6month || p.paid5.distress_baseline;
+            }
+            // Fallback: calculate from converted/total
+            var conv = getConverted('6month') || getConverted('baseline');
+            if (conv != null) return conv >= 40 ? 'high' : 'low';
+            return null;
         };
 
         const getStatus = () => {
@@ -1423,8 +1438,15 @@ const DiabetesDashboard = {
         const idIdx = headers.indexOf('ID');
         if (idIdx < 0) throw new Error('ไม่พบคอลัมน์ ID');
 
-        const groupMap = { '1': 'experimental', '0': 'control' };
-        const sexMap = { '1': 'male', '2': 'female', '3': 'other' };
+        const groupMap = {
+            '1': 'experimental', '0': 'control',
+            'e': 'experimental', 'c': 'control',
+            'exp': 'experimental', 'ctrl': 'control',
+            'experimental': 'experimental', 'control': 'control',
+            'ทดลอง': 'experimental', 'ควบคุม': 'control',
+            'กลุ่มทดลอง': 'experimental', 'กลุ่มควบคุม': 'control'
+        };
+        const sexMap = { '1': 'male', '2': 'female', '3': 'other', 'm': 'male', 'f': 'female', 'male': 'male', 'female': 'female', 'ชาย': 'male', 'หญิง': 'female' };
 
         let imported = 0;
         let newCount = 0;
@@ -1498,8 +1520,8 @@ const DiabetesDashboard = {
 
             const patient = {
                 patient_id: row.ID,
-                study_group: groupMap[row.Group] || row.Group || null,
-                gender: sexMap[row.Sex] || row.Sex || null,
+                study_group: groupMap[(row.Group || '').toString().trim().toLowerCase()] || row.Group || null,
+                gender: sexMap[(row.Sex || '').toString().trim().toLowerCase()] || row.Sex || null,
                 first_name: row.first_name || null,
                 last_name: row.last_name || null,
                 weight: row.BW ? parseFloat(row.BW) : null,
@@ -1538,6 +1560,17 @@ const DiabetesDashboard = {
             }
             if (row.PAID_total_baseline) patient.paid5.total_baseline = parseInt(row.PAID_total_baseline);
             if (row.PAID_total_6m) patient.paid5.total_6month = parseInt(row.PAID_total_6m);
+
+            // Calculate PAID-5 converted scores and distress levels
+            // (same formula as diabetes-form.js: converted = total * 5, distress = converted >= 40 ? 'high' : 'low')
+            if (patient.paid5.total_baseline != null) {
+                patient.paid5.converted_baseline = patient.paid5.total_baseline * 5;
+                patient.paid5.distress_baseline = patient.paid5.converted_baseline >= 40 ? 'high' : 'low';
+            }
+            if (patient.paid5.total_6month != null) {
+                patient.paid5.converted_6month = patient.paid5.total_6month * 5;
+                patient.paid5.distress_6month = patient.paid5.converted_6month >= 40 ? 'high' : 'low';
+            }
 
             // Health Literacy
             for (let q = 1; q <= 10; q++) {
