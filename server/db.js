@@ -34,7 +34,7 @@ async function testConnection() {
         return true;
     } catch (err) {
         console.warn('MariaDB connection failed:', err.message);
-        console.warn('App will run in demo mode (localStorage fallback)');
+        console.warn('Database features will be unavailable');
         return false;
     }
 }

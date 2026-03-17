@@ -9,7 +9,7 @@ require('dotenv').config();
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
-const { query, testConnection } = require('./db');
+const { pool, query, testConnection } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -239,6 +239,11 @@ app.get('/api/patients', async (req, res) => {
              ORDER BY p.created_at DESC`
         );
         rows.forEach(r => {
+            // Build comorbidities array from d1-d7 flags for backward compatibility
+            if (!r.comorbidities && (r.d1 || r.d2 || r.d3 || r.d4 || r.d5 || r.d6 || r.d7)) {
+                const cMap = { d1: 'hypertension', d2: 'dyslipidemia', d3: 'cvd', d4: 'ckd', d5: 'gout', d6: 'none', d7: 'other' };
+                r.comorbidities = Object.entries(cMap).filter(([k]) => r[k]).map(([, v]) => v);
+            }
             if (r.comorbidities && typeof r.comorbidities === 'string') {
                 try { r.comorbidities = JSON.parse(r.comorbidities); } catch(e) {}
             }
@@ -270,6 +275,11 @@ app.get('/api/patients/:id', async (req, res) => {
         const [patient] = await query('SELECT * FROM patients WHERE patient_id = ?', [id]);
         if (!patient) return res.status(404).json({ error: 'Patient not found' });
 
+        // Build comorbidities array from d1-d7 flags for backward compatibility
+        if (!patient.comorbidities && (patient.d1 || patient.d2 || patient.d3 || patient.d4 || patient.d5 || patient.d6 || patient.d7)) {
+            const cMap = { d1: 'hypertension', d2: 'dyslipidemia', d3: 'cvd', d4: 'ckd', d5: 'gout', d6: 'none', d7: 'other' };
+            patient.comorbidities = Object.entries(cMap).filter(([k]) => patient[k]).map(([, v]) => v);
+        }
         if (patient.comorbidities && typeof patient.comorbidities === 'string') {
             try { patient.comorbidities = JSON.parse(patient.comorbidities); } catch(e) {}
         }
@@ -304,30 +314,70 @@ app.post('/api/patients', async (req, res) => {
         const d = req.body;
 
         // Section 1: Patient basics
+        // Convert comorbidities array to d1-d7 flags
+        const comorb = d.comorbidities || [];
+        const cArray = Array.isArray(comorb) ? comorb : (typeof comorb === 'string' ? JSON.parse(comorb) : []);
+        const d1 = cArray.includes('hypertension') ? 1 : (d.d1 || 0);
+        const d2 = cArray.includes('dyslipidemia') ? 1 : (d.d2 || 0);
+        const d3 = cArray.includes('cvd') ? 1 : (d.d3 || 0);
+        const d4 = cArray.includes('ckd') ? 1 : (d.d4 || 0);
+        const d5 = cArray.includes('gout') ? 1 : (d.d5 || 0);
+        const d6 = cArray.includes('none') ? 1 : (d.d6 || 0);
+        const d7 = cArray.includes('other') ? 1 : (d.d7 || 0);
+
+        // Map diabetes_treatment text to int
+        let medication = d.medication || null;
+        if (!medication && d.diabetes_treatment) {
+            const treatMap = { 'oral': 1, 'insulin': 2, 'oral_insulin': 3 };
+            medication = treatMap[d.diabetes_treatment] || d.diabetes_treatment;
+        }
+
+        // Map line_usage text to int
+        let lineUsage = d.line_usage;
+        if (typeof lineUsage === 'string') {
+            const lineMap = { 'regular': 1, 'occasional': 2, 'rarely': 3, 'cannot_use': 4 };
+            lineUsage = lineMap[lineUsage] || lineUsage;
+        }
+
         await query(
-            `INSERT INTO patients (patient_id, enrollment_date, study_group, gender, age,
-             education_level, occupation, diabetes_duration_years, comorbidities,
-             comorbidity_other, diabetes_treatment, line_usage)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `INSERT INTO patients (patient_id, enrollment_date, study_group, gender,
+             first_name, last_name, weight, height, bmi, waist, age,
+             education_level, occupation, occupation_note, diabetes_duration_years,
+             d1, d2, d3, d4, d5, d6, d7, comorbidity_note,
+             medication, line_usage, diabetes_treatment)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE
              enrollment_date=VALUES(enrollment_date), study_group=VALUES(study_group),
-             gender=VALUES(gender), age=VALUES(age), education_level=VALUES(education_level),
-             occupation=VALUES(occupation), diabetes_duration_years=VALUES(diabetes_duration_years),
-             comorbidities=VALUES(comorbidities), comorbidity_other=VALUES(comorbidity_other),
-             diabetes_treatment=VALUES(diabetes_treatment), line_usage=VALUES(line_usage)`,
-            [d.patient_id, d.enrollment_date, d.study_group, d.gender, d.age,
-             d.education_level, d.occupation, d.diabetes_duration_years,
-             JSON.stringify(d.comorbidities || []), d.comorbidity_other || null,
-             d.diabetes_treatment, d.line_usage]
+             gender=VALUES(gender), first_name=VALUES(first_name), last_name=VALUES(last_name),
+             weight=VALUES(weight), height=VALUES(height), bmi=VALUES(bmi), waist=VALUES(waist),
+             age=VALUES(age), education_level=VALUES(education_level),
+             occupation=VALUES(occupation), occupation_note=VALUES(occupation_note),
+             diabetes_duration_years=VALUES(diabetes_duration_years),
+             d1=VALUES(d1), d2=VALUES(d2), d3=VALUES(d3), d4=VALUES(d4),
+             d5=VALUES(d5), d6=VALUES(d6), d7=VALUES(d7),
+             comorbidity_note=VALUES(comorbidity_note),
+             medication=VALUES(medication), line_usage=VALUES(line_usage),
+             diabetes_treatment=VALUES(diabetes_treatment)`,
+            [d.patient_id, d.enrollment_date || null, d.study_group, d.gender,
+             d.first_name || null, d.last_name || null,
+             d.weight || null, d.height || null, d.bmi || null, d.waist || null,
+             d.age || null, d.education_level || null, d.occupation || null,
+             d.occupation_note || d.comorbidity_other || null,
+             d.diabetes_duration_years || null,
+             d1, d2, d3, d4, d5, d6, d7,
+             d.comorbidity_note || d.comorbidity_other || null,
+             medication, lineUsage, d.diabetes_treatment || null]
         );
 
         // Section 2: Clinical outcomes
-        if (d.hba1c_baseline !== undefined || d.hba1c_6month !== undefined) {
+        if (d.hba1c_baseline !== undefined || d.hba1c_6month !== undefined || d.fbs !== undefined || d.gfr !== undefined || d.dtx1 !== undefined) {
             await query(
-                `INSERT INTO clinical_outcomes (patient_id, hba1c_baseline, hba1c_6month)
-                 VALUES (?, ?, ?)
-                 ON DUPLICATE KEY UPDATE hba1c_baseline=VALUES(hba1c_baseline), hba1c_6month=VALUES(hba1c_6month)`,
-                [d.patient_id, d.hba1c_baseline || null, d.hba1c_6month || null]
+                `INSERT INTO clinical_outcomes (patient_id, hba1c_baseline, hba1c_6month, fbs, gfr, dtx1)
+                 VALUES (?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE hba1c_baseline=VALUES(hba1c_baseline), hba1c_6month=VALUES(hba1c_6month),
+                 fbs=VALUES(fbs), gfr=VALUES(gfr), dtx1=VALUES(dtx1)`,
+                [d.patient_id, d.hba1c_baseline || null, d.hba1c_6month || null,
+                 d.fbs || null, d.gfr || null, d.dtx1 || null]
             );
         }
 
@@ -410,41 +460,34 @@ app.post('/api/questionnaire/:id', async (req, res) => {
         const id = req.params.id;
         const d = req.body;
 
-        // Health Literacy
+        // Health Literacy (save as baseline by default, or timepoint specified)
         if (d.healthLiteracy) {
             const hl = d.healthLiteracy;
+            const tp = hl.timepoint || 'baseline'; // 'baseline' or '6month'
+            const blCols = tp === 'baseline'
+                ? 'q1_baseline, q2_baseline, q3_baseline, q4_baseline, q5_baseline, q6_baseline, q7_baseline, q8_baseline, q9_baseline, q10_baseline, total_baseline'
+                : 'q1_6month, q2_6month, q3_6month, q4_6month, q5_6month, q6_6month, q7_6month, q8_6month, q9_6month, q10_6month, total_6month';
+            const updateParts = blCols.split(', ').map(c => c + '=VALUES(' + c + ')').join(', ');
             await query(
-                `INSERT INTO health_literacy (patient_id, q1_find_food_info, q2_ask_medication,
-                 q3_read_med_label, q4_foot_care_inst, q5_hypo_symptoms, q6_reliable_info,
-                 q7_choose_food, q8_adjust_eating, q9_med_on_time, q10_exercise, total_score)
+                `INSERT INTO health_literacy (patient_id, ${blCols})
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE
-                 q1_find_food_info=VALUES(q1_find_food_info), q2_ask_medication=VALUES(q2_ask_medication),
-                 q3_read_med_label=VALUES(q3_read_med_label), q4_foot_care_inst=VALUES(q4_foot_care_inst),
-                 q5_hypo_symptoms=VALUES(q5_hypo_symptoms), q6_reliable_info=VALUES(q6_reliable_info),
-                 q7_choose_food=VALUES(q7_choose_food), q8_adjust_eating=VALUES(q8_adjust_eating),
-                 q9_med_on_time=VALUES(q9_med_on_time), q10_exercise=VALUES(q10_exercise),
-                 total_score=VALUES(total_score)`,
+                 ON DUPLICATE KEY UPDATE ${updateParts}`,
                 [id, hl.q1, hl.q2, hl.q3, hl.q4, hl.q5, hl.q6, hl.q7, hl.q8, hl.q9, hl.q10, hl.total_score]
             );
         }
 
-        // Self Care
+        // Self Care (save as baseline by default, or timepoint specified)
         if (d.selfCare) {
             const sc = d.selfCare;
+            const tp = sc.timepoint || 'baseline';
+            const blCols = tp === 'baseline'
+                ? 'q1_baseline, q2_baseline, q3_baseline, q4_baseline, q5_baseline, q6_baseline, q7_baseline, q8_baseline, q9_baseline, q10_baseline, q11_baseline, q12_baseline, total_baseline'
+                : 'q1_6month, q2_6month, q3_6month, q4_6month, q5_6month, q6_6month, q7_6month, q8_6month, q9_6month, q10_6month, q11_6month, q12_6month, total_6month';
+            const updateParts = blCols.split(', ').map(c => c + '=VALUES(' + c + ')').join(', ');
             await query(
-                `INSERT INTO self_care (patient_id, q1_rice_portion, q2_avoid_sweets, q3_vegetables,
-                 q4_exercise_30min, q5_move_body, q6_stop_abnormal, q7_med_daily, q8_no_stop_med,
-                 q9_carry_sweets, q10_foot_inspect, q11_closed_shoes, q12_see_provider, total_score)
+                `INSERT INTO self_care (patient_id, ${blCols})
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE
-                 q1_rice_portion=VALUES(q1_rice_portion), q2_avoid_sweets=VALUES(q2_avoid_sweets),
-                 q3_vegetables=VALUES(q3_vegetables), q4_exercise_30min=VALUES(q4_exercise_30min),
-                 q5_move_body=VALUES(q5_move_body), q6_stop_abnormal=VALUES(q6_stop_abnormal),
-                 q7_med_daily=VALUES(q7_med_daily), q8_no_stop_med=VALUES(q8_no_stop_med),
-                 q9_carry_sweets=VALUES(q9_carry_sweets), q10_foot_inspect=VALUES(q10_foot_inspect),
-                 q11_closed_shoes=VALUES(q11_closed_shoes), q12_see_provider=VALUES(q12_see_provider),
-                 total_score=VALUES(total_score)`,
+                 ON DUPLICATE KEY UPDATE ${updateParts}`,
                 [id, sc.q1, sc.q2, sc.q3, sc.q4, sc.q5, sc.q6, sc.q7, sc.q8, sc.q9, sc.q10, sc.q11, sc.q12, sc.total_score]
             );
         }
@@ -462,15 +505,40 @@ app.put('/api/patients/:id', async (req, res) => {
         req.body.patient_id = req.params.id;
         const d = req.body;
 
+        // Convert comorbidities array to d1-d7 flags
+        const comorb = d.comorbidities || [];
+        const cArr = Array.isArray(comorb) ? comorb : [];
+        const ud1 = cArr.includes('hypertension') ? 1 : (d.d1 || 0);
+        const ud2 = cArr.includes('dyslipidemia') ? 1 : (d.d2 || 0);
+        const ud3 = cArr.includes('cvd') ? 1 : (d.d3 || 0);
+        const ud4 = cArr.includes('ckd') ? 1 : (d.d4 || 0);
+        const ud5 = cArr.includes('gout') ? 1 : (d.d5 || 0);
+        const ud6 = cArr.includes('none') ? 1 : (d.d6 || 0);
+        const ud7 = cArr.includes('other') ? 1 : (d.d7 || 0);
+
+        let uMed = d.medication || null;
+        if (!uMed && d.diabetes_treatment) {
+            const tMap = { 'oral': 1, 'insulin': 2, 'oral_insulin': 3 };
+            uMed = tMap[d.diabetes_treatment] || d.diabetes_treatment;
+        }
+
         await query(
-            `UPDATE patients SET enrollment_date=?, study_group=?, gender=?, age=?,
-             education_level=?, occupation=?, diabetes_duration_years=?, comorbidities=?,
-             comorbidity_other=?, diabetes_treatment=?, line_usage=?
+            `UPDATE patients SET enrollment_date=?, study_group=?, gender=?,
+             first_name=?, last_name=?, weight=?, height=?, bmi=?, waist=?, age=?,
+             education_level=?, occupation=?, occupation_note=?, diabetes_duration_years=?,
+             d1=?, d2=?, d3=?, d4=?, d5=?, d6=?, d7=?, comorbidity_note=?,
+             medication=?, line_usage=?, diabetes_treatment=?
              WHERE patient_id=?`,
-            [d.enrollment_date, d.study_group, d.gender, d.age,
-             d.education_level, d.occupation, d.diabetes_duration_years,
-             JSON.stringify(d.comorbidities || []), d.comorbidity_other || null,
-             d.diabetes_treatment, d.line_usage, d.patient_id]
+            [d.enrollment_date || null, d.study_group, d.gender,
+             d.first_name || null, d.last_name || null,
+             d.weight || null, d.height || null, d.bmi || null, d.waist || null, d.age || null,
+             d.education_level || null, d.occupation || null,
+             d.occupation_note || d.comorbidity_other || null,
+             d.diabetes_duration_years || null,
+             ud1, ud2, ud3, ud4, ud5, ud6, ud7,
+             d.comorbidity_note || d.comorbidity_other || null,
+             uMed, d.line_usage || null, d.diabetes_treatment || null,
+             d.patient_id]
         );
 
         res.json({ success: true });
@@ -494,7 +562,7 @@ app.delete('/api/patients/:id', async (req, res) => {
 // API: Public Stats (Guest accessible - counts only)
 // ============================================
 app.get('/api/stats/counts', async (req, res) => {
-    if (!dbConnected) return res.json({ totalPatients: 0, experimental: 0, control: 0 });
+    if (!dbConnected) return res.json({ totalPatients: 0, experimental: 0, control: 0, followUpComplete: 0 });
     try {
         const [counts] = await query(
             `SELECT COUNT(*) as total,
@@ -502,10 +570,16 @@ app.get('/api/stats/counts', async (req, res) => {
              SUM(study_group='control') as control
              FROM patients`
         );
+        let followUpComplete = 0;
+        try {
+            const [fuCount] = await query("SELECT COUNT(*) as cnt FROM follow_up_status WHERE status='complete'");
+            followUpComplete = Number(fuCount.cnt) || 0;
+        } catch(e) { /* table might not exist */ }
         res.json({
             totalPatients: Number(counts.total) || 0,
             experimental: Number(counts.experimental) || 0,
-            control: Number(counts.control) || 0
+            control: Number(counts.control) || 0,
+            followUpComplete
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -1151,9 +1225,132 @@ app.get('/api/status', (req, res) => {
 // ============================================
 // Start Server
 // ============================================
+async function ensureSchema() {
+    try {
+        const schemaSQL = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8');
+        // Split by semicolons, filter out USE/CREATE DATABASE, run CREATE TABLE statements
+        const statements = schemaSQL.split(';')
+            .map(s => s.trim())
+            .filter(s => s.toUpperCase().startsWith('CREATE TABLE'));
+        for (const stmt of statements) {
+            await query(stmt);
+        }
+        console.log('Database schema ensured (' + statements.length + ' tables)');
+
+        // Migration: add missing columns to existing tables
+        const migrations = [
+            // patients table - add columns that CSV import needs
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS first_name VARCHAR(100) DEFAULT NULL",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS last_name VARCHAR(100) DEFAULT NULL",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS weight DECIMAL(5,1) DEFAULT NULL",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS height DECIMAL(5,1) DEFAULT NULL",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS bmi DECIMAL(4,1) DEFAULT NULL",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS waist DECIMAL(5,1) DEFAULT NULL",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS occupation_note VARCHAR(100) DEFAULT NULL",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS d1 TINYINT DEFAULT 0",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS d2 TINYINT DEFAULT 0",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS d3 TINYINT DEFAULT 0",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS d4 TINYINT DEFAULT 0",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS d5 TINYINT DEFAULT 0",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS d6 TINYINT DEFAULT 0",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS d7 TINYINT DEFAULT 0",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS comorbidity_note VARCHAR(200) DEFAULT NULL",
+            // clinical_outcomes - add fbs, gfr, dtx1
+            "ALTER TABLE clinical_outcomes ADD COLUMN IF NOT EXISTS fbs DECIMAL(6,1) DEFAULT NULL",
+            "ALTER TABLE clinical_outcomes ADD COLUMN IF NOT EXISTS gfr DECIMAL(6,1) DEFAULT NULL",
+            "ALTER TABLE clinical_outcomes ADD COLUMN IF NOT EXISTS dtx1 DECIMAL(6,1) DEFAULT NULL",
+            // Relax NOT NULL constraints on patients table
+            "ALTER TABLE patients MODIFY COLUMN enrollment_date DATE DEFAULT NULL",
+            "ALTER TABLE patients MODIFY COLUMN study_group VARCHAR(20) DEFAULT NULL",
+            "ALTER TABLE patients MODIFY COLUMN gender VARCHAR(10) DEFAULT NULL",
+            "ALTER TABLE patients MODIFY COLUMN age INT DEFAULT NULL",
+            "ALTER TABLE patients MODIFY COLUMN education_level INT DEFAULT NULL",
+            "ALTER TABLE patients MODIFY COLUMN occupation VARCHAR(50) DEFAULT NULL",
+            "ALTER TABLE patients MODIFY COLUMN diabetes_duration_years DECIMAL(4,1) DEFAULT NULL",
+            "ALTER TABLE patients MODIFY COLUMN line_usage INT DEFAULT NULL",
+            "ALTER TABLE patients MODIFY COLUMN medication INT DEFAULT NULL",
+            // Fix health_literacy: rename descriptive columns to q#_baseline/q#_6month if old schema
+            // We'll use a try-catch approach for these
+        ];
+
+        for (const sql of migrations) {
+            try {
+                await query(sql);
+            } catch (e) {
+                // Ignore errors (column already exists, etc.)
+            }
+        }
+
+        // Handle health_literacy table: check if it has old column names
+        try {
+            const hlCols = await query("SHOW COLUMNS FROM health_literacy");
+            const colNames = hlCols.map(c => c.Field);
+            if (colNames.includes('q1_find_food_info') && !colNames.includes('q1_baseline')) {
+                // Old schema - drop and recreate
+                await query("DROP TABLE IF EXISTS health_literacy");
+                const hlCreate = statements.find(s => s.includes('health_literacy'));
+                if (hlCreate) await query(hlCreate);
+                console.log('health_literacy table recreated with new schema');
+            }
+        } catch (e) { /* table might not exist yet */ }
+
+        // Handle self_care table: check if it has old column names
+        try {
+            const scCols = await query("SHOW COLUMNS FROM self_care");
+            const colNames = scCols.map(c => c.Field);
+            if (colNames.includes('q1_rice_portion') && !colNames.includes('q1_baseline')) {
+                await query("DROP TABLE IF EXISTS self_care");
+                const scCreate = statements.find(s => s.includes('self_care'));
+                if (scCreate) await query(scCreate);
+                console.log('self_care table recreated with new schema');
+            }
+        } catch (e) { /* table might not exist yet */ }
+
+        // Handle paid5_scores: ensure distress columns are VARCHAR not ENUM
+        try {
+            await query("ALTER TABLE paid5_scores MODIFY COLUMN distress_baseline VARCHAR(10) DEFAULT NULL");
+            await query("ALTER TABLE paid5_scores MODIFY COLUMN distress_6month VARCHAR(10) DEFAULT NULL");
+        } catch (e) { /* ignore */ }
+
+        // Handle follow_up_status: ensure status is VARCHAR not ENUM
+        try {
+            await query("ALTER TABLE follow_up_status MODIFY COLUMN status VARCHAR(20) DEFAULT NULL");
+        } catch (e) { /* ignore */ }
+
+        // Handle program_participation: ensure columns are VARCHAR not ENUM
+        try {
+            await query("ALTER TABLE program_participation MODIFY COLUMN sessions_attended VARCHAR(10) DEFAULT NULL");
+            await query("ALTER TABLE program_participation MODIFY COLUMN line_engagement VARCHAR(20) DEFAULT NULL");
+            await query("ALTER TABLE program_participation MODIFY COLUMN line_interaction VARCHAR(20) DEFAULT NULL");
+        } catch (e) { /* ignore */ }
+
+        // Remove diabetes_treatment NOT NULL if exists (CSV doesn't have this column)
+        try {
+            await query("ALTER TABLE patients MODIFY COLUMN diabetes_treatment VARCHAR(20) DEFAULT NULL");
+        } catch (e) { /* ignore */ }
+
+        // Drop old comorbidities JSON column if exists (replaced by d1-d7)
+        try {
+            const patCols = await query("SHOW COLUMNS FROM patients");
+            const patColNames = patCols.map(c => c.Field);
+            if (patColNames.includes('comorbidities') && !patColNames.includes('d1')) {
+                try { await query("ALTER TABLE patients DROP COLUMN comorbidities"); } catch(e) {}
+                try { await query("ALTER TABLE patients DROP COLUMN comorbidity_other"); } catch(e) {}
+            }
+        } catch (e) { /* ignore */ }
+
+        console.log('Schema migrations complete');
+    } catch (err) {
+        console.warn('Schema migration warning:', err.message);
+    }
+}
+
 async function start() {
     await initDefaultAdmin();
     dbConnected = await testConnection();
+    if (dbConnected) {
+        await ensureSchema();
+    }
     app.listen(PORT, () => {
         console.log(`\nDiabetes Tracking App running at http://localhost:${PORT}/diabetes.html`);
         console.log(`Mode: ${dbConnected ? 'MariaDB Database' : 'DB unavailable'}`);
