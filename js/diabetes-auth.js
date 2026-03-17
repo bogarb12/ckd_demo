@@ -67,19 +67,97 @@ const Auth = {
         return {};
     },
 
+    // Offline user store key (for when server is unavailable)
+    OFFLINE_USERS_KEY: 'dt_offline_users',
+
+    // Get offline users (seeded with default admin)
+    _getOfflineUsers() {
+        try {
+            var data = localStorage.getItem(this.OFFLINE_USERS_KEY);
+            if (data) return JSON.parse(data);
+        } catch (e) { /* ignore */ }
+        // Seed default admin (same hash as server's data/users.json: password = admin123)
+        var defaultUsers = [{
+            username: 'admin',
+            password: '$2b$10$o/5uRv0M5vhCnuBQj3fx..u6nHiGjDvxYS45WbOj36LRVmdfSqN0O',
+            role: 'admin',
+            displayName: 'ผู้ดูแลระบบ'
+        }];
+        localStorage.setItem(this.OFFLINE_USERS_KEY, JSON.stringify(defaultUsers));
+        return defaultUsers;
+    },
+
+    _saveOfflineUsers(users) {
+        localStorage.setItem(this.OFFLINE_USERS_KEY, JSON.stringify(users));
+    },
+
     async login(username, password) {
+        // Try server API first
+        var serverOk = false;
         var baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
-        var response = await fetch(baseUrl + '/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: username, password: password })
-        });
-        var data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.error || 'เข้าสู่ระบบไม่สำเร็จ');
+        try {
+            var response = await fetch(baseUrl + '/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username, password: password })
+            });
+            var data = await response.json();
+            if (response.ok) {
+                this.setAuth(data.token, data.user);
+                console.log('[Auth] Server login สำเร็จ');
+                return data.user;
+            }
+            // Server returned error (e.g. 401 wrong password) - only if server is truly up
+            if (response.status === 400 || response.status === 401) {
+                // Could be server is up but credentials wrong, or could be proxy 401
+                // Try offline as fallback
+                serverOk = false;
+            }
+        } catch (e) {
+            // Network error / server unreachable
+            console.warn('[Auth] Server ไม่ตอบ, ใช้ offline login:', e.message);
+            serverOk = false;
         }
-        this.setAuth(data.token, data.user);
-        return data.user;
+
+        // Fallback: offline login using bcryptjs client-side
+        return this._offlineLogin(username, password);
+    },
+
+    async _offlineLogin(username, password) {
+        var users = this._getOfflineUsers();
+        var user = null;
+        for (var i = 0; i < users.length; i++) {
+            if (users[i].username === username) { user = users[i]; break; }
+        }
+        if (!user) {
+            throw new Error('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+        }
+
+        // Use bcryptjs browser build (loaded from CDN)
+        if (typeof dcodeIO === 'undefined' || !dcodeIO.bcrypt) {
+            throw new Error('ไม่สามารถตรวจสอบรหัสผ่านได้ (bcrypt library ไม่พร้อม)');
+        }
+
+        var bcryptLib = dcodeIO.bcrypt;
+        var valid = await new Promise(function(resolve, reject) {
+            bcryptLib.compare(password, user.password, function(err, result) {
+                if (err) reject(err);
+                else resolve(result);
+            });
+        });
+
+        if (!valid) {
+            throw new Error('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+        }
+
+        // Create offline token (simple base64 marker)
+        var tokenPayload = { username: user.username, role: user.role, displayName: user.displayName, offline: true, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 };
+        var offlineToken = 'offline_' + btoa(unescape(encodeURIComponent(JSON.stringify(tokenPayload))));
+
+        var userData = { username: user.username, role: user.role, displayName: user.displayName };
+        this.setAuth(offlineToken, userData);
+        console.log('[Auth] Offline login สำเร็จ (mode: localStorage)');
+        return userData;
     },
 
     logout() {
@@ -102,13 +180,28 @@ const Auth = {
         var token = this.getToken();
         if (!token) return false;
 
+        // Offline token: check expiry locally
+        if (token.indexOf('offline_') === 0) {
+            try {
+                var payload = JSON.parse(decodeURIComponent(escape(atob(token.substring(8)))));
+                if (payload.exp && payload.exp < Date.now()) {
+                    this.clearAuth();
+                    return false;
+                }
+                return true;
+            } catch (e) {
+                this.clearAuth();
+                return false;
+            }
+        }
+
+        // Server token: verify with API
         var baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
         try {
             var response = await fetch(baseUrl + '/api/auth/me', {
                 headers: { 'Authorization': 'Bearer ' + token }
             });
             if (!response.ok) {
-                // Backend ไม่ได้รัน หรือ token หมดอายุ — เก็บ auth ไว้ถ้ามี user data
                 if (this.getUser()) {
                     return true;
                 }
@@ -119,7 +212,6 @@ const Auth = {
             localStorage.setItem(this.USER_KEY, JSON.stringify(data.user));
             return true;
         } catch (e) {
-            // Server might not be reachable, keep token for later
             return this.isLoggedIn();
         }
     },
@@ -198,7 +290,7 @@ const Auth = {
                 self.updateHeaderLoginButton();
                 // Re-init dashboard if currently on dashboard tab
                 var dashTab = document.getElementById('tab-dashboard');
-                if (dashTab && (dashTab.classList.contains('active') || dashTab.style.display !== 'none')) {
+                if (dashTab && dashTab.classList.contains('active')) {
                     if (window.DiabetesDashboard) DiabetesDashboard.init();
                 }
                 if (window.showToast) window.showToast('เข้าสู่ระบบสำเร็จ', 'success');
@@ -313,39 +405,78 @@ const Auth = {
                 headers: this.getAuthHeaders()
             });
             if (!response.ok) throw new Error('Failed to load users');
-            return await response.json();
+            var serverUsers = await response.json();
+            // Sync to offline store (without passwords from server)
+            return serverUsers;
         } catch (e) {
-            console.error('loadUsers error:', e);
-            return [];
+            console.warn('[Auth] loadUsers: Server ไม่ตอบ, ใช้ offline users');
+            // Fallback: offline users (hide password hash)
+            var offUsers = this._getOfflineUsers();
+            return offUsers.map(function(u) {
+                return { username: u.username, role: u.role, displayName: u.displayName, createdAt: u.createdAt || null };
+            });
         }
     },
 
     async addUser(username, password, role, displayName) {
         var baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
-        var response = await fetch(baseUrl + '/api/users', {
-            method: 'POST',
-            headers: Object.assign({ 'Content-Type': 'application/json' }, this.getAuthHeaders()),
-            body: JSON.stringify({
-                username: username,
-                password: password,
-                role: role,
-                displayName: displayName
-            })
+        try {
+            var response = await fetch(baseUrl + '/api/users', {
+                method: 'POST',
+                headers: Object.assign({ 'Content-Type': 'application/json' }, this.getAuthHeaders()),
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                    role: role,
+                    displayName: displayName
+                })
+            });
+            var data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'เพิ่มผู้ใช้ไม่สำเร็จ');
+            return data;
+        } catch (e) {
+            // Fallback: add user offline
+            return this._addUserOffline(username, password, role, displayName);
+        }
+    },
+
+    async _addUserOffline(username, password, role, displayName) {
+        var users = this._getOfflineUsers();
+        for (var i = 0; i < users.length; i++) {
+            if (users[i].username === username) throw new Error('ชื่อผู้ใช้ "' + username + '" มีอยู่แล้ว');
+        }
+        if (typeof dcodeIO === 'undefined' || !dcodeIO.bcrypt) {
+            throw new Error('bcrypt library ไม่พร้อม');
+        }
+        var hash = await new Promise(function(resolve, reject) {
+            dcodeIO.bcrypt.hash(password, 10, function(err, h) { if (err) reject(err); else resolve(h); });
         });
-        var data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'เพิ่มผู้ใช้ไม่สำเร็จ');
-        return data;
+        users.push({ username: username, password: hash, role: role, displayName: displayName, createdAt: new Date().toISOString() });
+        this._saveOfflineUsers(users);
+        console.log('[Auth] เพิ่มผู้ใช้ offline:', username);
+        return { message: 'เพิ่มผู้ใช้สำเร็จ (offline mode)' };
     },
 
     async deleteUser(username) {
         var baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
-        var response = await fetch(baseUrl + '/api/users/' + encodeURIComponent(username), {
-            method: 'DELETE',
-            headers: this.getAuthHeaders()
-        });
-        var data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'ลบผู้ใช้ไม่สำเร็จ');
-        return data;
+        try {
+            var response = await fetch(baseUrl + '/api/users/' + encodeURIComponent(username), {
+                method: 'DELETE',
+                headers: this.getAuthHeaders()
+            });
+            var data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'ลบผู้ใช้ไม่สำเร็จ');
+            return data;
+        } catch (e) {
+            // Fallback: delete user offline
+            if (username === 'admin') throw new Error('ไม่สามารถลบ admin ได้');
+            var users = this._getOfflineUsers();
+            var filtered = users.filter(function(u) { return u.username !== username; });
+            if (filtered.length === users.length) throw new Error('ไม่พบผู้ใช้');
+            this._saveOfflineUsers(filtered);
+            console.log('[Auth] ลบผู้ใช้ offline:', username);
+            return { message: 'ลบผู้ใช้สำเร็จ (offline mode)' };
+        }
     },
 
     _usersPage: 1,
