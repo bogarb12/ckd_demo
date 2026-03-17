@@ -1,168 +1,17 @@
 /**
  * Diabetes Tracking App - Main Controller
- * Handles API communication, localStorage fallback, navigation, and app initialization.
+ * All data flows through server API (MariaDB).
+ * Auth token stored in sessionStorage only.
  */
 
 // ============================================================================
-// LocalDB - localStorage Fallback
-// ============================================================================
-
-const LocalDB = {
-    STORAGE_KEY: 'diabetes_patients',
-
-    getAll() {
-        try {
-            const data = localStorage.getItem(this.STORAGE_KEY);
-            return data ? JSON.parse(data) : [];
-        } catch (e) {
-            console.error('LocalDB.getAll error:', e);
-            return [];
-        }
-    },
-
-    get(id) {
-        const patients = this.getAll();
-        return patients.find(p => p.id === id || p.hn === id) || null;
-    },
-
-    save(data) {
-        try {
-            const patients = this.getAll();
-            const existingIndex = patients.findIndex(
-                p => (data.id && p.id === data.id) || (data.hn && p.hn === data.hn)
-            );
-
-            if (existingIndex >= 0) {
-                patients[existingIndex] = {
-                    ...patients[existingIndex],
-                    ...data,
-                    updatedAt: new Date().toISOString()
-                };
-            } else {
-                data.id = data.id || 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                data.createdAt = new Date().toISOString();
-                data.updatedAt = new Date().toISOString();
-                patients.push(data);
-            }
-
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(patients));
-            return data;
-        } catch (e) {
-            console.error('LocalDB.save error:', e);
-            throw e;
-        }
-    },
-
-    delete(id) {
-        try {
-            let patients = this.getAll();
-            patients = patients.filter(p => p.id !== id && p.hn !== id);
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(patients));
-            return true;
-        } catch (e) {
-            console.error('LocalDB.delete error:', e);
-            return false;
-        }
-    },
-
-    saveQuestionnaire(id, data) {
-        try {
-            const patients = this.getAll();
-            const index = patients.findIndex(p => p.id === id || p.hn === id);
-
-            if (index >= 0) {
-                patients[index].questionnaire = {
-                    ...patients[index].questionnaire,
-                    ...data
-                };
-                patients[index].updatedAt = new Date().toISOString();
-                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(patients));
-                return patients[index];
-            } else {
-                const newPatient = {
-                    id: id || 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-                    questionnaire: data,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                };
-                patients.push(newPatient);
-                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(patients));
-                return newPatient;
-            }
-        } catch (e) {
-            console.error('LocalDB.saveQuestionnaire error:', e);
-            throw e;
-        }
-    },
-
-    exportCSV() {
-        const patients = this.getAll();
-        if (patients.length === 0) {
-            return null;
-        }
-
-        const allKeys = new Set();
-        patients.forEach(function (patient) {
-            _flattenKeys(patient, '', allKeys);
-        });
-
-        const sortedKeys = Array.from(allKeys).sort();
-        const BOM = '\uFEFF';
-
-        const headerRow = sortedKeys.map(function (key) {
-            return '"' + key.replace(/"/g, '""') + '"';
-        }).join(',');
-
-        const dataRows = patients.map(function (patient) {
-            const flat = {};
-            _flattenObject(patient, '', flat);
-            return sortedKeys.map(function (key) {
-                const val = flat[key] !== undefined ? String(flat[key]) : '';
-                return '"' + val.replace(/"/g, '""') + '"';
-            }).join(',');
-        });
-
-        return BOM + headerRow + '\n' + dataRows.join('\n');
-    }
-};
-
-function _flattenKeys(obj, prefix, keysSet) {
-    for (const key in obj) {
-        if (!obj.hasOwnProperty(key)) continue;
-        const fullKey = prefix ? prefix + '.' + key : key;
-        const val = obj[key];
-        if (val && typeof val === 'object' && !Array.isArray(val) && !(val instanceof Date)) {
-            _flattenKeys(val, fullKey, keysSet);
-        } else {
-            keysSet.add(fullKey);
-        }
-    }
-}
-
-function _flattenObject(obj, prefix, result) {
-    for (const key in obj) {
-        if (!obj.hasOwnProperty(key)) continue;
-        const fullKey = prefix ? prefix + '.' + key : key;
-        const val = obj[key];
-        if (val && typeof val === 'object' && !Array.isArray(val) && !(val instanceof Date)) {
-            _flattenObject(val, fullKey, result);
-        } else if (Array.isArray(val)) {
-            result[fullKey] = val.join('; ');
-        } else {
-            result[fullKey] = val;
-        }
-    }
-}
-
-// ============================================================================
-// Authenticated Fetch Helper
+// Helper: Auth-aware fetch
 // ============================================================================
 
 function authFetch(url, options) {
     options = options || {};
     options.headers = options.headers || {};
 
-    // Add auth token if available
     if (window.Auth && Auth.getToken()) {
         options.headers['Authorization'] = 'Bearer ' + Auth.getToken();
     }
@@ -171,7 +20,7 @@ function authFetch(url, options) {
 }
 
 // ============================================================================
-// API Client (with auth headers)
+// API Client (server-only, no localStorage)
 // ============================================================================
 
 const API = {
@@ -190,177 +39,76 @@ const API = {
             this.dbConnected = !!(result && result.dbConnected);
             return result;
         } catch (e) {
-            console.warn('API.checkStatus: Server not available, using localStorage fallback.', e.message);
+            console.warn('API.checkStatus: Server not available.', e.message);
             this.dbConnected = false;
             return { dbConnected: false };
         }
     },
 
     async getPatients() {
-        if (!this.dbConnected) {
-            return LocalDB.getAll();
-        }
-        try {
-            const response = await authFetch(this.baseUrl + '/api/patients');
-            if (!response.ok) throw new Error('Failed to fetch patients');
-            return await response.json();
-        } catch (e) {
-            console.warn('API.getPatients: using localStorage fallback -', e.message);
-            return LocalDB.getAll();
-        }
+        const response = await authFetch(this.baseUrl + '/api/patients');
+        if (!response.ok) throw new Error('Failed to fetch patients');
+        return await response.json();
     },
 
     async getPatient(id) {
-        if (!this.dbConnected) {
-            return LocalDB.get(id);
-        }
-        try {
-            const response = await authFetch(this.baseUrl + '/api/patients/' + encodeURIComponent(id));
-            if (!response.ok) throw new Error('Failed to fetch patient');
-            return await response.json();
-        } catch (e) {
-            console.error('API.getPatient error, falling back to localStorage:', e.message);
-            showToast('Cannot reach server. Using local data.', 'error');
-            return LocalDB.get(id);
-        }
+        const response = await authFetch(this.baseUrl + '/api/patients/' + encodeURIComponent(id));
+        if (!response.ok) throw new Error('Failed to fetch patient');
+        return await response.json();
     },
 
     async savePatient(data) {
-        if (!this.dbConnected) {
-            const saved = LocalDB.save(data);
-            showToast('Saved locally (offline mode).', 'info');
-            return saved;
-        }
-        try {
-            const response = await authFetch(this.baseUrl + '/api/patients', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            if (!response.ok) throw new Error('Failed to save patient');
-            const result = await response.json();
-            showToast('Saved successfully.', 'success');
-            return result;
-        } catch (e) {
-            console.error('API.savePatient error, falling back to localStorage:', e.message);
-            showToast('Server error. Saved locally instead.', 'error');
-            return LocalDB.save(data);
-        }
+        const response = await authFetch(this.baseUrl + '/api/patients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error('Failed to save patient');
+        return await response.json();
     },
 
     async saveQuestionnaire(id, data) {
-        if (!this.dbConnected) {
-            const saved = LocalDB.saveQuestionnaire(id, data);
-            showToast('Questionnaire saved locally (offline mode).', 'info');
-            return saved;
-        }
-        try {
-            const response = await authFetch(this.baseUrl + '/api/questionnaire/' + encodeURIComponent(id), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            if (!response.ok) throw new Error('Failed to save questionnaire');
-            const result = await response.json();
-            showToast('Questionnaire saved successfully.', 'success');
-            return result;
-        } catch (e) {
-            console.error('API.saveQuestionnaire error, falling back to localStorage:', e.message);
-            showToast('Server error. Questionnaire saved locally.', 'error');
-            return LocalDB.saveQuestionnaire(id, data);
-        }
+        const response = await authFetch(this.baseUrl + '/api/questionnaire/' + encodeURIComponent(id), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error('Failed to save questionnaire');
+        return await response.json();
     },
 
     async getStatsCounts() {
-        if (!this.dbConnected) {
-            return _buildLocalDashboardSummary();
-        }
         try {
             const response = await fetch(this.baseUrl + '/api/stats/counts');
             if (!response.ok) throw new Error('Failed to fetch stats');
             return await response.json();
         } catch (e) {
-            console.error('API.getStatsCounts error, falling back to localStorage:', e.message);
-            return _buildLocalDashboardSummary();
+            console.error('API.getStatsCounts error:', e.message);
+            return { total: 0, experimental: 0, control: 0 };
         }
     },
 
     async getDashboardSummary() {
-        if (!this.dbConnected) {
-            return _buildLocalDashboardSummary();
-        }
-        try {
-            const response = await authFetch(this.baseUrl + '/api/dashboard/summary');
-            if (!response.ok) throw new Error('Failed to fetch dashboard summary');
-            return await response.json();
-        } catch (e) {
-            console.error('API.getDashboardSummary error, falling back to localStorage:', e.message);
-            showToast('Cannot reach server. Showing local data.', 'error');
-            return _buildLocalDashboardSummary();
-        }
+        const response = await authFetch(this.baseUrl + '/api/dashboard/summary');
+        if (!response.ok) throw new Error('Failed to fetch dashboard summary');
+        return await response.json();
     },
 
     async exportCSV() {
-        if (!this.dbConnected) {
-            return _downloadLocalCSV();
-        }
-        try {
-            const response = await authFetch(this.baseUrl + '/api/export/csv');
-            if (!response.ok) throw new Error('Failed to export CSV');
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'diabetes_patients_export.csv';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast('CSV exported successfully.', 'success');
-        } catch (e) {
-            console.error('API.exportCSV error, falling back to localStorage:', e.message);
-            showToast('Server error. Exporting from local data.', 'error');
-            return _downloadLocalCSV();
-        }
+        const response = await authFetch(this.baseUrl + '/api/export/csv');
+        if (!response.ok) throw new Error('Failed to export CSV');
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'diabetes_patients_export.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('ส่งออก CSV สำเร็จ', 'success');
     }
 };
-
-function _buildLocalDashboardSummary() {
-    const patients = LocalDB.getAll();
-    const total = patients.length;
-    const experimental = patients.filter(function (p) {
-        return p.group === 'experimental' || p.group === 'exp';
-    }).length;
-    const control = patients.filter(function (p) {
-        return p.group === 'control' || p.group === 'ctrl';
-    }).length;
-
-    return {
-        total: total,
-        experimental: experimental,
-        control: control,
-        source: 'localStorage'
-    };
-}
-
-function _downloadLocalCSV() {
-    const csvContent = LocalDB.exportCSV();
-    if (!csvContent) {
-        showToast('No data to export.', 'info');
-        return;
-    }
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'diabetes_patients_export.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('CSV exported from local data.', 'success');
-}
 
 // ============================================================================
 // Toast Notifications
@@ -481,7 +229,6 @@ function initNavigation() {
         btn.addEventListener('click', function () {
             var targetTab = btn.getAttribute('data-tab');
 
-            // Check if this tab requires admin login
             var requiredRole = btn.getAttribute('data-role');
             if (requiredRole && window.Auth) {
                 var hasAccess = false;
@@ -494,15 +241,12 @@ function initNavigation() {
                 }
             }
 
-            // Remove active class from all nav buttons
             navButtons.forEach(function (b) {
                 b.classList.remove('active');
             });
 
-            // Add active class to clicked button
             btn.classList.add('active');
 
-            // Hide all tab contents, then show the matching one
             tabContents.forEach(function (tc) {
                 if (tc.id === 'tab-' + targetTab || tc.id === targetTab || tc.getAttribute('data-tab') === targetTab) {
                     tc.classList.add('active');
@@ -513,7 +257,6 @@ function initNavigation() {
                 }
             });
 
-            // Call tab-specific init functions
             if (targetTab === 'home') {
                 initHome();
             } else if (targetTab === 'dashboard') {
@@ -544,7 +287,7 @@ async function initHome() {
             textEl.textContent = 'Database Connected';
         } else {
             dotEl.style.background = '#fe6a35';
-            textEl.textContent = 'Offline (Local Storage)';
+            textEl.textContent = 'Server ไม่พร้อม';
         }
     }
 
@@ -555,7 +298,6 @@ async function initHome() {
         var total = summary.totalPatients || summary.total || 0;
         var followUp = summary.followUpComplete || 0;
 
-        // Render doughnut chart (admin-only section)
         var canvas = document.getElementById('home-patient-chart');
         if (canvas && typeof Chart !== 'undefined') {
             if (homePatientChart) homePatientChart.destroy();
@@ -610,7 +352,6 @@ async function initHome() {
                 }]
             });
 
-            // Build legend
             var legendEl = document.getElementById('home-chart-legend');
             if (legendEl) {
                 legendEl.innerHTML = labels.map(function(label, i) {
@@ -628,22 +369,19 @@ async function initHome() {
 }
 
 // ============================================================================
-// DOMContentLoaded - App Initialization (Guest-first, no login required)
+// DOMContentLoaded - App Initialization
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', async function () {
-    // Initialize auth module (login form, header button, etc.)
     if (window.Auth) {
         Auth.initLoginForm();
         Auth.initHeaderLoginButton();
 
-        // If already logged in, verify token silently
         if (Auth.isLoggedIn()) {
             await Auth.verifyToken();
         }
     }
 
-    // Always initialize the app (guest mode by default)
     await initApp();
 });
 
@@ -652,7 +390,6 @@ async function initApp() {
 
     await API.checkStatus();
 
-    // Apply role-based visibility
     if (window.Auth) {
         Auth.applyRoleAccess();
         Auth.updateUserMenu();
@@ -662,7 +399,6 @@ async function initApp() {
     initNavigation();
     await initHome();
 
-    // Initialize other modules if they exist
     if (window.DiabetesForm && typeof window.DiabetesForm.init === 'function') {
         window.DiabetesForm.init();
     }
@@ -683,11 +419,10 @@ async function initApp() {
 }
 
 // ============================================================================
-// Expose all public functions and objects on window for global access
+// Expose public functions on window
 // ============================================================================
 
 window.API = API;
-window.LocalDB = LocalDB;
 window.authFetch = authFetch;
 window.showToast = showToast;
 window.showLoading = showLoading;
@@ -698,8 +433,6 @@ window.initApp = initApp;
 
 // ============================================================================
 // DiabetesApp Facade
-// Bridges legacy DiabetesApp references in form/questionnaire/dashboard modules
-// to the actual API, LocalDB, and utility functions.
 // ============================================================================
 
 const DiabetesApp = {
@@ -727,28 +460,17 @@ const DiabetesApp = {
         return DiabetesApp.patients;
     },
 
-    loadAllFromLocal() {
-        const patients = LocalDB.getAll();
-        DiabetesApp.patients = patients || [];
-        return DiabetesApp.patients;
-    },
-
-    loadFromLocal(id) {
-        return LocalDB.get(id);
-    },
-
     populatePatientSelector(selector) {
         if (!selector) return;
-        // Clear existing options except the first placeholder
         while (selector.options.length > 1) {
             selector.remove(1);
         }
         DiabetesApp.patients.forEach(function (patient) {
             var opt = document.createElement('option');
-            opt.value = patient.id || patient.hn || '';
-            opt.textContent = (patient.hn || patient.id || '?') +
-                (patient.name ? ' - ' + patient.name : '') +
-                (patient.group ? ' (' + patient.group + ')' : '');
+            opt.value = patient.patient_id || patient.id || patient.hn || '';
+            opt.textContent = (patient.patient_id || patient.hn || patient.id || '?') +
+                (patient.first_name ? ' - ' + patient.first_name : '') +
+                (patient.study_group ? ' (' + patient.study_group + ')' : '');
             selector.appendChild(opt);
         });
     },

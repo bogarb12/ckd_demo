@@ -168,3 +168,28 @@ CREATE TABLE IF NOT EXISTS self_care (
     FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON DELETE CASCADE,
     UNIQUE KEY uk_patient (patient_id)
 ) ENGINE=InnoDB;
+
+-- ============================================
+-- 9. daily_tracking - บันทึกพฤติกรรมสุขภาพประจำวัน
+-- ============================================
+CREATE TABLE IF NOT EXISTS daily_tracking (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_id VARCHAR(20) NOT NULL,
+    tracking_date DATE NOT NULL,
+    bs_fasting DECIMAL(6,1) COMMENT 'น้ำตาลก่อนอาหาร (mg/dL)',
+    bs_postmeal DECIMAL(6,1) COMMENT 'น้ำตาลหลังอาหาร (mg/dL)',
+    bs_bedtime DECIMAL(6,1) COMMENT 'น้ำตาลก่อนนอน (mg/dL)',
+    diet JSON COMMENT 'อาหาร: meals, sweet_drink, snack',
+    exercise_types VARCHAR(200) COMMENT 'ประเภทออกกำลังกาย',
+    exercise_minutes INT COMMENT 'เวลาออกกำลังกาย (นาที)',
+    exercise_intensity VARCHAR(20) COMMENT 'ความหนัก: light/moderate/vigorous',
+    medication VARCHAR(10) COMMENT 'กินยา: all/some/none',
+    foot_inspected BOOLEAN DEFAULT FALSE,
+    foot_cream BOOLEAN DEFAULT FALSE,
+    foot_wound BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON DELETE CASCADE,
+    UNIQUE KEY uk_patient_date (patient_id, tracking_date)
+) ENGINE=InnoDB;

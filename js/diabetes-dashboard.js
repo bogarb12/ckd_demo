@@ -11,9 +11,7 @@ const DiabetesDashboard = {
     // Initialization
     // =====================
 
-    async init(options) {
-        options = options || {};
-
+    async init() {
         // Auth guard: only logged-in admin can see patient data
         var authOverlay = document.getElementById('dashboard-auth-overlay');
         var dashContent = document.getElementById('dashboard-content');
@@ -37,28 +35,12 @@ const DiabetesDashboard = {
         if (dashContent) dashContent.style.display = '';
 
         try {
-            // Load patient data
+            // Load patient data from server API
             let patients = [];
             let usingDemo = false;
 
-            if (options.forceLocal && typeof LocalDB !== 'undefined') {
-                // After CSV import: use localStorage directly
-                patients = LocalDB.getAll();
-            } else if (typeof DiabetesApp !== 'undefined') {
+            if (typeof DiabetesApp !== 'undefined') {
                 patients = await DiabetesApp.loadAllPatients();
-            }
-
-            // Also merge localStorage data if DB returned results
-            // (imported CSV data lives in localStorage, DB may have different data)
-            if (!options.forceLocal && typeof LocalDB !== 'undefined') {
-                var localPatients = LocalDB.getAll();
-                if (localPatients.length > 0) {
-                    // Merge: localStorage patients override DB patients by patient_id
-                    var merged = {};
-                    patients.forEach(function(p) { if (p.patient_id) merged[p.patient_id] = p; });
-                    localPatients.forEach(function(p) { if (p.patient_id) merged[p.patient_id] = Object.assign(merged[p.patient_id] || {}, p); });
-                    patients = Object.values(merged);
-                }
             }
 
             if (!patients || patients.length === 0) {
@@ -947,193 +929,32 @@ const DiabetesDashboard = {
 
     async exportCSV() {
         try {
-            // If DB connected, fetch from API
-            if (typeof DiabetesApp !== 'undefined' && DiabetesApp.dbConnected) {
-                try {
-                    const baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
-                    const fetchFn = window.authFetch || fetch;
-                    const response = await fetchFn(baseUrl + '/api/export/csv');
-                    if (!response.ok) {
-                        throw new Error('Export API failed');
-                    }
+            const baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
+            const fetchFn = window.authFetch || fetch;
+            const response = await fetchFn(baseUrl + '/api/export/csv');
+            if (!response.ok) throw new Error('Export API failed');
 
-                    const blob = await response.blob();
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = 'diabetes_patients_' + new Date().toISOString().slice(0, 10) + '.csv';
-                    link.style.display = 'none';
-                    document.body.appendChild(link);
-                    link.click();
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'diabetes_patients_' + new Date().toISOString().slice(0, 10) + '.csv';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
 
-                    setTimeout(() => {
-                        document.body.removeChild(link);
-                        URL.revokeObjectURL(url);
-                    }, 100);
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
 
-                    if (typeof DiabetesApp !== 'undefined') {
-                        DiabetesApp.showToast('ส่งออกข้อมูล CSV สำเร็จ', 'success');
-                    }
-                    return;
-                } catch (apiErr) {
-                    console.warn('API export failed, falling back to local export:', apiErr.message);
-                }
-            }
-
-            // localStorage fallback: generate CSV from local data
-            this.exportLocalCSV();
-
+            showToast('ส่งออกข้อมูล CSV สำเร็จ', 'success');
         } catch (err) {
             console.error('Export error:', err);
-            if (typeof DiabetesApp !== 'undefined') {
-                DiabetesApp.showToast('เกิดข้อผิดพลาดในการส่งออกข้อมูล', 'error');
-            }
+            showToast('เกิดข้อผิดพลาดในการส่งออกข้อมูล', 'error');
         }
     },
 
-    exportLocalCSV() {
-        let patients = [];
-
-        if (typeof DiabetesApp !== 'undefined') {
-            patients = DiabetesApp.loadAllFromLocal();
-        }
-
-        // If no local data, try demo data
-        if (!patients || patients.length === 0) {
-            const demoData = this.getDemoData();
-            patients = demoData.patients;
-        }
-
-        if (!patients || patients.length === 0) {
-            if (typeof DiabetesApp !== 'undefined') {
-                DiabetesApp.showToast('ไม่มีข้อมูลสำหรับส่งออก', 'info');
-            }
-            return;
-        }
-
-        // Define CSV columns matching the research template (89 columns)
-        const headers = [
-            'ID', 'Group (1=Intervention,0=Control)', 'Sex (1=Male,2=Female,3=Other)',
-            'ชื่อ', 'นามสกุล', 'BW', 'Ht', 'BMI', 'เอว', 'Age',
-            'ระดับการศึกษา', 'อาชีพ', 'note', 'ระยะเวลา DM',
-            'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'note', 'ยา', 'Line',
-            'HbA1c_baseline', 'FBS', 'GFR', 'DTX 1', 'HbA1c_6m',
-            'PAID1_baseline', 'PAID2_baseline', 'PAID3_baseline', 'PAID4_baseline', 'PAID5_baseline',
-            'PAID1_6m', 'PAID2_6m', 'PAID3_6m', 'PAID4_6m', 'PAID5_6m',
-            'PAID_total_baseline', 'PAID_total_6m',
-            'HL1_baseline', 'HL2_baseline', 'HL3_baseline', 'HL4_baseline', 'HL5_baseline',
-            'HL6_baseline', 'HL7_baseline', 'HL8_baseline', 'HL9_baseline', 'HL10_baseline',
-            'HL1_6m', 'HL2_6m', 'HL3_6m', 'HL4_6m', 'HL5_6m',
-            'HL6_6m', 'HL7_6m', 'HL8_6m', 'HL9_6m', 'HL10_6m',
-            'HL_total_baseline', 'HL_total_6m',
-            'H1_baseline', 'H2_baseline', 'H3_baseline', 'H4_baseline', 'H5_baseline', 'H6_baseline',
-            'H7_baseline', 'H8_baseline', 'H9_baseline', 'H10_baseline', 'H11_baseline', 'H12_baseline',
-            'H1_6m', 'H2_6m', 'H3_6m', 'H4_6m', 'H5_6m', 'H6_6m',
-            'H7_6m', 'H8_6m', 'H9_6m', 'H10_6m', 'H11_6m', 'H12_6m',
-            'H_baseline', 'H_6month'
-        ];
-
-        const groupMap = { 'experimental': '1', 'control': '0' };
-        const sexMap = { 'male': '1', 'female': '2', 'other': '3' };
-
-        const escapeCSV = (val) => {
-            if (val === null || val === undefined) return '';
-            const str = String(val);
-            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-                return '"' + str.replace(/"/g, '""') + '"';
-            }
-            return str;
-        };
-
-        const getVal = (obj, ...keys) => {
-            for (const k of keys) {
-                const v = obj[k];
-                if (v != null && v !== '') return v;
-            }
-            return '';
-        };
-
-        const getPaid = (p, q, period) => {
-            const keys = period === 'baseline'
-                ? [`paid5.q${q}_baseline`, `paid5_q${q}_baseline`]
-                : [`paid5.q${q}_6month`, `paid5_q${q}_6month`, `paid5_q${q}_6m`];
-            for (const k of keys) {
-                const parts = k.split('.');
-                let v = p;
-                for (const part of parts) { v = v && v[part]; }
-                if (v != null && v !== '') return v;
-            }
-            return '';
-        };
-
-        const getHL = (p, q, period) => {
-            const pre = period === 'baseline' ? 'baseline' : '6month';
-            if (p.health_literacy && p.health_literacy[`q${q}_${pre}`] != null) return p.health_literacy[`q${q}_${pre}`];
-            return '';
-        };
-
-        const getSC = (p, q, period) => {
-            const pre = period === 'baseline' ? 'baseline' : '6month';
-            if (p.self_care && p.self_care[`q${q}_${pre}`] != null) return p.self_care[`q${q}_${pre}`];
-            return '';
-        };
-
-        const rows = [headers.map(escapeCSV).join(',')];
-
-        patients.forEach(p => {
-            const grp = p.study_group || p.group || p.enrollment_group || '';
-            const gen = p.gender || '';
-            const row = [
-                p.patient_id || p.id || '',
-                groupMap[grp] || grp,
-                sexMap[gen] || gen,
-                p.first_name || '', p.last_name || '',
-                getVal(p, 'weight', 'bw'), getVal(p, 'height', 'ht'), getVal(p, 'bmi'), getVal(p, 'waist'), getVal(p, 'age'),
-                getVal(p, 'education_level'), getVal(p, 'occupation'), getVal(p, 'occupation_note'),
-                getVal(p, 'diabetes_duration_years', 'dm_duration'),
-                getVal(p, 'd1'), getVal(p, 'd2'), getVal(p, 'd3'), getVal(p, 'd4'),
-                getVal(p, 'd5'), getVal(p, 'd6'), getVal(p, 'd7'),
-                getVal(p, 'comorbidity_note'), getVal(p, 'medication'), getVal(p, 'line_usage'),
-                getVal(p, 'hba1c_baseline'), getVal(p, 'fbs'), getVal(p, 'gfr'), getVal(p, 'dtx1'), getVal(p, 'hba1c_6month', 'hba1c_6m'),
-                getPaid(p, 1, 'baseline'), getPaid(p, 2, 'baseline'), getPaid(p, 3, 'baseline'), getPaid(p, 4, 'baseline'), getPaid(p, 5, 'baseline'),
-                getPaid(p, 1, '6m'), getPaid(p, 2, '6m'), getPaid(p, 3, '6m'), getPaid(p, 4, '6m'), getPaid(p, 5, '6m'),
-                getVal(p, 'paid_total_baseline', 'paid5_total_baseline'), getVal(p, 'paid_total_6m', 'paid5_total_6month'),
-                getHL(p, 1, 'baseline'), getHL(p, 2, 'baseline'), getHL(p, 3, 'baseline'), getHL(p, 4, 'baseline'), getHL(p, 5, 'baseline'),
-                getHL(p, 6, 'baseline'), getHL(p, 7, 'baseline'), getHL(p, 8, 'baseline'), getHL(p, 9, 'baseline'), getHL(p, 10, 'baseline'),
-                getHL(p, 1, '6m'), getHL(p, 2, '6m'), getHL(p, 3, '6m'), getHL(p, 4, '6m'), getHL(p, 5, '6m'),
-                getHL(p, 6, '6m'), getHL(p, 7, '6m'), getHL(p, 8, '6m'), getHL(p, 9, '6m'), getHL(p, 10, '6m'),
-                getVal(p, 'hl_total_baseline'), getVal(p, 'hl_total_6m'),
-                getSC(p, 1, 'baseline'), getSC(p, 2, 'baseline'), getSC(p, 3, 'baseline'), getSC(p, 4, 'baseline'), getSC(p, 5, 'baseline'), getSC(p, 6, 'baseline'),
-                getSC(p, 7, 'baseline'), getSC(p, 8, 'baseline'), getSC(p, 9, 'baseline'), getSC(p, 10, 'baseline'), getSC(p, 11, 'baseline'), getSC(p, 12, 'baseline'),
-                getSC(p, 1, '6m'), getSC(p, 2, '6m'), getSC(p, 3, '6m'), getSC(p, 4, '6m'), getSC(p, 5, '6m'), getSC(p, 6, '6m'),
-                getSC(p, 7, '6m'), getSC(p, 8, '6m'), getSC(p, 9, '6m'), getSC(p, 10, '6m'), getSC(p, 11, '6m'), getSC(p, 12, '6m'),
-                getVal(p, 'h_total_baseline', 'sc_total_baseline'), getVal(p, 'h_total_6m', 'sc_total_6month')
-            ];
-            rows.push(row.map(escapeCSV).join(','));
-        });
-
-        const csvContent = rows.join('\n');
-
-        // Trigger download with BOM for Thai encoding in Excel
-        const bom = '﻿';
-        const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'diabetes_dashboard_' + new Date().toISOString().slice(0, 10) + '.csv';
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-
-        setTimeout(() => {
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        }, 100);
-
-        if (typeof DiabetesApp !== 'undefined') {
-            DiabetesApp.showToast('ส่งออกข้อมูล CSV สำเร็จ', 'success');
-        }
-    },
 
     // =====================
     // CSV Import
@@ -1163,13 +984,27 @@ const DiabetesDashboard = {
             showLoading();
 
             try {
-                // Import to localStorage (works without server/auth)
-                const csvText = await file.text();
-                const localResult = this.importCSVLocal(csvText);
+                // Send CSV to server API
+                const baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
+                const formData = new FormData();
+                formData.append('file', file);
 
-                this._showImportResult(localResult);
+                const headers = (window.Auth) ? Auth.getAuthHeaders() : {};
+                const response = await fetch(baseUrl + '/api/import/csv', {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error || 'นำเข้าข้อมูลไม่สำเร็จ');
+                }
+
+                this._showImportResult(result);
                 hideLoading();
-                await this.init({ forceLocal: true });
+                // Reload from DB
+                await this.init();
             } catch (err) {
                 hideLoading();
                 console.error('Import error:', err);
@@ -1443,213 +1278,6 @@ const DiabetesDashboard = {
         });
     },
 
-    // Import CSV to localStorage
-    importCSVLocal(csvText) {
-        const content = csvText.replace(/^\uFEFF/, '');
-        const lines = content.split(/\r?\n/).filter(l => l.trim());
-        if (lines.length < 2) throw new Error('CSV ต้องมี header + อย่างน้อย 1 แถวข้อมูล');
-
-        const rawHeaders = this._parseCSVLine(lines[0]);
-        const headers = this._normalizeHeaders(rawHeaders);
-        const idIdx = headers.indexOf('ID');
-        if (idIdx < 0) throw new Error('ไม่พบคอลัมน์ ID');
-
-        const groupMap = {
-            '1': 'experimental', '0': 'control',
-            'e': 'experimental', 'c': 'control',
-            'exp': 'experimental', 'ctrl': 'control',
-            'experimental': 'experimental', 'control': 'control',
-            'ทดลอง': 'experimental', 'ควบคุม': 'control',
-            'กลุ่มทดลอง': 'experimental', 'กลุ่มควบคุม': 'control'
-        };
-        const sexMap = { '1': 'male', '2': 'female', '3': 'other', 'm': 'male', 'f': 'female', 'male': 'male', 'female': 'female', 'ชาย': 'male', 'หญิง': 'female' };
-
-        let imported = 0;
-        let newCount = 0;
-        let updatedCount = 0;
-        const errors = [];
-        const warnings = [];
-        const rowDetails = [];
-
-        // Field coverage tracking
-        const fieldSections = {
-            demographic: { label: 'ข้อมูลพื้นฐาน', fields: ['ID','Group','Sex','Age','BW','Ht','BMI','waist'], filled: 0, total: 0 },
-            clinical: { label: 'ข้อมูลทางคลินิก', fields: ['HbA1c_baseline','FBS','GFR','DTX1','HbA1c_6m','dm_duration','medication'], filled: 0, total: 0 },
-            paid5: { label: 'PAID-5', fields: [], filled: 0, total: 0 },
-            health_literacy: { label: 'Health Literacy', fields: [], filled: 0, total: 0 },
-            self_care: { label: 'Self-Care', fields: [], filled: 0, total: 0 }
-        };
-        for (let q = 1; q <= 5; q++) { fieldSections.paid5.fields.push('PAID' + q + '_baseline', 'PAID' + q + '_6m'); }
-        fieldSections.paid5.fields.push('PAID_total_baseline', 'PAID_total_6m');
-        for (let q = 1; q <= 10; q++) { fieldSections.health_literacy.fields.push('HL' + q + '_baseline', 'HL' + q + '_6m'); }
-        fieldSections.health_literacy.fields.push('HL_total_baseline', 'HL_total_6m');
-        for (let q = 1; q <= 12; q++) { fieldSections.self_care.fields.push('H' + q + '_baseline', 'H' + q + '_6m'); }
-        fieldSections.self_care.fields.push('H_baseline', 'H_6month');
-
-        // Group counters
-        const groupCounts = { experimental: 0, control: 0, unknown: 0 };
-
-        for (let i = 1; i < lines.length; i++) {
-            const values = this._parseCSVLine(lines[i]);
-            if (values.length === 0) continue;
-
-            const row = {};
-            headers.forEach((h, idx) => { row[h] = values[idx] || null; });
-
-            if (!row.ID) {
-                errors.push({ row: i + 1, id: '-', message: 'ไม่มี ID', type: 'error' });
-                rowDetails.push({ row: i + 1, id: '-', status: 'error', message: 'ไม่มี ID' });
-                continue;
-            }
-
-            // Track field coverage per section
-            Object.keys(fieldSections).forEach(function(sec) {
-                fieldSections[sec].fields.forEach(function(f) {
-                    fieldSections[sec].total++;
-                    if (row[f] && row[f].trim && row[f].trim() !== '') fieldSections[sec].filled++;
-                });
-            });
-
-            // Validate numeric fields
-            var rowWarnings = [];
-            if (row.Age && (parseInt(row.Age) < 18 || parseInt(row.Age) > 120)) {
-                rowWarnings.push('อายุผิดปกติ: ' + row.Age);
-            }
-            if (row.HbA1c_baseline && (parseFloat(row.HbA1c_baseline) < 3 || parseFloat(row.HbA1c_baseline) > 20)) {
-                rowWarnings.push('HbA1c baseline ผิดปกติ: ' + row.HbA1c_baseline);
-            }
-            if (row.HbA1c_6m && (parseFloat(row.HbA1c_6m) < 3 || parseFloat(row.HbA1c_6m) > 20)) {
-                rowWarnings.push('HbA1c 6m ผิดปกติ: ' + row.HbA1c_6m);
-            }
-            if (row.BMI && (parseFloat(row.BMI) < 10 || parseFloat(row.BMI) > 80)) {
-                rowWarnings.push('BMI ผิดปกติ: ' + row.BMI);
-            }
-            if (row.FBS && (parseFloat(row.FBS) < 20 || parseFloat(row.FBS) > 600)) {
-                rowWarnings.push('FBS ผิดปกติ: ' + row.FBS);
-            }
-            if (row.GFR && (parseFloat(row.GFR) < 0 || parseFloat(row.GFR) > 200)) {
-                rowWarnings.push('GFR ผิดปกติ: ' + row.GFR);
-            }
-            if (rowWarnings.length > 0) {
-                rowWarnings.forEach(function(w) { warnings.push({ row: i + 1, id: row.ID, message: w }); });
-            }
-
-            const patient = {
-                patient_id: row.ID,
-                study_group: groupMap[(row.Group || '').toString().trim().toLowerCase()] || row.Group || null,
-                gender: sexMap[(row.Sex || '').toString().trim().toLowerCase()] || row.Sex || null,
-                first_name: row.first_name || null,
-                last_name: row.last_name || null,
-                weight: row.BW ? parseFloat(row.BW) : null,
-                height: row.Ht ? parseFloat(row.Ht) : null,
-                bmi: row.BMI ? parseFloat(row.BMI) : null,
-                waist: row.waist ? parseFloat(row.waist) : null,
-                age: row.Age ? parseInt(row.Age) : null,
-                education_level: row.education_level ? parseInt(row.education_level) : null,
-                occupation: row.occupation ? parseInt(row.occupation) : null,
-                occupation_note: row.occupation_note || null,
-                diabetes_duration_years: row.dm_duration ? parseFloat(row.dm_duration) : null,
-                d1: row.D1 ? parseInt(row.D1) : 0,
-                d2: row.D2 ? parseInt(row.D2) : 0,
-                d3: row.D3 ? parseInt(row.D3) : 0,
-                d4: row.D4 ? parseInt(row.D4) : 0,
-                d5: row.D5 ? parseInt(row.D5) : 0,
-                d6: row.D6 ? parseInt(row.D6) : 0,
-                d7: row.D7 ? parseInt(row.D7) : 0,
-                comorbidity_note: row.comorbidity_note || null,
-                medication: row.medication ? parseInt(row.medication) : null,
-                line_usage: row.Line ? parseInt(row.Line) : null,
-                hba1c_baseline: row.HbA1c_baseline ? parseFloat(row.HbA1c_baseline) : null,
-                fbs: row.FBS ? parseFloat(row.FBS) : null,
-                gfr: row.GFR ? parseFloat(row.GFR) : null,
-                dtx1: row.DTX1 ? parseFloat(row.DTX1) : null,
-                hba1c_6month: row.HbA1c_6m ? parseFloat(row.HbA1c_6m) : null,
-                paid5: {},
-                health_literacy: {},
-                self_care: {}
-            };
-
-            // PAID-5
-            for (let q = 1; q <= 5; q++) {
-                if (row['PAID' + q + '_baseline']) patient.paid5['q' + q + '_baseline'] = parseInt(row['PAID' + q + '_baseline']);
-                if (row['PAID' + q + '_6m']) patient.paid5['q' + q + '_6month'] = parseInt(row['PAID' + q + '_6m']);
-            }
-            if (row.PAID_total_baseline) patient.paid5.total_baseline = parseInt(row.PAID_total_baseline);
-            if (row.PAID_total_6m) patient.paid5.total_6month = parseInt(row.PAID_total_6m);
-
-            // Calculate PAID-5 converted scores and distress levels
-            // (same formula as diabetes-form.js: converted = total * 5, distress = converted >= 40 ? 'high' : 'low')
-            if (patient.paid5.total_baseline != null) {
-                patient.paid5.converted_baseline = patient.paid5.total_baseline * 5;
-                patient.paid5.distress_baseline = patient.paid5.converted_baseline >= 40 ? 'high' : 'low';
-            }
-            if (patient.paid5.total_6month != null) {
-                patient.paid5.converted_6month = patient.paid5.total_6month * 5;
-                patient.paid5.distress_6month = patient.paid5.converted_6month >= 40 ? 'high' : 'low';
-            }
-
-            // Health Literacy
-            for (let q = 1; q <= 10; q++) {
-                if (row['HL' + q + '_baseline']) patient.health_literacy['q' + q + '_baseline'] = parseInt(row['HL' + q + '_baseline']);
-                if (row['HL' + q + '_6m']) patient.health_literacy['q' + q + '_6month'] = parseInt(row['HL' + q + '_6m']);
-            }
-            if (row.HL_total_baseline) patient.health_literacy.total_baseline = parseInt(row.HL_total_baseline);
-            if (row.HL_total_6m) patient.health_literacy.total_6month = parseInt(row.HL_total_6m);
-
-            // Self-Care
-            for (let q = 1; q <= 12; q++) {
-                if (row['H' + q + '_baseline']) patient.self_care['q' + q + '_baseline'] = parseInt(row['H' + q + '_baseline']);
-                if (row['H' + q + '_6m']) patient.self_care['q' + q + '_6month'] = parseInt(row['H' + q + '_6m']);
-            }
-            if (row.H_baseline) patient.self_care.total_baseline = parseInt(row.H_baseline);
-            if (row.H_6month) patient.self_care.total_6month = parseInt(row.H_6month);
-
-            // Track group
-            if (patient.study_group === 'experimental') groupCounts.experimental++;
-            else if (patient.study_group === 'control') groupCounts.control++;
-            else groupCounts.unknown++;
-
-            // Save to localStorage
-            if (typeof LocalDB !== 'undefined') {
-                try {
-                    const existing = LocalDB.getAll();
-                    const idx = existing.findIndex(p => p.patient_id === patient.patient_id);
-                    if (idx >= 0) {
-                        existing[idx] = Object.assign(existing[idx], patient);
-                        updatedCount++;
-                        rowDetails.push({ row: i + 1, id: patient.patient_id, status: 'updated', message: 'อัปเดตข้อมูล', warnings: rowWarnings });
-                    } else {
-                        existing.push(patient);
-                        newCount++;
-                        rowDetails.push({ row: i + 1, id: patient.patient_id, status: 'new', message: 'เพิ่มใหม่', warnings: rowWarnings });
-                    }
-                    localStorage.setItem('diabetes_patients', JSON.stringify(existing));
-                    imported++;
-                } catch (e) {
-                    errors.push({ row: i + 1, id: patient.patient_id, message: e.message, type: 'error' });
-                    rowDetails.push({ row: i + 1, id: patient.patient_id, status: 'error', message: e.message });
-                }
-            } else {
-                errors.push({ row: i + 1, id: row.ID, message: 'LocalDB not available', type: 'error' });
-                rowDetails.push({ row: i + 1, id: row.ID, status: 'error', message: 'LocalDB not available' });
-            }
-        }
-
-        return {
-            success: true,
-            imported: imported,
-            total: lines.length - 1,
-            newCount: newCount,
-            updatedCount: updatedCount,
-            errors: errors,
-            warnings: warnings,
-            rowDetails: rowDetails,
-            groupCounts: groupCounts,
-            fieldCoverage: fieldSections,
-            columnCount: headers.length,
-            headersMapped: headers.filter(function(h) { return h !== null; }).length
-        };
-    },
 
     // =====================
     // Template Download

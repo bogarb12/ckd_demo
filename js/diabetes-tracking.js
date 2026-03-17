@@ -1,22 +1,60 @@
 // ============================================================================
 // Daily Behavior Tracking Module
 // บันทึกพฤติกรรมสุขภาพประจำวัน: อาหาร, ออกกำลังกาย, น้ำตาล, ยา, เท้า
+// All data flows through server API (MariaDB). No localStorage.
 // ============================================================================
 
 const DailyTracking = {
 
-    STORAGE_KEY: 'diabetes_daily_tracking',
+    _records: [],
+    _patientId: null,
 
     init() {
+        this.setupPatientSelector();
         this.setupDatePicker();
         this.setupSaveButton();
         this.setupExportButton();
-        this.renderHistory();
     },
 
     // =====================
     // Setup
     // =====================
+
+    setupPatientSelector() {
+        const selector = document.getElementById('tracking-patient-select');
+        if (!selector) return;
+        selector.addEventListener('change', async () => {
+            this._patientId = selector.value || null;
+            if (this._patientId) {
+                await this._loadAll();
+                this.renderHistory();
+            } else {
+                this._records = [];
+                this.renderHistory();
+            }
+        });
+        // Populate patient list
+        this._populatePatients();
+    },
+
+    async _populatePatients() {
+        const selector = document.getElementById('tracking-patient-select');
+        if (!selector) return;
+        try {
+            const patients = await API.getPatients();
+            while (selector.options.length > 1) selector.remove(1);
+            (patients || []).forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.patient_id || p.id || '';
+                opt.textContent = (p.patient_id || p.id || '?') +
+                    (p.first_name ? ' - ' + p.first_name : '') +
+                    (p.study_group ? ' (' + p.study_group + ')' : '');
+                selector.appendChild(opt);
+            });
+        } catch (e) {
+            console.error('Failed to load patients for tracking:', e);
+        }
+    },
 
     setupDatePicker() {
         const dateInput = document.getElementById('tracking-date');
@@ -84,7 +122,6 @@ const DailyTracking = {
 
         return {
             date: date,
-            timestamp: new Date().toISOString(),
             blood_sugar: {
                 fasting: bsFasting,
                 postmeal: bsPostmeal,
@@ -111,48 +148,58 @@ const DailyTracking = {
     },
 
     // =====================
-    // Save & Load
+    // Save & Load (Server API)
     // =====================
 
-    saveEntry() {
-        const entry = this.collectEntry();
-
-        if (!entry.date) {
-            if (typeof DiabetesApp !== 'undefined') {
-                DiabetesApp.showToast('กรุณาเลือกวันที่', 'error');
-            }
+    async saveEntry() {
+        if (!this._patientId) {
+            showToast('กรุณาเลือกผู้ป่วยก่อนบันทึก', 'error');
             return;
         }
 
-        const records = this._loadAll();
+        const entry = this.collectEntry();
 
-        // Replace if same date exists, otherwise add
-        const existingIndex = records.findIndex(r => r.date === entry.date);
-        if (existingIndex >= 0) {
-            records[existingIndex] = entry;
-        } else {
-            records.push(entry);
+        if (!entry.date) {
+            showToast('กรุณาเลือกวันที่', 'error');
+            return;
         }
 
-        // Sort by date descending
-        records.sort((a, b) => b.date.localeCompare(a.date));
+        try {
+            showLoading();
+            const response = await authFetch(API.baseUrl + '/api/tracking/' + encodeURIComponent(this._patientId), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(entry)
+            });
+            if (!response.ok) throw new Error('Failed to save tracking entry');
 
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(records));
+            showToast('บันทึกข้อมูลวันที่ ' + entry.date + ' แล้ว', 'success');
 
-        if (typeof DiabetesApp !== 'undefined') {
-            DiabetesApp.showToast('บันทึกข้อมูลวันที่ ' + entry.date + ' แล้ว', 'success');
+            await this._loadAll();
+            this.renderHistory();
+            this._clearForm();
+        } catch (e) {
+            console.error('saveEntry error:', e);
+            showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
+        } finally {
+            hideLoading();
         }
-
-        this.renderHistory();
-        this._clearForm();
     },
 
-    _loadAll() {
-        try {
-            return JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '[]');
-        } catch (e) {
+    async _loadAll() {
+        if (!this._patientId) {
+            this._records = [];
             return [];
         }
+        try {
+            const response = await authFetch(API.baseUrl + '/api/tracking/' + encodeURIComponent(this._patientId));
+            if (!response.ok) throw new Error('Failed to load tracking');
+            this._records = await response.json();
+        } catch (e) {
+            console.error('_loadAll error:', e);
+            this._records = [];
+        }
+        return this._records;
     },
 
     // =====================
@@ -163,8 +210,7 @@ const DailyTracking = {
         const container = document.getElementById('tracking-history');
         if (!container) return;
 
-        const records = this._loadAll();
-        const recent = records.slice(0, 7);
+        const recent = this._records.slice(0, 7);
 
         if (recent.length === 0) {
             container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted)">ยังไม่มีข้อมูล</div>';
@@ -210,8 +256,7 @@ const DailyTracking = {
     },
 
     loadEntry(date) {
-        const records = this._loadAll();
-        const entry = records.find(r => r.date === date);
+        const entry = this._records.find(r => r.date === date);
         if (!entry) return;
 
         // Set date
@@ -264,9 +309,7 @@ const DailyTracking = {
         // Notes
         this._setVal('tr-notes', entry.notes);
 
-        if (typeof DiabetesApp !== 'undefined') {
-            DiabetesApp.showToast('โหลดข้อมูลวันที่ ' + date, 'info');
-        }
+        showToast('โหลดข้อมูลวันที่ ' + date, 'info');
     },
 
     // =====================
@@ -274,11 +317,8 @@ const DailyTracking = {
     // =====================
 
     exportCSV() {
-        const records = this._loadAll();
-        if (records.length === 0) {
-            if (typeof DiabetesApp !== 'undefined') {
-                DiabetesApp.showToast('ไม่มีข้อมูลให้ Export', 'error');
-            }
+        if (this._records.length === 0) {
+            showToast('ไม่มีข้อมูลให้ Export', 'error');
             return;
         }
 
@@ -294,7 +334,7 @@ const DailyTracking = {
 
         let csv = '\uFEFF' + headers.join(',') + '\n';
 
-        records.forEach(r => {
+        this._records.forEach(r => {
             const bs = r.blood_sugar || {};
             const meals = r.diet?.meals || {};
             const ex = r.exercise || {};
@@ -333,13 +373,11 @@ const DailyTracking = {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'daily_tracking_' + this._todayStr() + '.csv';
+        a.download = 'daily_tracking_' + (this._patientId || 'all') + '_' + this._todayStr() + '.csv';
         a.click();
         URL.revokeObjectURL(url);
 
-        if (typeof DiabetesApp !== 'undefined') {
-            DiabetesApp.showToast('Export CSV สำเร็จ (' + records.length + ' รายการ)', 'success');
-        }
+        showToast('Export CSV สำเร็จ (' + this._records.length + ' รายการ)', 'success');
     },
 
     // =====================

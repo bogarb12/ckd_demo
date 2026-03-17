@@ -65,12 +65,10 @@ const DiabetesQuestionnaire = {
             select.appendChild(defaultOpt);
         }
 
-        // Populate from DiabetesApp.patients (API) or localStorage
+        // Populate from DiabetesApp.patients (API)
         let patients = [];
         if (typeof DiabetesApp !== 'undefined' && Array.isArray(DiabetesApp.patients) && DiabetesApp.patients.length > 0) {
             patients = DiabetesApp.patients;
-        } else if (typeof LocalDB !== 'undefined') {
-            patients = LocalDB.getAll() || [];
         }
 
         patients.forEach(patient => {
@@ -341,61 +339,26 @@ const DiabetesQuestionnaire = {
             assessment_date: new Date().toISOString()
         };
 
-        // If no patient selected ("ไม่ระบุผู้ป่วย"), save to localStorage only
         if (!patientId) {
-            const anonKey = 'anonymous_' + Date.now();
-            this._saveToLocalStorage(anonKey, questionnaireData);
             if (typeof DiabetesApp !== 'undefined') {
-                DiabetesApp.showToast('บันทึกแบบประเมินสำเร็จ (ไม่ระบุผู้ป่วย)', 'success');
+                DiabetesApp.showToast('กรุณาเลือกผู้ป่วยก่อนบันทึก', 'error');
             }
             return;
         }
 
-        if (typeof DiabetesApp !== 'undefined' && DiabetesApp.dbConnected) {
-            // Save via API
+        // Save via API only
+        if (typeof DiabetesApp !== 'undefined') {
             try {
                 await DiabetesApp.apiPost(`/api/questionnaire/${encodeURIComponent(patientId)}`, questionnaireData);
                 DiabetesApp.showToast('บันทึกแบบประเมินสำเร็จ', 'success');
             } catch (err) {
                 console.error('บันทึกแบบประเมินผ่าน API ล้มเหลว:', err);
-                // Fallback to localStorage on API failure
-                this._saveToLocalStorage(patientId, questionnaireData);
-                if (typeof DiabetesApp !== 'undefined') {
-                    DiabetesApp.showToast('บันทึกแบบประเมินสำเร็จ (localStorage)', 'info');
-                }
-            }
-        } else {
-            // Save to localStorage
-            this._saveToLocalStorage(patientId, questionnaireData);
-            if (typeof DiabetesApp !== 'undefined') {
-                DiabetesApp.showToast('บันทึกแบบประเมินสำเร็จ', 'success');
+                DiabetesApp.showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error');
             }
         }
     },
 
-    _saveToLocalStorage(patientId, questionnaireData) {
-        try {
-            if (typeof DiabetesApp !== 'undefined') {
-                const patients = DiabetesApp.loadAllFromLocal();
-                const idx = patients.findIndex(p => p.patient_id === patientId);
-                if (idx >= 0) {
-                    patients[idx].healthLiteracy = questionnaireData.healthLiteracy;
-                    patients[idx].selfCare = questionnaireData.selfCare;
-                    patients[idx].questionnaire_date = questionnaireData.assessment_date;
-                    localStorage.setItem('diabetes_patients', JSON.stringify(patients));
-                } else {
-                    // Patient not found in main list; save as standalone questionnaire record
-                    const key = `questionnaire_${patientId}`;
-                    localStorage.setItem(key, JSON.stringify(questionnaireData));
-                }
-            } else {
-                const key = `questionnaire_${patientId}`;
-                localStorage.setItem(key, JSON.stringify(questionnaireData));
-            }
-        } catch (err) {
-            console.error('ไม่สามารถบันทึกลง localStorage ได้:', err);
-        }
-    },
+    // _saveToLocalStorage removed - all data goes through server API
 
     // =====================
     // Load Existing Questionnaire Data
@@ -406,8 +369,8 @@ const DiabetesQuestionnaire = {
 
         let data = null;
 
-        if (typeof DiabetesApp !== 'undefined' && DiabetesApp.dbConnected) {
-            // Load via API
+        // Load via API
+        if (typeof DiabetesApp !== 'undefined') {
             try {
                 const response = await DiabetesApp.apiGet(`/api/patients/${encodeURIComponent(patientId)}`);
                 if (response) {
@@ -417,11 +380,8 @@ const DiabetesQuestionnaire = {
                     };
                 }
             } catch (err) {
-                console.warn('โหลดข้อมูลแบบประเมินจาก API ล้มเหลว ลอง localStorage:', err.message);
-                data = this._loadFromLocalStorage(patientId);
+                console.warn('โหลดข้อมูลแบบประเมินจาก API ล้มเหลว:', err.message);
             }
-        } else {
-            data = this._loadFromLocalStorage(patientId);
         }
 
         if (data) {
@@ -430,32 +390,6 @@ const DiabetesQuestionnaire = {
         }
     },
 
-    _loadFromLocalStorage(patientId) {
-        try {
-            if (typeof DiabetesApp !== 'undefined') {
-                const patientData = DiabetesApp.loadFromLocal(patientId);
-                if (patientData) {
-                    return {
-                        healthLiteracy: patientData.healthLiteracy || null,
-                        selfCare: patientData.selfCare || null
-                    };
-                }
-            }
-            // Try standalone questionnaire record
-            const key = `questionnaire_${patientId}`;
-            const raw = localStorage.getItem(key);
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                return {
-                    healthLiteracy: parsed.healthLiteracy || null,
-                    selfCare: parsed.selfCare || null
-                };
-            }
-        } catch (err) {
-            console.error('ไม่สามารถโหลดข้อมูลจาก localStorage ได้:', err);
-        }
-        return null;
-    },
 
     // =====================
     // Populate Form Fields from Loaded Data

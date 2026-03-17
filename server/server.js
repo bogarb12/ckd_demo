@@ -1055,10 +1055,97 @@ function parseCSVLine(line) {
 }
 
 // ============================================
+// API: Daily Tracking
+// ============================================
+
+// GET /api/tracking/:patientId - get all tracking entries for a patient
+app.get('/api/tracking/:patientId', async (req, res) => {
+    if (!dbConnected) return res.status(503).json({ error: 'Database not connected' });
+    try {
+        const conn = await pool.getConnection();
+        const rows = await conn.query(
+            'SELECT * FROM daily_tracking WHERE patient_id = ? ORDER BY tracking_date DESC',
+            [req.params.patientId]
+        );
+        conn.release();
+        // Parse diet JSON
+        const entries = rows.map(r => ({
+            id: r.id,
+            patient_id: r.patient_id,
+            date: r.tracking_date ? r.tracking_date.toISOString().split('T')[0] : null,
+            blood_sugar: {
+                fasting: r.bs_fasting ? parseFloat(r.bs_fasting) : null,
+                postmeal: r.bs_postmeal ? parseFloat(r.bs_postmeal) : null,
+                bedtime: r.bs_bedtime ? parseFloat(r.bs_bedtime) : null
+            },
+            diet: r.diet ? (typeof r.diet === 'string' ? JSON.parse(r.diet) : r.diet) : {},
+            exercise: {
+                types: r.exercise_types ? r.exercise_types.split(';').filter(Boolean) : [],
+                minutes: r.exercise_minutes,
+                intensity: r.exercise_intensity
+            },
+            medication: r.medication,
+            foot_care: {
+                inspected: !!r.foot_inspected,
+                cream: !!r.foot_cream,
+                wound: !!r.foot_wound
+            },
+            notes: r.notes
+        }));
+        res.json(entries);
+    } catch (err) {
+        console.error('GET /api/tracking error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/tracking/:patientId - save/update a tracking entry
+app.post('/api/tracking/:patientId', async (req, res) => {
+    if (!dbConnected) return res.status(503).json({ error: 'Database not connected' });
+    try {
+        const patientId = req.params.patientId;
+        const d = req.body;
+        const trackingDate = d.date;
+        if (!trackingDate) return res.status(400).json({ error: 'date is required' });
+
+        const bs = d.blood_sugar || {};
+        const ex = d.exercise || {};
+        const foot = d.foot_care || {};
+        const dietJson = JSON.stringify(d.diet || {});
+        const exerciseTypes = (ex.types || []).join(';');
+
+        const conn = await pool.getConnection();
+        await conn.query(
+            `INSERT INTO daily_tracking
+             (patient_id, tracking_date, bs_fasting, bs_postmeal, bs_bedtime,
+              diet, exercise_types, exercise_minutes, exercise_intensity,
+              medication, foot_inspected, foot_cream, foot_wound, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+              bs_fasting=VALUES(bs_fasting), bs_postmeal=VALUES(bs_postmeal), bs_bedtime=VALUES(bs_bedtime),
+              diet=VALUES(diet), exercise_types=VALUES(exercise_types),
+              exercise_minutes=VALUES(exercise_minutes), exercise_intensity=VALUES(exercise_intensity),
+              medication=VALUES(medication), foot_inspected=VALUES(foot_inspected),
+              foot_cream=VALUES(foot_cream), foot_wound=VALUES(foot_wound), notes=VALUES(notes)`,
+            [patientId, trackingDate,
+             bs.fasting || null, bs.postmeal || null, bs.bedtime || null,
+             dietJson, exerciseTypes, ex.minutes || null, ex.intensity || null,
+             d.medication || null, foot.inspected ? 1 : 0, foot.cream ? 1 : 0, foot.wound ? 1 : 0,
+             d.notes || null]
+        );
+        conn.release();
+        res.json({ success: true });
+    } catch (err) {
+        console.error('POST /api/tracking error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================
 // API: DB Status (Public - needed before login)
 // ============================================
 app.get('/api/status', (req, res) => {
-    res.json({ dbConnected, mode: dbConnected ? 'database' : 'localStorage' });
+    res.json({ dbConnected, mode: dbConnected ? 'database' : 'unavailable' });
 });
 
 // ============================================
@@ -1069,7 +1156,7 @@ async function start() {
     dbConnected = await testConnection();
     app.listen(PORT, () => {
         console.log(`\nDiabetes Tracking App running at http://localhost:${PORT}/diabetes.html`);
-        console.log(`Mode: ${dbConnected ? 'MariaDB Database' : 'localStorage (Demo)'}`);
+        console.log(`Mode: ${dbConnected ? 'MariaDB Database' : 'DB unavailable'}`);
         console.log(`API: http://localhost:${PORT}/api/status\n`);
     });
 }
