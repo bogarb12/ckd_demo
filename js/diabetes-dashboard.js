@@ -12,6 +12,30 @@ const DiabetesDashboard = {
     // =====================
 
     async init() {
+        // Auth guard: only logged-in admin can see patient data
+        var authOverlay = document.getElementById('dashboard-auth-overlay');
+        var dashContent = document.getElementById('dashboard-content');
+        var loginBtn = document.getElementById('btn-dashboard-login');
+
+        if (loginBtn && !loginBtn._bound) {
+            loginBtn._bound = true;
+            loginBtn.addEventListener('click', function() {
+                if (window.Auth) Auth.showLoginModal();
+            });
+        }
+
+        var isAdmin = window.Auth && Auth.isLoggedIn() && Auth.isAdmin();
+        if (!isAdmin) {
+            // Show lock overlay, hide content
+            if (authOverlay) authOverlay.classList.remove('hidden');
+            if (dashContent) dashContent.style.display = 'none';
+            return;
+        }
+
+        // Admin logged in: hide overlay, show content
+        if (authOverlay) authOverlay.classList.add('hidden');
+        if (dashContent) dashContent.style.display = '';
+
         try {
             // Load patient data
             let patients = [];

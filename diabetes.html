@@ -901,6 +901,18 @@
 <div class="tab-content" id="tab-dashboard">
     <div class="section-title"><i class="fa-solid fa-chart-column"></i> Dashboard ภาพรวมข้อมูล</div>
 
+    <!-- Login Required Overlay -->
+    <div id="dashboard-auth-overlay" class="hidden" style="background:#f8fafc;border:2px dashed #cbd5e1;border-radius:16px;padding:48px 24px;text-align:center;margin-bottom:16px">
+        <div style="font-size:56px;color:#94a3b8;margin-bottom:16px"><i class="fa-solid fa-lock"></i></div>
+        <h3 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#334155">ต้องเข้าสู่ระบบก่อน</h3>
+        <p style="color:#64748b;font-size:14px;margin:0 0 20px;max-width:360px;margin-left:auto;margin-right:auto">เฉพาะผู้ดูแลระบบ (Admin) ที่ login แล้วเท่านั้น จึงสามารถดูข้อมูลผู้ป่วยได้</p>
+        <button id="btn-dashboard-login" class="btn btn-primary" style="min-width:160px;font-size:15px;padding:10px 24px">
+            <i class="fa-solid fa-right-to-bracket" style="margin-right:6px"></i> เข้าสู่ระบบ
+        </button>
+    </div>
+
+    <!-- Dashboard Content (hidden until admin login) -->
+    <div id="dashboard-content" style="display:none">
     <div class="notice-banner warning hidden" id="demo-notice">
         <i class="fa-solid fa-triangle-exclamation"></i> ไม่ได้เชื่อมต่อฐานข้อมูล - แสดงข้อมูลตัวอย่าง (Demo)
     </div>
@@ -1020,6 +1032,7 @@
             </tbody>
         </table>
     </div>
+    </div><!-- /dashboard-content -->
 </div>
 
 <!-- ============================================ -->

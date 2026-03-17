@@ -87,6 +87,11 @@ const Auth = {
         this.applyRoleAccess();
         this.updateUserMenu();
         this.updateHeaderLoginButton();
+        // Hide dashboard content and show auth overlay
+        var authOverlay = document.getElementById('dashboard-auth-overlay');
+        var dashContent = document.getElementById('dashboard-content');
+        if (authOverlay) authOverlay.classList.remove('hidden');
+        if (dashContent) dashContent.style.display = 'none';
         // Switch back to home tab
         var homeBtn = document.querySelector('.bottom-nav-btn[data-tab="home"]');
         if (homeBtn) homeBtn.click();
@@ -190,6 +195,12 @@ const Auth = {
                 self.hideLoginModal();
                 self.applyRoleAccess();
                 self.updateUserMenu();
+                self.updateHeaderLoginButton();
+                // Re-init dashboard if currently on dashboard tab
+                var dashTab = document.getElementById('tab-dashboard');
+                if (dashTab && (dashTab.classList.contains('active') || dashTab.style.display !== 'none')) {
+                    if (window.DiabetesDashboard) DiabetesDashboard.init();
+                }
                 if (window.showToast) window.showToast('เข้าสู่ระบบสำเร็จ', 'success');
             } catch (err) {
                 errorEl.textContent = err.message;
