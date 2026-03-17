@@ -225,19 +225,26 @@ app.delete('/api/users/:username', authMiddleware, adminOnly, (req, res) => {
 app.get('/api/patients', async (req, res) => {
     if (!dbConnected) return res.json([]);
     try {
-        const rows = await query(
-            `SELECT p.*,
-             c.hba1c_baseline, c.hba1c_6month,
-             s.total_baseline as paid5_total_baseline, s.total_6month as paid5_total_6month,
-             s.converted_baseline as paid5_converted_baseline, s.converted_6month as paid5_converted_6month,
-             s.distress_baseline as paid5_distress_baseline, s.distress_6month as paid5_distress_6month,
-             fu.status as follow_up_status, fu.end_date as follow_up_end_date
-             FROM patients p
-             LEFT JOIN clinical_outcomes c ON p.patient_id = c.patient_id
-             LEFT JOIN paid5_scores s ON p.patient_id = s.patient_id
-             LEFT JOIN follow_up_status fu ON p.patient_id = fu.patient_id
-             ORDER BY p.created_at DESC`
-        );
+        let rows;
+        try {
+            rows = await query(
+                `SELECT p.*,
+                 c.hba1c_baseline, c.hba1c_6month,
+                 s.total_baseline as paid5_total_baseline, s.total_6month as paid5_total_6month,
+                 s.converted_baseline as paid5_converted_baseline, s.converted_6month as paid5_converted_6month,
+                 s.distress_baseline as paid5_distress_baseline, s.distress_6month as paid5_distress_6month,
+                 fu.status as follow_up_status, fu.end_date as follow_up_end_date
+                 FROM patients p
+                 LEFT JOIN clinical_outcomes c ON p.patient_id = c.patient_id
+                 LEFT JOIN paid5_scores s ON p.patient_id = s.patient_id
+                 LEFT JOIN follow_up_status fu ON p.patient_id = fu.patient_id
+                 ORDER BY p.created_at DESC`
+            );
+        } catch (joinErr) {
+            // Fallback: some joined tables may not exist yet
+            console.warn('GET /api/patients JOIN failed, using simple query:', joinErr.message);
+            rows = await query('SELECT p.*, c.hba1c_baseline, c.hba1c_6month FROM patients p LEFT JOIN clinical_outcomes c ON p.patient_id = c.patient_id ORDER BY p.created_at DESC');
+        }
         rows.forEach(r => {
             // Build comorbidities array from d1-d7 flags for backward compatibility
             if (!r.comorbidities && (r.d1 || r.d2 || r.d3 || r.d4 || r.d5 || r.d6 || r.d7)) {
