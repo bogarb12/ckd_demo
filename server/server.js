@@ -798,7 +798,11 @@ app.get('/api/import/template', (req, res) => {
 // ============================================
 app.post('/api/import/csv', upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    if (!dbConnected) return res.json({ success: true, imported: 0, total: 0, errors: [], mode: 'localStorage', message: 'DB not connected - use client-side import' });
+    if (!dbConnected) return res.json({ success: true, imported: 0, total: 0, errors: [], message: 'DB not connected' });
+
+    // Safe number parsers: return null instead of NaN
+    const safeInt = (v) => { if (!v || v === '') return null; const n = parseInt(v); return isNaN(n) ? null : n; };
+    const safeFloat = (v) => { if (!v || v === '') return null; const n = parseFloat(v); return isNaN(n) ? null : n; };
 
     // Map CSV header names to normalized keys
     // "note" appears twice: after อาชีพ (occupation_note) and after D7 (comorbidity_note)
@@ -909,25 +913,25 @@ app.post('/api/import/csv', upload.single('file'), async (req, res) => {
                         gender,
                         row.first_name || null,
                         row.last_name || null,
-                        row.BW ? parseFloat(row.BW) : null,
-                        row.Ht ? parseFloat(row.Ht) : null,
-                        row.BMI ? parseFloat(row.BMI) : null,
-                        row.waist ? parseFloat(row.waist) : null,
-                        row.Age ? parseInt(row.Age) : null,
-                        row.education_level ? parseInt(row.education_level) : null,
-                        row.occupation ? parseInt(row.occupation) : null,
+                        safeFloat(row.BW),
+                        safeFloat(row.Ht),
+                        safeFloat(row.BMI),
+                        safeFloat(row.waist),
+                        safeInt(row.Age),
+                        safeInt(row.education_level),
+                        safeInt(row.occupation),
                         row.occupation_note || null,
-                        row.dm_duration ? parseFloat(row.dm_duration) : null,
-                        row.D1 ? parseInt(row.D1) : 0,
-                        row.D2 ? parseInt(row.D2) : 0,
-                        row.D3 ? parseInt(row.D3) : 0,
-                        row.D4 ? parseInt(row.D4) : 0,
-                        row.D5 ? parseInt(row.D5) : 0,
-                        row.D6 ? parseInt(row.D6) : 0,
-                        row.D7 ? parseInt(row.D7) : 0,
+                        safeFloat(row.dm_duration),
+                        safeInt(row.D1) || 0,
+                        safeInt(row.D2) || 0,
+                        safeInt(row.D3) || 0,
+                        safeInt(row.D4) || 0,
+                        safeInt(row.D5) || 0,
+                        safeInt(row.D6) || 0,
+                        safeInt(row.D7) || 0,
                         row.comorbidity_note || null,
-                        row.medication ? parseInt(row.medication) : null,
-                        row.Line ? parseInt(row.Line) : null
+                        safeInt(row.medication),
+                        safeInt(row.Line)
                     ]
                 );
 
@@ -941,11 +945,11 @@ app.post('/api/import/csv', upload.single('file'), async (req, res) => {
                          fbs=VALUES(fbs), gfr=VALUES(gfr), dtx1=VALUES(dtx1)`,
                         [
                             row.ID,
-                            row.HbA1c_baseline ? parseFloat(row.HbA1c_baseline) : null,
-                            row.HbA1c_6m ? parseFloat(row.HbA1c_6m) : null,
-                            row.FBS ? parseFloat(row.FBS) : null,
-                            row.GFR ? parseFloat(row.GFR) : null,
-                            row.DTX1 ? parseFloat(row.DTX1) : null
+                            safeFloat(row.HbA1c_baseline),
+                            safeFloat(row.HbA1c_6m),
+                            safeFloat(row.FBS),
+                            safeFloat(row.GFR),
+                            safeFloat(row.DTX1)
                         ]
                     );
                 }
@@ -955,14 +959,14 @@ app.post('/api/import/csv', upload.single('file'), async (req, res) => {
                 if (hasPaid) {
                     const p5 = {};
                     for (let q = 1; q <= 5; q++) {
-                        p5[`q${q}_bl`] = row[`PAID${q}_baseline`] ? parseInt(row[`PAID${q}_baseline`]) : null;
-                        p5[`q${q}_6m`] = row[`PAID${q}_6m`] ? parseInt(row[`PAID${q}_6m`]) : null;
+                        p5[`q${q}_bl`] = safeInt(row[`PAID${q}_baseline`]);
+                        p5[`q${q}_6m`] = safeInt(row[`PAID${q}_6m`]);
                     }
                     // Use provided totals or calculate
-                    const totalBL = row.PAID_total_baseline ? parseInt(row.PAID_total_baseline) :
+                    const totalBL = safeInt(row.PAID_total_baseline) ||
                         ([p5.q1_bl, p5.q2_bl, p5.q3_bl, p5.q4_bl, p5.q5_bl].filter(v => v != null).length > 0
                             ? [p5.q1_bl, p5.q2_bl, p5.q3_bl, p5.q4_bl, p5.q5_bl].filter(v => v != null).reduce((a, b) => a + b, 0) : null);
-                    const total6m = row.PAID_total_6m ? parseInt(row.PAID_total_6m) :
+                    const total6m = safeInt(row.PAID_total_6m) ||
                         ([p5.q1_6m, p5.q2_6m, p5.q3_6m, p5.q4_6m, p5.q5_6m].filter(v => v != null).length > 0
                             ? [p5.q1_6m, p5.q2_6m, p5.q3_6m, p5.q4_6m, p5.q5_6m].filter(v => v != null).reduce((a, b) => a + b, 0) : null);
                     const convBL = totalBL != null ? (totalBL / 20) * 100 : null;
@@ -1002,11 +1006,11 @@ app.post('/api/import/csv', upload.single('file'), async (req, res) => {
                 if (hasHL) {
                     const hl = {};
                     for (let q = 1; q <= 10; q++) {
-                        hl[`q${q}_bl`] = row[`HL${q}_baseline`] ? parseInt(row[`HL${q}_baseline`]) : null;
-                        hl[`q${q}_6m`] = row[`HL${q}_6m`] ? parseInt(row[`HL${q}_6m`]) : null;
+                        hl[`q${q}_bl`] = safeInt(row[`HL${q}_baseline`]);
+                        hl[`q${q}_6m`] = safeInt(row[`HL${q}_6m`]);
                     }
-                    const totalBL = row.HL_total_baseline ? parseInt(row.HL_total_baseline) : null;
-                    const total6m = row.HL_total_6m ? parseInt(row.HL_total_6m) : null;
+                    const totalBL = safeInt(row.HL_total_baseline);
+                    const total6m = safeInt(row.HL_total_6m);
 
                     if (totalBL != null || total6m != null || Object.values(hl).some(v => v != null)) {
                         await query(
@@ -1044,11 +1048,11 @@ app.post('/api/import/csv', upload.single('file'), async (req, res) => {
                 if (hasH) {
                     const sc = {};
                     for (let q = 1; q <= 12; q++) {
-                        sc[`q${q}_bl`] = row[`H${q}_baseline`] ? parseInt(row[`H${q}_baseline`]) : null;
-                        sc[`q${q}_6m`] = row[`H${q}_6m`] ? parseInt(row[`H${q}_6m`]) : null;
+                        sc[`q${q}_bl`] = safeInt(row[`H${q}_baseline`]);
+                        sc[`q${q}_6m`] = safeInt(row[`H${q}_6m`]);
                     }
-                    const totalBL = row.H_baseline ? parseInt(row.H_baseline) : null;
-                    const total6m = row.H_6month ? parseInt(row.H_6month) : null;
+                    const totalBL = safeInt(row.H_baseline);
+                    const total6m = safeInt(row.H_6month);
 
                     if (totalBL != null || total6m != null || Object.values(sc).some(v => v != null)) {
                         await query(
