@@ -956,13 +956,12 @@ const DiabetesDashboard = {
             return;
         }
 
-        // Define CSV columns matching the research template
+        // Define CSV columns matching the research template (89 columns)
         const headers = [
-            'ID',
-            'Group (1=Intervention,0=Control)',
-            'Sex (1=Male,2=Female,3=Other)',
-            'ชื่อ', 'นามสกุล',
-            'BW', 'Ht', 'BMI', 'เอว', 'Age',
+            'ID', 'Group (1=Intervention,0=Control)', 'Sex (1=Male,2=Female,3=Other)',
+            'ชื่อ', 'นามสกุล', 'BW', 'Ht', 'BMI', 'เอว', 'Age',
+            'ระดับการศึกษา', 'อาชีพ', 'note', 'ระยะเวลา DM',
+            'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'note', 'ยา', 'Line',
             'HbA1c_baseline', 'FBS', 'GFR', 'DTX 1', 'HbA1c_6m',
             'PAID1_baseline', 'PAID2_baseline', 'PAID3_baseline', 'PAID4_baseline', 'PAID5_baseline',
             'PAID1_6m', 'PAID2_6m', 'PAID3_6m', 'PAID4_6m', 'PAID5_6m',
@@ -1035,6 +1034,11 @@ const DiabetesDashboard = {
                 sexMap[gen] || gen,
                 p.first_name || '', p.last_name || '',
                 getVal(p, 'weight', 'bw'), getVal(p, 'height', 'ht'), getVal(p, 'bmi'), getVal(p, 'waist'), getVal(p, 'age'),
+                getVal(p, 'education_level'), getVal(p, 'occupation'), getVal(p, 'occupation_note'),
+                getVal(p, 'diabetes_duration_years', 'dm_duration'),
+                getVal(p, 'd1'), getVal(p, 'd2'), getVal(p, 'd3'), getVal(p, 'd4'),
+                getVal(p, 'd5'), getVal(p, 'd6'), getVal(p, 'd7'),
+                getVal(p, 'comorbidity_note'), getVal(p, 'medication'), getVal(p, 'line_usage'),
                 getVal(p, 'hba1c_baseline'), getVal(p, 'fbs'), getVal(p, 'gfr'), getVal(p, 'dtx1'), getVal(p, 'hba1c_6month', 'hba1c_6m'),
                 getPaid(p, 1, 'baseline'), getPaid(p, 2, 'baseline'), getPaid(p, 3, 'baseline'), getPaid(p, 4, 'baseline'), getPaid(p, 5, 'baseline'),
                 getPaid(p, 1, '6m'), getPaid(p, 2, '6m'), getPaid(p, 3, '6m'), getPaid(p, 4, '6m'), getPaid(p, 5, '6m'),
@@ -1187,38 +1191,51 @@ const DiabetesDashboard = {
         return result;
     },
 
-    // Normalize CSV header to internal key
-    _normalizeHeader(h) {
-        h = h.trim();
-        if (/^ID$/i.test(h)) return 'ID';
-        if (/^Group/i.test(h)) return 'Group';
-        if (/^Sex/i.test(h)) return 'Sex';
-        if (h === 'ชื่อ') return 'first_name';
-        if (h === 'นามสกุล') return 'last_name';
-        if (/^BW$/i.test(h)) return 'BW';
-        if (/^Ht$/i.test(h)) return 'Ht';
-        if (/^BMI$/i.test(h)) return 'BMI';
-        if (h === 'เอว') return 'waist';
-        if (/^Age$/i.test(h)) return 'Age';
-        if (/^HbA1c_baseline$/i.test(h)) return 'HbA1c_baseline';
-        if (/^FBS$/i.test(h)) return 'FBS';
-        if (/^GFR$/i.test(h)) return 'GFR';
-        if (/^DTX\s*1$/i.test(h)) return 'DTX1';
-        if (/^HbA1c_6m$/i.test(h)) return 'HbA1c_6m';
-        const paidMatch = h.match(/^PAID(\d+)_(baseline|6m)$/i);
-        if (paidMatch) return 'PAID' + paidMatch[1] + '_' + paidMatch[2].toLowerCase();
-        if (/^PAID_total_baseline$/i.test(h)) return 'PAID_total_baseline';
-        if (/^PAID_total_6m$/i.test(h)) return 'PAID_total_6m';
-        const hlMatch = h.match(/^HL(\d+)_(baseline|6m)$/i);
-        if (hlMatch) return 'HL' + hlMatch[1] + '_' + hlMatch[2].toLowerCase();
-        if (/^HL_total_baseline$/i.test(h)) return 'HL_total_baseline';
-        if (/^HL_total_6m$/i.test(h)) return 'HL_total_6m';
-        const hMatch = h.match(/^H(\d+)_(baseline|6m)$/i);
-        if (hMatch) return 'H' + hMatch[1] + '_' + hMatch[2].toLowerCase();
-        if (/^H_\s*baseline$/i.test(h)) return 'H_baseline';
-        if (/^H_\s*6\s*month$/i.test(h)) return 'H_6month';
-        if (/^patient_id$/i.test(h)) return 'ID';
-        return h;
+    // Normalize CSV headers (handles duplicate "note" columns positionally)
+    _normalizeHeaders(rawHeaders) {
+        let noteCount = 0;
+        return rawHeaders.map(raw => {
+            const h = raw.trim();
+            if (/^ID$/i.test(h)) return 'ID';
+            if (/^Group/i.test(h)) return 'Group';
+            if (/^Sex/i.test(h)) return 'Sex';
+            if (h === 'ชื่อ') return 'first_name';
+            if (h === 'นามสกุล') return 'last_name';
+            if (/^BW$/i.test(h)) return 'BW';
+            if (/^Ht$/i.test(h)) return 'Ht';
+            if (/^BMI$/i.test(h)) return 'BMI';
+            if (h === 'เอว') return 'waist';
+            if (/^Age$/i.test(h)) return 'Age';
+            if (h === 'ระดับการศึกษา') return 'education_level';
+            if (h === 'อาชีพ') return 'occupation';
+            if (/^note$/i.test(h)) {
+                noteCount++;
+                return noteCount === 1 ? 'occupation_note' : 'comorbidity_note';
+            }
+            if (h === 'ระยะเวลา DM' || h === 'ระยะเวลาDM') return 'dm_duration';
+            if (/^D[1-7]$/.test(h)) return h.toUpperCase();
+            if (h === 'ยา') return 'medication';
+            if (/^Line$/i.test(h)) return 'Line';
+            if (/^HbA1c_baseline$/i.test(h)) return 'HbA1c_baseline';
+            if (/^FBS$/i.test(h)) return 'FBS';
+            if (/^GFR$/i.test(h)) return 'GFR';
+            if (/^DTX\s*1$/i.test(h)) return 'DTX1';
+            if (/^HbA1c_6m$/i.test(h)) return 'HbA1c_6m';
+            const paidMatch = h.match(/^PAID(\d+)_(baseline|6m)$/i);
+            if (paidMatch) return 'PAID' + paidMatch[1] + '_' + paidMatch[2].toLowerCase();
+            if (/^PAID_total_baseline$/i.test(h)) return 'PAID_total_baseline';
+            if (/^PAID_total_6m$/i.test(h)) return 'PAID_total_6m';
+            const hlMatch = h.match(/^HL(\d+)_(baseline|6m)$/i);
+            if (hlMatch) return 'HL' + hlMatch[1] + '_' + hlMatch[2].toLowerCase();
+            if (/^HL_total_baseline$/i.test(h)) return 'HL_total_baseline';
+            if (/^HL_total_6m$/i.test(h)) return 'HL_total_6m';
+            const hMatch = h.match(/^H(\d+)_(baseline|6m)$/i);
+            if (hMatch) return 'H' + hMatch[1] + '_' + hMatch[2].toLowerCase();
+            if (/^H_\s*baseline$/i.test(h)) return 'H_baseline';
+            if (/^H_\s*6\s*month$/i.test(h)) return 'H_6month';
+            if (/^patient_id$/i.test(h)) return 'ID';
+            return h;
+        });
     },
 
     // Import CSV to localStorage
@@ -1228,7 +1245,7 @@ const DiabetesDashboard = {
         if (lines.length < 2) throw new Error('CSV ต้องมี header + อย่างน้อย 1 แถวข้อมูล');
 
         const rawHeaders = this._parseCSVLine(lines[0]);
-        const headers = rawHeaders.map(h => this._normalizeHeader(h));
+        const headers = this._normalizeHeaders(rawHeaders);
         const idIdx = headers.indexOf('ID');
         if (idIdx < 0) throw new Error('ไม่พบคอลัมน์ ID');
 
@@ -1258,6 +1275,20 @@ const DiabetesDashboard = {
                 bmi: row.BMI ? parseFloat(row.BMI) : null,
                 waist: row.waist ? parseFloat(row.waist) : null,
                 age: row.Age ? parseInt(row.Age) : null,
+                education_level: row.education_level ? parseInt(row.education_level) : null,
+                occupation: row.occupation ? parseInt(row.occupation) : null,
+                occupation_note: row.occupation_note || null,
+                diabetes_duration_years: row.dm_duration ? parseFloat(row.dm_duration) : null,
+                d1: row.D1 ? parseInt(row.D1) : 0,
+                d2: row.D2 ? parseInt(row.D2) : 0,
+                d3: row.D3 ? parseInt(row.D3) : 0,
+                d4: row.D4 ? parseInt(row.D4) : 0,
+                d5: row.D5 ? parseInt(row.D5) : 0,
+                d6: row.D6 ? parseInt(row.D6) : 0,
+                d7: row.D7 ? parseInt(row.D7) : 0,
+                comorbidity_note: row.comorbidity_note || null,
+                medication: row.medication ? parseInt(row.medication) : null,
+                line_usage: row.Line ? parseInt(row.Line) : null,
                 hba1c_baseline: row.HbA1c_baseline ? parseFloat(row.HbA1c_baseline) : null,
                 fbs: row.FBS ? parseFloat(row.FBS) : null,
                 gfr: row.GFR ? parseFloat(row.GFR) : null,
@@ -1331,13 +1362,12 @@ const DiabetesDashboard = {
                 return;
             }
 
-            // Generate template client-side
+            // Generate template client-side (89 columns)
             const headers = [
-                'ID',
-                'Group (1=Intervention,0=Control)',
-                'Sex (1=Male,2=Female,3=Other)',
-                'ชื่อ', 'นามสกุล',
-                'BW', 'Ht', 'BMI', 'เอว', 'Age',
+                'ID', 'Group (1=Intervention,0=Control)', 'Sex (1=Male,2=Female,3=Other)',
+                'ชื่อ', 'นามสกุล', 'BW', 'Ht', 'BMI', 'เอว', 'Age',
+                'ระดับการศึกษา', 'อาชีพ', 'note', 'ระยะเวลา DM',
+                'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'note', 'ยา', 'Line',
                 'HbA1c_baseline', 'FBS', 'GFR', 'DTX 1', 'HbA1c_6m',
                 'PAID1_baseline', 'PAID2_baseline', 'PAID3_baseline', 'PAID4_baseline', 'PAID5_baseline',
                 'PAID1_6m', 'PAID2_6m', 'PAID3_6m', 'PAID4_6m', 'PAID5_6m',
@@ -1356,6 +1386,8 @@ const DiabetesDashboard = {
             const example = [
                 'DM-001', '1', '2', 'สมศรี', 'มั่นคง',
                 '65', '158', '26.0', '88', '55',
+                '1', '5', '', '5',
+                '1', '1', '0', '0', '0', '0', '0', '', '1', '1',
                 '8.5', '130', '75', '180', '7.2',
                 '3', '2', '3', '2', '4', '1', '1', '2', '1', '2', '14', '7',
                 '3', '3', '2', '3', '2', '3', '2', '3', '3', '2',

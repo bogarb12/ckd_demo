@@ -569,6 +569,10 @@ app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
         const rows = await query(
             `SELECT p.patient_id, p.study_group, p.gender, p.first_name, p.last_name,
              p.weight, p.height, p.bmi, p.waist, p.age,
+             p.education_level, p.occupation, p.occupation_note,
+             p.diabetes_duration_years,
+             p.d1, p.d2, p.d3, p.d4, p.d5, p.d6, p.d7,
+             p.comorbidity_note, p.medication, p.line_usage,
              c.hba1c_baseline, c.fbs, c.gfr, c.dtx1, c.hba1c_6month,
              s.q1_baseline as paid1_bl, s.q2_baseline as paid2_bl, s.q3_baseline as paid3_bl,
              s.q4_baseline as paid4_bl, s.q5_baseline as paid5_bl,
@@ -605,13 +609,11 @@ app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
             return res.status(404).json({ error: 'No data to export' });
         }
 
-        // Map DB columns to user-friendly CSV headers matching template format
         const csvHeaders = [
-            'ID',
-            'Group (1=Intervention,0=Control)',
-            'Sex (1=Male,2=Female,3=Other)',
-            'ชื่อ', 'นามสกุล',
-            'BW', 'Ht', 'BMI', 'เอว', 'Age',
+            'ID', 'Group (1=Intervention,0=Control)', 'Sex (1=Male,2=Female,3=Other)',
+            'ชื่อ', 'นามสกุล', 'BW', 'Ht', 'BMI', 'เอว', 'Age',
+            'ระดับการศึกษา', 'อาชีพ', 'note', 'ระยะเวลา DM',
+            'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'note', 'ยา', 'Line',
             'HbA1c_baseline', 'FBS', 'GFR', 'DTX 1', 'HbA1c_6m',
             'PAID1_baseline', 'PAID2_baseline', 'PAID3_baseline', 'PAID4_baseline', 'PAID5_baseline',
             'PAID1_6m', 'PAID2_6m', 'PAID3_6m', 'PAID4_6m', 'PAID5_6m',
@@ -639,6 +641,10 @@ app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
                 sexMap[row.gender] || '',
                 row.first_name || '', row.last_name || '',
                 row.weight || '', row.height || '', row.bmi || '', row.waist || '', row.age || '',
+                row.education_level || '', row.occupation || '', row.occupation_note || '',
+                row.diabetes_duration_years || '',
+                row.d1 || '', row.d2 || '', row.d3 || '', row.d4 || '', row.d5 || '', row.d6 || '', row.d7 || '',
+                row.comorbidity_note || '', row.medication || '', row.line_usage || '',
                 row.hba1c_baseline || '', row.fbs || '', row.gfr || '', row.dtx1 || '', row.hba1c_6month || '',
                 row.paid1_bl || '', row.paid2_bl || '', row.paid3_bl || '', row.paid4_bl || '', row.paid5_bl || '',
                 row.paid1_6m || '', row.paid2_6m || '', row.paid3_6m || '', row.paid4_6m || '', row.paid5_6m || '',
@@ -675,11 +681,10 @@ app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
 app.get('/api/import/template', (req, res) => {
     const BOM = '\uFEFF';
     const headers = [
-        'ID',
-        'Group (1=Intervention,0=Control)',
-        'Sex (1=Male,2=Female,3=Other)',
-        'ชื่อ', 'นามสกุล',
-        'BW', 'Ht', 'BMI', 'เอว', 'Age',
+        'ID', 'Group (1=Intervention,0=Control)', 'Sex (1=Male,2=Female,3=Other)',
+        'ชื่อ', 'นามสกุล', 'BW', 'Ht', 'BMI', 'เอว', 'Age',
+        'ระดับการศึกษา', 'อาชีพ', 'note', 'ระยะเวลา DM',
+        'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'note', 'ยา', 'Line',
         'HbA1c_baseline', 'FBS', 'GFR', 'DTX 1', 'HbA1c_6m',
         'PAID1_baseline', 'PAID2_baseline', 'PAID3_baseline', 'PAID4_baseline', 'PAID5_baseline',
         'PAID1_6m', 'PAID2_6m', 'PAID3_6m', 'PAID4_6m', 'PAID5_6m',
@@ -696,20 +701,16 @@ app.get('/api/import/template', (req, res) => {
         'H_baseline', 'H_6month'
     ];
     const example = [
-        'DM-001',
-        '1', '2',
-        'สมศรี', 'มั่นคง',
-        '65', '158', '26.0', '88', '55',
+        'DM-001', '1', '2',
+        'สมศรี', 'มั่นคง', '65', '158', '26.0', '88', '55',
+        '1', '5', '', '5',
+        '1', '1', '0', '0', '0', '0', '0', '', '1', '1',
         '8.5', '130', '75', '180', '7.2',
-        '3', '2', '3', '2', '4',
-        '1', '1', '2', '1', '2',
-        '14', '7',
+        '3', '2', '3', '2', '4', '1', '1', '2', '1', '2', '14', '7',
         '3', '3', '2', '3', '2', '3', '2', '3', '3', '2',
-        '2', '3', '3', '3', '3', '3', '3', '3', '3', '3',
-        '26', '29',
+        '2', '3', '3', '3', '3', '3', '3', '3', '3', '3', '26', '29',
         '2', '3', '2', '2', '3', '2', '3', '3', '2', '3', '2', '3',
-        '3', '3', '3', '3', '3', '3', '3', '3', '3', '3', '3', '3',
-        '30', '36'
+        '3', '3', '3', '3', '3', '3', '3', '3', '3', '3', '3', '3', '30', '36'
     ];
     const csv = BOM + headers.join(',') + '\n' + example.join(',') + '\n';
 
@@ -726,42 +727,51 @@ app.post('/api/import/csv', authMiddleware, adminOnly, upload.single('file'), as
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     // Map CSV header names to normalized keys
-    function normalizeHeader(h) {
-        h = h.trim();
-        // First column: ID
-        if (/^ID$/i.test(h)) return 'ID';
-        if (/^Group/i.test(h)) return 'Group';
-        if (/^Sex/i.test(h)) return 'Sex';
-        if (h === 'ชื่อ') return 'first_name';
-        if (h === 'นามสกุล') return 'last_name';
-        if (/^BW$/i.test(h)) return 'BW';
-        if (/^Ht$/i.test(h)) return 'Ht';
-        if (/^BMI$/i.test(h)) return 'BMI';
-        if (h === 'เอว') return 'waist';
-        if (/^Age$/i.test(h)) return 'Age';
-        if (/^HbA1c_baseline$/i.test(h)) return 'HbA1c_baseline';
-        if (/^FBS$/i.test(h)) return 'FBS';
-        if (/^GFR$/i.test(h)) return 'GFR';
-        if (/^DTX\s*1$/i.test(h)) return 'DTX1';
-        if (/^HbA1c_6m$/i.test(h)) return 'HbA1c_6m';
-        // PAID
-        const paidMatch = h.match(/^PAID(\d+)_(baseline|6m)$/i);
-        if (paidMatch) return `PAID${paidMatch[1]}_${paidMatch[2].toLowerCase()}`;
-        if (/^PAID_total_baseline$/i.test(h)) return 'PAID_total_baseline';
-        if (/^PAID_total_6m$/i.test(h)) return 'PAID_total_6m';
-        // HL
-        const hlMatch = h.match(/^HL(\d+)_(baseline|6m)$/i);
-        if (hlMatch) return `HL${hlMatch[1]}_${hlMatch[2].toLowerCase()}`;
-        if (/^HL_total_baseline$/i.test(h)) return 'HL_total_baseline';
-        if (/^HL_total_6m$/i.test(h)) return 'HL_total_6m';
-        // H (self-care)
-        const hMatch = h.match(/^H(\d+)_(baseline|6m)$/i);
-        if (hMatch) return `H${hMatch[1]}_${hMatch[2].toLowerCase()}`;
-        if (/^H_\s*baseline$/i.test(h)) return 'H_baseline';
-        if (/^H_\s*6\s*month$/i.test(h)) return 'H_6month';
-        // Fallback: also support old format
-        if (/^patient_id$/i.test(h)) return 'ID';
-        return h;
+    // "note" appears twice: after อาชีพ (occupation_note) and after D7 (comorbidity_note)
+    function normalizeHeaders(rawHeaders) {
+        let noteCount = 0;
+        return rawHeaders.map(raw => {
+            const h = raw.trim();
+            if (/^ID$/i.test(h)) return 'ID';
+            if (/^Group/i.test(h)) return 'Group';
+            if (/^Sex/i.test(h)) return 'Sex';
+            if (h === 'ชื่อ') return 'first_name';
+            if (h === 'นามสกุล') return 'last_name';
+            if (/^BW$/i.test(h)) return 'BW';
+            if (/^Ht$/i.test(h)) return 'Ht';
+            if (/^BMI$/i.test(h)) return 'BMI';
+            if (h === 'เอว') return 'waist';
+            if (/^Age$/i.test(h)) return 'Age';
+            if (h === 'ระดับการศึกษา') return 'education_level';
+            if (h === 'อาชีพ') return 'occupation';
+            if (/^note$/i.test(h)) {
+                noteCount++;
+                return noteCount === 1 ? 'occupation_note' : 'comorbidity_note';
+            }
+            if (h === 'ระยะเวลา DM' || h === 'ระยะเวลาDM') return 'dm_duration';
+            if (/^D[1-7]$/.test(h)) return h.toUpperCase();
+            if (h === 'ยา') return 'medication';
+            if (/^Line$/i.test(h)) return 'Line';
+            if (/^HbA1c_baseline$/i.test(h)) return 'HbA1c_baseline';
+            if (/^FBS$/i.test(h)) return 'FBS';
+            if (/^GFR$/i.test(h)) return 'GFR';
+            if (/^DTX\s*1$/i.test(h)) return 'DTX1';
+            if (/^HbA1c_6m$/i.test(h)) return 'HbA1c_6m';
+            const paidMatch = h.match(/^PAID(\d+)_(baseline|6m)$/i);
+            if (paidMatch) return `PAID${paidMatch[1]}_${paidMatch[2].toLowerCase()}`;
+            if (/^PAID_total_baseline$/i.test(h)) return 'PAID_total_baseline';
+            if (/^PAID_total_6m$/i.test(h)) return 'PAID_total_6m';
+            const hlMatch = h.match(/^HL(\d+)_(baseline|6m)$/i);
+            if (hlMatch) return `HL${hlMatch[1]}_${hlMatch[2].toLowerCase()}`;
+            if (/^HL_total_baseline$/i.test(h)) return 'HL_total_baseline';
+            if (/^HL_total_6m$/i.test(h)) return 'HL_total_6m';
+            const hMatch = h.match(/^H(\d+)_(baseline|6m)$/i);
+            if (hMatch) return `H${hMatch[1]}_${hMatch[2].toLowerCase()}`;
+            if (/^H_\s*baseline$/i.test(h)) return 'H_baseline';
+            if (/^H_\s*6\s*month$/i.test(h)) return 'H_6month';
+            if (/^patient_id$/i.test(h)) return 'ID';
+            return h;
+        });
     }
 
     try {
@@ -770,7 +780,7 @@ app.post('/api/import/csv', authMiddleware, adminOnly, upload.single('file'), as
         if (lines.length < 2) return res.status(400).json({ error: 'CSV must have header + at least 1 data row' });
 
         const rawHeaders = parseCSVLine(lines[0]);
-        const headers = rawHeaders.map(normalizeHeader);
+        const headers = normalizeHeaders(rawHeaders);
         const idIdx = headers.indexOf('ID');
         if (idIdx < 0) return res.status(400).json({ error: 'Missing required column: ID (patient_id)' });
 
@@ -804,13 +814,21 @@ app.post('/api/import/csv', authMiddleware, adminOnly, upload.single('file'), as
                 // Insert patient
                 await query(
                     `INSERT INTO patients (patient_id, study_group, gender, first_name, last_name,
-                     weight, height, bmi, waist, age)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     weight, height, bmi, waist, age,
+                     education_level, occupation, occupation_note, diabetes_duration_years,
+                     d1, d2, d3, d4, d5, d6, d7, comorbidity_note, medication, line_usage)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                      ON DUPLICATE KEY UPDATE
                      study_group=VALUES(study_group), gender=VALUES(gender),
                      first_name=VALUES(first_name), last_name=VALUES(last_name),
                      weight=VALUES(weight), height=VALUES(height), bmi=VALUES(bmi),
-                     waist=VALUES(waist), age=VALUES(age)`,
+                     waist=VALUES(waist), age=VALUES(age),
+                     education_level=VALUES(education_level), occupation=VALUES(occupation),
+                     occupation_note=VALUES(occupation_note), diabetes_duration_years=VALUES(diabetes_duration_years),
+                     d1=VALUES(d1), d2=VALUES(d2), d3=VALUES(d3), d4=VALUES(d4),
+                     d5=VALUES(d5), d6=VALUES(d6), d7=VALUES(d7),
+                     comorbidity_note=VALUES(comorbidity_note), medication=VALUES(medication),
+                     line_usage=VALUES(line_usage)`,
                     [
                         row.ID,
                         studyGroup,
@@ -821,7 +839,21 @@ app.post('/api/import/csv', authMiddleware, adminOnly, upload.single('file'), as
                         row.Ht ? parseFloat(row.Ht) : null,
                         row.BMI ? parseFloat(row.BMI) : null,
                         row.waist ? parseFloat(row.waist) : null,
-                        row.Age ? parseInt(row.Age) : null
+                        row.Age ? parseInt(row.Age) : null,
+                        row.education_level ? parseInt(row.education_level) : null,
+                        row.occupation ? parseInt(row.occupation) : null,
+                        row.occupation_note || null,
+                        row.dm_duration ? parseFloat(row.dm_duration) : null,
+                        row.D1 ? parseInt(row.D1) : 0,
+                        row.D2 ? parseInt(row.D2) : 0,
+                        row.D3 ? parseInt(row.D3) : 0,
+                        row.D4 ? parseInt(row.D4) : 0,
+                        row.D5 ? parseInt(row.D5) : 0,
+                        row.D6 ? parseInt(row.D6) : 0,
+                        row.D7 ? parseInt(row.D7) : 0,
+                        row.comorbidity_note || null,
+                        row.medication ? parseInt(row.medication) : null,
+                        row.Line ? parseInt(row.Line) : null
                     ]
                 );
 
