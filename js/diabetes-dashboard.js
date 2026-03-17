@@ -1108,28 +1108,9 @@ const DiabetesDashboard = {
             showLoading();
 
             try {
-                // Always import to localStorage first (primary data source)
+                // Import to localStorage (works without server/auth)
                 const csvText = await file.text();
                 const localResult = this.importCSVLocal(csvText);
-
-                // Also try API import if DB connected
-                if (typeof DiabetesApp !== 'undefined' && DiabetesApp.dbConnected) {
-                    try {
-                        const formData = new FormData();
-                        formData.append('file', file);
-                        const baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
-                        const response = await fetch(baseUrl + '/api/import/csv', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        if (response.ok) {
-                            const apiResult = await response.json();
-                            console.log('API import also succeeded:', apiResult);
-                        }
-                    } catch (apiErr) {
-                        console.warn('API import skipped:', apiErr.message);
-                    }
-                }
 
                 this._showImportResult(localResult);
                 hideLoading();

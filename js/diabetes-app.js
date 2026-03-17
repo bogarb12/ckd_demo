@@ -205,8 +205,7 @@ const API = {
             if (!response.ok) throw new Error('Failed to fetch patients');
             return await response.json();
         } catch (e) {
-            console.error('API.getPatients error, falling back to localStorage:', e.message);
-            showToast('Cannot reach server. Using local data.', 'error');
+            console.warn('API.getPatients: using localStorage fallback -', e.message);
             return LocalDB.getAll();
         }
     },
