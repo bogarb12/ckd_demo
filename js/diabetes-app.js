@@ -483,9 +483,16 @@ function initNavigation() {
             var targetTab = btn.getAttribute('data-tab');
 
             // Check if this tab requires admin login
-            if (btn.getAttribute('data-role') === 'admin' && window.Auth && !Auth.isAdmin()) {
-                Auth.showLoginModal();
-                return;
+            var requiredRole = btn.getAttribute('data-role');
+            if (requiredRole && window.Auth) {
+                var hasAccess = false;
+                if (requiredRole === 'admin') hasAccess = Auth.isAdmin();
+                else if (requiredRole === 'staff') hasAccess = Auth.isStaff();
+                else if (requiredRole === 'researcher') hasAccess = Auth.isResearcher();
+                if (!hasAccess) {
+                    Auth.showLoginModal();
+                    return;
+                }
             }
 
             // Remove active class from all nav buttons
@@ -665,6 +672,9 @@ async function initApp() {
     }
     if (window.DiabetesEducation && typeof window.DiabetesEducation.init === 'function') {
         window.DiabetesEducation.init();
+    }
+    if (window.DailyTracking && typeof window.DailyTracking.init === 'function') {
+        window.DailyTracking.init();
     }
     if (window.LineBotGenerator && typeof window.LineBotGenerator.init === 'function') {
         window.LineBotGenerator.init();

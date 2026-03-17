@@ -1468,6 +1468,21 @@ textarea { min-height: 80px; resize: vertical; }
     color: #166534;
 }
 
+.role-staff {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.role-researcher {
+    background: #f3e8ff;
+    color: #7c3aed;
+}
+
+.role-patient {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 /* ============ User Management ============ */
 .user-item {
     display: flex;
@@ -1646,6 +1661,51 @@ textarea { min-height: 80px; resize: vertical; }
 #bot-script-code {
     font-family: 'Courier New', Consolas, monospace;
     tab-size: 2;
+}
+
+/* ============ Daily Tracking ============ */
+.chip-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: var(--transition);
+    background: var(--surface);
+}
+
+.chip-option:has(input:checked) {
+    background: var(--primary-subtle);
+    border-color: var(--primary);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.chip-option input { display: none; }
+
+.tracking-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+}
+
+.tracking-badge.bs-low { background: #dbeafe; border-color: #93c5fd; color: #1e40af; }
+.tracking-badge.bs-normal { background: #dcfce7; border-color: #86efac; color: #166534; }
+.tracking-badge.bs-high { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
+.tracking-badge.bs-very-high { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
+
+.diet-meal-entry {
+    padding: 10px;
+    background: var(--bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
 }
 
 @media print {

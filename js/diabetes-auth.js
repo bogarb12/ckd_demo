@@ -26,7 +26,27 @@ const Auth = {
 
     isAdmin() {
         var user = this.getUser();
-        return user && user.role === 'admin';
+        return user && (user.role === 'admin' || user.role === 'staff' || user.role === 'researcher');
+    },
+
+    isStaff() {
+        var user = this.getUser();
+        return user && (user.role === 'admin' || user.role === 'staff');
+    },
+
+    isResearcher() {
+        var user = this.getUser();
+        return user && (user.role === 'admin' || user.role === 'researcher');
+    },
+
+    isPatient() {
+        var user = this.getUser();
+        return user && user.role === 'patient';
+    },
+
+    getUserRole() {
+        var user = this.getUser();
+        return user ? user.role : null;
     },
 
     setAuth(token, user) {
@@ -202,17 +222,31 @@ const Auth = {
     // ==========================================
 
     applyRoleAccess() {
-        var isAdmin = this.isAdmin();
-        var adminElements = document.querySelectorAll('[data-role="admin"]');
+        var self = this;
+        var role = this.getUserRole();
 
-        adminElements.forEach(function(el) {
-            if (isAdmin) {
-                el.style.display = '';
-                el.classList.remove('role-hidden');
-            } else {
-                el.style.display = 'none';
-                el.classList.add('role-hidden');
-            }
+        // Role hierarchy: admin sees everything, staff/researcher see specific tabs
+        // data-role="admin" → admin, staff, researcher (all non-patient logged-in users)
+        // data-role="staff" → admin, staff only
+        // data-role="researcher" → admin, researcher only
+        var roleChecks = {
+            admin: function() { return self.isAdmin(); },
+            staff: function() { return self.isStaff(); },
+            researcher: function() { return self.isResearcher(); }
+        };
+
+        ['admin', 'staff', 'researcher'].forEach(function(r) {
+            var elements = document.querySelectorAll('[data-role="' + r + '"]');
+            var hasAccess = roleChecks[r]();
+            elements.forEach(function(el) {
+                if (hasAccess) {
+                    el.style.display = '';
+                    el.classList.remove('role-hidden');
+                } else {
+                    el.style.display = 'none';
+                    el.classList.add('role-hidden');
+                }
+            });
         });
     },
 
@@ -233,8 +267,10 @@ const Auth = {
             menuEl.style.display = 'flex';
             if (nameEl) nameEl.textContent = user.displayName || user.username;
             if (roleEl) {
-                roleEl.textContent = user.role === 'admin' ? 'Admin' : 'User';
-                roleEl.className = 'role-badge ' + (user.role === 'admin' ? 'role-admin' : 'role-user');
+                var roleLabels = { admin: 'Admin', staff: 'เจ้าหน้าที่', researcher: 'นักวิจัย', patient: 'ผู้ป่วย', user: 'User' };
+                var roleClasses = { admin: 'role-admin', staff: 'role-staff', researcher: 'role-researcher', patient: 'role-patient', user: 'role-user' };
+                roleEl.textContent = roleLabels[user.role] || user.role;
+                roleEl.className = 'role-badge ' + (roleClasses[user.role] || 'role-user');
             }
         } else {
             menuEl.style.display = 'none';
@@ -333,9 +369,9 @@ const Auth = {
 
         var html = '';
         pageUsers.forEach(function(u) {
-            var roleBadge = u.role === 'admin'
-                ? '<span class="role-badge role-admin">Admin</span>'
-                : '<span class="role-badge role-user">User</span>';
+            var roleLabels = { admin: 'Admin', staff: 'เจ้าหน้าที่', researcher: 'นักวิจัย', patient: 'ผู้ป่วย', user: 'User' };
+            var roleClasses = { admin: 'role-admin', staff: 'role-staff', researcher: 'role-researcher', patient: 'role-patient', user: 'role-user' };
+            var roleBadge = '<span class="role-badge ' + (roleClasses[u.role] || 'role-user') + '">' + (roleLabels[u.role] || u.role) + '</span>';
 
             var deleteBtn = u.username === 'admin'
                 ? ''

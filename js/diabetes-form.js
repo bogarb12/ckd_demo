@@ -16,6 +16,7 @@ const DiabetesForm = {
         this.setupScaleOptions();
         this.setupPAID5Calculation();
         this.setupHbA1cCalculation();
+        this.setupBMICalculation();
         this.loadPatientList();
         this.goToStep(1);
     },
@@ -533,6 +534,51 @@ const DiabetesForm = {
     },
 
     // =====================
+    // BMI Calculation
+    // =====================
+
+    setupBMICalculation() {
+        const inputs = document.querySelectorAll('.bmi-input');
+        inputs.forEach(input => {
+            input.addEventListener('input', () => this.calculateBMI());
+        });
+    },
+
+    calculateBMI() {
+        const heightCm = parseFloat(document.getElementById('f-height')?.value || '');
+        const weightBL = parseFloat(document.getElementById('f-weight-baseline')?.value || '');
+        const weight6m = parseFloat(document.getElementById('f-weight-6month')?.value || '');
+        const heightM = heightCm / 100;
+
+        this._updateBMIDisplay('bmi-baseline', weightBL, heightM);
+        this._updateBMIDisplay('bmi-6month', weight6m, heightM);
+    },
+
+    _updateBMIDisplay(prefix, weight, heightM) {
+        const display = document.getElementById(prefix + '-display');
+        const valueEl = document.getElementById(prefix + '-value');
+        const textEl = document.getElementById(prefix + '-text');
+        if (!display || !valueEl) return;
+
+        if (!isNaN(weight) && !isNaN(heightM) && heightM > 0) {
+            const bmi = weight / (heightM * heightM);
+            valueEl.textContent = bmi.toFixed(1);
+            display.style.display = '';
+
+            let label = '', color = '';
+            if (bmi < 18.5) { label = 'น้ำหนักน้อย'; color = '#3b82f6'; }
+            else if (bmi < 23) { label = 'ปกติ'; color = '#22c55e'; }
+            else if (bmi < 25) { label = 'น้ำหนักเกิน'; color = '#f59e0b'; }
+            else if (bmi < 30) { label = 'อ้วนระดับ 1'; color = '#f97316'; }
+            else { label = 'อ้วนระดับ 2'; color = '#ef4444'; }
+
+            if (textEl) { textEl.textContent = label; textEl.style.color = color; }
+        } else {
+            display.style.display = 'none';
+        }
+    },
+
+    // =====================
     // Collect Form Data
     // =====================
 
@@ -592,21 +638,35 @@ const DiabetesForm = {
     },
 
     collectSection2() {
-        const baselineEl = document.getElementById('f-hba1c-baseline');
-        const sixMonthEl = document.getElementById('f-hba1c-6month');
+        const _numVal = (id) => { const el = document.getElementById(id); return el && el.value ? parseFloat(el.value) : null; };
 
-        const hba1cBaseline = baselineEl && baselineEl.value ? parseFloat(baselineEl.value) : null;
-        const hba1c6month = sixMonthEl && sixMonthEl.value ? parseFloat(sixMonthEl.value) : null;
+        const weightBL = _numVal('f-weight-baseline');
+        const weight6m = _numVal('f-weight-6month');
+        const heightCm = _numVal('f-height');
+        const heightM = heightCm ? heightCm / 100 : null;
 
-        let change = null;
+        const calcBMI = (w) => (w && heightM) ? parseFloat((w / (heightM * heightM)).toFixed(1)) : null;
+
+        const hba1cBaseline = _numVal('f-hba1c-baseline');
+        const hba1c6month = _numVal('f-hba1c-6month');
+        let hba1cChange = null;
         if (hba1cBaseline !== null && hba1c6month !== null) {
-            change = parseFloat((hba1c6month - hba1cBaseline).toFixed(2));
+            hba1cChange = parseFloat((hba1c6month - hba1cBaseline).toFixed(2));
         }
 
         return {
+            weight_baseline: weightBL,
+            weight_6month: weight6m,
+            height: heightCm,
+            bmi_baseline: calcBMI(weightBL),
+            bmi_6month: calcBMI(weight6m),
+            sbp_baseline: _numVal('f-sbp-baseline'),
+            dbp_baseline: _numVal('f-dbp-baseline'),
+            sbp_6month: _numVal('f-sbp-6month'),
+            dbp_6month: _numVal('f-dbp-6month'),
             hba1c_baseline: hba1cBaseline,
             hba1c_6month: hba1c6month,
-            hba1c_change: change
+            hba1c_change: hba1cChange
         };
     },
 
