@@ -956,19 +956,31 @@ const DiabetesDashboard = {
             return;
         }
 
-        // Define CSV columns
+        // Define CSV columns matching the research template
         const headers = [
-            'รหัสผู้ป่วย',
-            'เพศ',
-            'อายุ',
-            'กลุ่ม',
-            'HbA1c Baseline',
-            'HbA1c 6m',
-            'PAID-5 Baseline',
-            'PAID-5 6m',
-            'Distress',
-            'สถานะ'
+            'ID',
+            'Group (1=Intervention,0=Control)',
+            'Sex (1=Male,2=Female,3=Other)',
+            'ชื่อ', 'นามสกุล',
+            'BW', 'Ht', 'BMI', 'เอว', 'Age',
+            'HbA1c_baseline', 'FBS', 'GFR', 'DTX 1', 'HbA1c_6m',
+            'PAID1_baseline', 'PAID2_baseline', 'PAID3_baseline', 'PAID4_baseline', 'PAID5_baseline',
+            'PAID1_6m', 'PAID2_6m', 'PAID3_6m', 'PAID4_6m', 'PAID5_6m',
+            'PAID_total_baseline', 'PAID_total_6m',
+            'HL1_baseline', 'HL2_baseline', 'HL3_baseline', 'HL4_baseline', 'HL5_baseline',
+            'HL6_baseline', 'HL7_baseline', 'HL8_baseline', 'HL9_baseline', 'HL10_baseline',
+            'HL1_6m', 'HL2_6m', 'HL3_6m', 'HL4_6m', 'HL5_6m',
+            'HL6_6m', 'HL7_6m', 'HL8_6m', 'HL9_6m', 'HL10_6m',
+            'HL_total_baseline', 'HL_total_6m',
+            'H1_baseline', 'H2_baseline', 'H3_baseline', 'H4_baseline', 'H5_baseline', 'H6_baseline',
+            'H7_baseline', 'H8_baseline', 'H9_baseline', 'H10_baseline', 'H11_baseline', 'H12_baseline',
+            'H1_6m', 'H2_6m', 'H3_6m', 'H4_6m', 'H5_6m', 'H6_6m',
+            'H7_6m', 'H8_6m', 'H9_6m', 'H10_6m', 'H11_6m', 'H12_6m',
+            'H_baseline', 'H_6month'
         ];
+
+        const groupMap = { 'experimental': '1', 'control': '0' };
+        const sexMap = { 'male': '1', 'female': '2', 'other': '3' };
 
         const escapeCSV = (val) => {
             if (val === null || val === undefined) return '';
@@ -979,20 +991,64 @@ const DiabetesDashboard = {
             return str;
         };
 
+        const getVal = (obj, ...keys) => {
+            for (const k of keys) {
+                const v = obj[k];
+                if (v != null && v !== '') return v;
+            }
+            return '';
+        };
+
+        const getPaid = (p, q, period) => {
+            const keys = period === 'baseline'
+                ? [`paid5.q${q}_baseline`, `paid5_q${q}_baseline`]
+                : [`paid5.q${q}_6month`, `paid5_q${q}_6month`, `paid5_q${q}_6m`];
+            for (const k of keys) {
+                const parts = k.split('.');
+                let v = p;
+                for (const part of parts) { v = v && v[part]; }
+                if (v != null && v !== '') return v;
+            }
+            return '';
+        };
+
+        const getHL = (p, q, period) => {
+            const pre = period === 'baseline' ? 'baseline' : '6month';
+            if (p.health_literacy && p.health_literacy[`q${q}_${pre}`] != null) return p.health_literacy[`q${q}_${pre}`];
+            return '';
+        };
+
+        const getSC = (p, q, period) => {
+            const pre = period === 'baseline' ? 'baseline' : '6month';
+            if (p.self_care && p.self_care[`q${q}_${pre}`] != null) return p.self_care[`q${q}_${pre}`];
+            return '';
+        };
+
         const rows = [headers.map(escapeCSV).join(',')];
 
         patients.forEach(p => {
+            const grp = p.study_group || p.group || p.enrollment_group || '';
+            const gen = p.gender || '';
             const row = [
-                p.patient_id || '',
-                p.gender || '',
-                p.age != null ? p.age : '',
-                p.group || p.study_group || p.enrollment_group || '',
-                p.hba1c_baseline != null ? p.hba1c_baseline : '',
-                p.hba1c_6month != null ? p.hba1c_6month : (p.hba1c_6m != null ? p.hba1c_6m : ''),
-                p.paid5_baseline != null ? p.paid5_baseline : '',
-                p.paid5_6month != null ? p.paid5_6month : (p.paid5_6m != null ? p.paid5_6m : ''),
-                p.distress || '',
-                p.status || ''
+                p.patient_id || p.id || '',
+                groupMap[grp] || grp,
+                sexMap[gen] || gen,
+                p.first_name || '', p.last_name || '',
+                getVal(p, 'weight', 'bw'), getVal(p, 'height', 'ht'), getVal(p, 'bmi'), getVal(p, 'waist'), getVal(p, 'age'),
+                getVal(p, 'hba1c_baseline'), getVal(p, 'fbs'), getVal(p, 'gfr'), getVal(p, 'dtx1'), getVal(p, 'hba1c_6month', 'hba1c_6m'),
+                getPaid(p, 1, 'baseline'), getPaid(p, 2, 'baseline'), getPaid(p, 3, 'baseline'), getPaid(p, 4, 'baseline'), getPaid(p, 5, 'baseline'),
+                getPaid(p, 1, '6m'), getPaid(p, 2, '6m'), getPaid(p, 3, '6m'), getPaid(p, 4, '6m'), getPaid(p, 5, '6m'),
+                getVal(p, 'paid_total_baseline', 'paid5_total_baseline'), getVal(p, 'paid_total_6m', 'paid5_total_6month'),
+                getHL(p, 1, 'baseline'), getHL(p, 2, 'baseline'), getHL(p, 3, 'baseline'), getHL(p, 4, 'baseline'), getHL(p, 5, 'baseline'),
+                getHL(p, 6, 'baseline'), getHL(p, 7, 'baseline'), getHL(p, 8, 'baseline'), getHL(p, 9, 'baseline'), getHL(p, 10, 'baseline'),
+                getHL(p, 1, '6m'), getHL(p, 2, '6m'), getHL(p, 3, '6m'), getHL(p, 4, '6m'), getHL(p, 5, '6m'),
+                getHL(p, 6, '6m'), getHL(p, 7, '6m'), getHL(p, 8, '6m'), getHL(p, 9, '6m'), getHL(p, 10, '6m'),
+                getVal(p, 'hl_total_baseline'), getVal(p, 'hl_total_6m'),
+                getSC(p, 1, 'baseline'), getSC(p, 2, 'baseline'), getSC(p, 3, 'baseline'), getSC(p, 4, 'baseline'), getSC(p, 5, 'baseline'), getSC(p, 6, 'baseline'),
+                getSC(p, 7, 'baseline'), getSC(p, 8, 'baseline'), getSC(p, 9, 'baseline'), getSC(p, 10, 'baseline'), getSC(p, 11, 'baseline'), getSC(p, 12, 'baseline'),
+                getSC(p, 1, '6m'), getSC(p, 2, '6m'), getSC(p, 3, '6m'), getSC(p, 4, '6m'), getSC(p, 5, '6m'), getSC(p, 6, '6m'),
+                getSC(p, 7, '6m'), getSC(p, 8, '6m'), getSC(p, 9, '6m'), getSC(p, 10, '6m'), getSC(p, 11, '6m'), getSC(p, 12, '6m'),
+                getVal(p, 'h_total_baseline', 'sc_total_baseline'), getVal(p, 'h_total_6m', 'sc_total_6month')
             ];
             rows.push(row.map(escapeCSV).join(','));
         });
@@ -1047,44 +1103,44 @@ const DiabetesDashboard = {
 
             showLoading();
 
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
+            // If DB connected, use API
+            if (typeof DiabetesApp !== 'undefined' && DiabetesApp.dbConnected) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
 
-                const baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
-                const headers = {};
-                if (window.Auth && Auth.getToken()) {
-                    headers['Authorization'] = 'Bearer ' + Auth.getToken();
-                }
-
-                const response = await fetch(baseUrl + '/api/import/csv', {
-                    method: 'POST',
-                    headers: headers,
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.error || 'Import failed');
-                }
-
-                // Show result banner
-                const banner = document.getElementById('import-result');
-                const text = document.getElementById('import-result-text');
-                if (banner && text) {
-                    let msg = 'นำเข้าสำเร็จ ' + result.imported + '/' + result.total + ' รายการ';
-                    if (result.errors && result.errors.length > 0) {
-                        msg += ' (ข้อผิดพลาด ' + result.errors.length + ' รายการ)';
+                    const baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
+                    const headers = {};
+                    if (window.Auth && Auth.getToken()) {
+                        headers['Authorization'] = 'Bearer ' + Auth.getToken();
                     }
-                    text.textContent = msg;
-                    banner.classList.remove('hidden');
-                    setTimeout(() => banner.classList.add('hidden'), 8000);
+
+                    const response = await fetch(baseUrl + '/api/import/csv', {
+                        method: 'POST',
+                        headers: headers,
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Import failed');
+                    }
+
+                    this._showImportResult(result);
+                    hideLoading();
+                    await this.init();
+                    return;
+                } catch (err) {
+                    console.warn('API import failed, trying local import:', err.message);
                 }
+            }
 
-                showToast('นำเข้าข้อมูลสำเร็จ ' + result.imported + ' รายการ', 'success');
-
-                // Reload dashboard data
+            // localStorage fallback: parse CSV client-side
+            try {
+                const text = await file.text();
+                const result = this.importCSVLocal(text);
+                this._showImportResult(result);
                 hideLoading();
                 await this.init();
             } catch (err) {
@@ -1093,6 +1149,170 @@ const DiabetesDashboard = {
                 showToast('เกิดข้อผิดพลาดในการนำเข้า: ' + err.message, 'error');
             }
         });
+    },
+
+    _showImportResult(result) {
+        const banner = document.getElementById('import-result');
+        const text = document.getElementById('import-result-text');
+        if (banner && text) {
+            let msg = 'นำเข้าสำเร็จ ' + result.imported + '/' + result.total + ' รายการ';
+            if (result.errors && result.errors.length > 0) {
+                msg += ' (ข้อผิดพลาด ' + result.errors.length + ' รายการ)';
+            }
+            text.textContent = msg;
+            banner.classList.remove('hidden');
+            setTimeout(() => banner.classList.add('hidden'), 8000);
+        }
+        showToast('นำเข้าข้อมูลสำเร็จ ' + result.imported + ' รายการ', 'success');
+    },
+
+    // Parse CSV line respecting quoted fields
+    _parseCSVLine(line) {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (inQuotes) {
+                if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+                else if (ch === '"') { inQuotes = false; }
+                else { current += ch; }
+            } else {
+                if (ch === '"') { inQuotes = true; }
+                else if (ch === ',') { result.push(current.trim()); current = ''; }
+                else { current += ch; }
+            }
+        }
+        result.push(current.trim());
+        return result;
+    },
+
+    // Normalize CSV header to internal key
+    _normalizeHeader(h) {
+        h = h.trim();
+        if (/^ID$/i.test(h)) return 'ID';
+        if (/^Group/i.test(h)) return 'Group';
+        if (/^Sex/i.test(h)) return 'Sex';
+        if (h === 'ชื่อ') return 'first_name';
+        if (h === 'นามสกุล') return 'last_name';
+        if (/^BW$/i.test(h)) return 'BW';
+        if (/^Ht$/i.test(h)) return 'Ht';
+        if (/^BMI$/i.test(h)) return 'BMI';
+        if (h === 'เอว') return 'waist';
+        if (/^Age$/i.test(h)) return 'Age';
+        if (/^HbA1c_baseline$/i.test(h)) return 'HbA1c_baseline';
+        if (/^FBS$/i.test(h)) return 'FBS';
+        if (/^GFR$/i.test(h)) return 'GFR';
+        if (/^DTX\s*1$/i.test(h)) return 'DTX1';
+        if (/^HbA1c_6m$/i.test(h)) return 'HbA1c_6m';
+        const paidMatch = h.match(/^PAID(\d+)_(baseline|6m)$/i);
+        if (paidMatch) return 'PAID' + paidMatch[1] + '_' + paidMatch[2].toLowerCase();
+        if (/^PAID_total_baseline$/i.test(h)) return 'PAID_total_baseline';
+        if (/^PAID_total_6m$/i.test(h)) return 'PAID_total_6m';
+        const hlMatch = h.match(/^HL(\d+)_(baseline|6m)$/i);
+        if (hlMatch) return 'HL' + hlMatch[1] + '_' + hlMatch[2].toLowerCase();
+        if (/^HL_total_baseline$/i.test(h)) return 'HL_total_baseline';
+        if (/^HL_total_6m$/i.test(h)) return 'HL_total_6m';
+        const hMatch = h.match(/^H(\d+)_(baseline|6m)$/i);
+        if (hMatch) return 'H' + hMatch[1] + '_' + hMatch[2].toLowerCase();
+        if (/^H_\s*baseline$/i.test(h)) return 'H_baseline';
+        if (/^H_\s*6\s*month$/i.test(h)) return 'H_6month';
+        if (/^patient_id$/i.test(h)) return 'ID';
+        return h;
+    },
+
+    // Import CSV to localStorage
+    importCSVLocal(csvText) {
+        const content = csvText.replace(/^\uFEFF/, '');
+        const lines = content.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) throw new Error('CSV ต้องมี header + อย่างน้อย 1 แถวข้อมูล');
+
+        const rawHeaders = this._parseCSVLine(lines[0]);
+        const headers = rawHeaders.map(h => this._normalizeHeader(h));
+        const idIdx = headers.indexOf('ID');
+        if (idIdx < 0) throw new Error('ไม่พบคอลัมน์ ID');
+
+        const groupMap = { '1': 'experimental', '0': 'control' };
+        const sexMap = { '1': 'male', '2': 'female', '3': 'other' };
+
+        let imported = 0;
+        const errors = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            const values = this._parseCSVLine(lines[i]);
+            if (values.length === 0) continue;
+
+            const row = {};
+            headers.forEach((h, idx) => { row[h] = values[idx] || null; });
+
+            if (!row.ID) { errors.push('Row ' + (i + 1) + ': missing ID'); continue; }
+
+            const patient = {
+                patient_id: row.ID,
+                study_group: groupMap[row.Group] || row.Group || null,
+                gender: sexMap[row.Sex] || row.Sex || null,
+                first_name: row.first_name || null,
+                last_name: row.last_name || null,
+                weight: row.BW ? parseFloat(row.BW) : null,
+                height: row.Ht ? parseFloat(row.Ht) : null,
+                bmi: row.BMI ? parseFloat(row.BMI) : null,
+                waist: row.waist ? parseFloat(row.waist) : null,
+                age: row.Age ? parseInt(row.Age) : null,
+                hba1c_baseline: row.HbA1c_baseline ? parseFloat(row.HbA1c_baseline) : null,
+                fbs: row.FBS ? parseFloat(row.FBS) : null,
+                gfr: row.GFR ? parseFloat(row.GFR) : null,
+                dtx1: row.DTX1 ? parseFloat(row.DTX1) : null,
+                hba1c_6month: row.HbA1c_6m ? parseFloat(row.HbA1c_6m) : null,
+                paid5: {},
+                health_literacy: {},
+                self_care: {}
+            };
+
+            // PAID-5
+            for (let q = 1; q <= 5; q++) {
+                if (row['PAID' + q + '_baseline']) patient.paid5['q' + q + '_baseline'] = parseInt(row['PAID' + q + '_baseline']);
+                if (row['PAID' + q + '_6m']) patient.paid5['q' + q + '_6month'] = parseInt(row['PAID' + q + '_6m']);
+            }
+            if (row.PAID_total_baseline) patient.paid5.total_baseline = parseInt(row.PAID_total_baseline);
+            if (row.PAID_total_6m) patient.paid5.total_6month = parseInt(row.PAID_total_6m);
+
+            // Health Literacy
+            for (let q = 1; q <= 10; q++) {
+                if (row['HL' + q + '_baseline']) patient.health_literacy['q' + q + '_baseline'] = parseInt(row['HL' + q + '_baseline']);
+                if (row['HL' + q + '_6m']) patient.health_literacy['q' + q + '_6month'] = parseInt(row['HL' + q + '_6m']);
+            }
+            if (row.HL_total_baseline) patient.health_literacy.total_baseline = parseInt(row.HL_total_baseline);
+            if (row.HL_total_6m) patient.health_literacy.total_6month = parseInt(row.HL_total_6m);
+
+            // Self-Care
+            for (let q = 1; q <= 12; q++) {
+                if (row['H' + q + '_baseline']) patient.self_care['q' + q + '_baseline'] = parseInt(row['H' + q + '_baseline']);
+                if (row['H' + q + '_6m']) patient.self_care['q' + q + '_6month'] = parseInt(row['H' + q + '_6m']);
+            }
+            if (row.H_baseline) patient.self_care.total_baseline = parseInt(row.H_baseline);
+            if (row.H_6month) patient.self_care.total_6month = parseInt(row.H_6month);
+
+            // Save to localStorage
+            if (typeof LocalDB !== 'undefined') {
+                try {
+                    const existing = LocalDB.getAll();
+                    const idx = existing.findIndex(p => p.patient_id === patient.patient_id);
+                    if (idx >= 0) {
+                        existing[idx] = Object.assign(existing[idx], patient);
+                    } else {
+                        existing.push(patient);
+                    }
+                    localStorage.setItem('diabetes_patients', JSON.stringify(existing));
+                    imported++;
+                } catch (e) {
+                    errors.push('Row ' + (i + 1) + ': ' + e.message);
+                }
+            } else {
+                errors.push('Row ' + (i + 1) + ': LocalDB not available');
+            }
+        }
+
+        return { success: true, imported, total: lines.length - 1, errors };
     },
 
     // =====================
@@ -1104,8 +1324,55 @@ const DiabetesDashboard = {
         if (!btn) return;
 
         btn.addEventListener('click', () => {
-            const baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
-            window.location.href = baseUrl + '/api/import/template';
+            // Try API first, fallback to client-side generation
+            if (typeof DiabetesApp !== 'undefined' && DiabetesApp.dbConnected) {
+                const baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
+                window.location.href = baseUrl + '/api/import/template';
+                return;
+            }
+
+            // Generate template client-side
+            const headers = [
+                'ID',
+                'Group (1=Intervention,0=Control)',
+                'Sex (1=Male,2=Female,3=Other)',
+                'ชื่อ', 'นามสกุล',
+                'BW', 'Ht', 'BMI', 'เอว', 'Age',
+                'HbA1c_baseline', 'FBS', 'GFR', 'DTX 1', 'HbA1c_6m',
+                'PAID1_baseline', 'PAID2_baseline', 'PAID3_baseline', 'PAID4_baseline', 'PAID5_baseline',
+                'PAID1_6m', 'PAID2_6m', 'PAID3_6m', 'PAID4_6m', 'PAID5_6m',
+                'PAID_total_baseline', 'PAID_total_6m',
+                'HL1_baseline', 'HL2_baseline', 'HL3_baseline', 'HL4_baseline', 'HL5_baseline',
+                'HL6_baseline', 'HL7_baseline', 'HL8_baseline', 'HL9_baseline', 'HL10_baseline',
+                'HL1_6m', 'HL2_6m', 'HL3_6m', 'HL4_6m', 'HL5_6m',
+                'HL6_6m', 'HL7_6m', 'HL8_6m', 'HL9_6m', 'HL10_6m',
+                'HL_total_baseline', 'HL_total_6m',
+                'H1_baseline', 'H2_baseline', 'H3_baseline', 'H4_baseline', 'H5_baseline', 'H6_baseline',
+                'H7_baseline', 'H8_baseline', 'H9_baseline', 'H10_baseline', 'H11_baseline', 'H12_baseline',
+                'H1_6m', 'H2_6m', 'H3_6m', 'H4_6m', 'H5_6m', 'H6_6m',
+                'H7_6m', 'H8_6m', 'H9_6m', 'H10_6m', 'H11_6m', 'H12_6m',
+                'H_baseline', 'H_6month'
+            ];
+            const example = [
+                'DM-001', '1', '2', 'สมศรี', 'มั่นคง',
+                '65', '158', '26.0', '88', '55',
+                '8.5', '130', '75', '180', '7.2',
+                '3', '2', '3', '2', '4', '1', '1', '2', '1', '2', '14', '7',
+                '3', '3', '2', '3', '2', '3', '2', '3', '3', '2',
+                '2', '3', '3', '3', '3', '3', '3', '3', '3', '3', '26', '29',
+                '2', '3', '2', '2', '3', '2', '3', '3', '2', '3', '2', '3',
+                '3', '3', '3', '3', '3', '3', '3', '3', '3', '3', '3', '3', '30', '36'
+            ];
+            const csv = '\uFEFF' + headers.join(',') + '\n' + example.join(',') + '\n';
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'diabetes_import_template.csv';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 100);
         });
     },
 

@@ -567,38 +567,35 @@ app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
     if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
     try {
         const rows = await query(
-            `SELECT p.*,
-             c.hba1c_baseline, c.hba1c_6month,
-             s.q1_baseline as paid5_q1_bl, s.q1_6month as paid5_q1_6m,
-             s.q2_baseline as paid5_q2_bl, s.q2_6month as paid5_q2_6m,
-             s.q3_baseline as paid5_q3_bl, s.q3_6month as paid5_q3_6m,
-             s.q4_baseline as paid5_q4_bl, s.q4_6month as paid5_q4_6m,
-             s.q5_baseline as paid5_q5_bl, s.q5_6month as paid5_q5_6m,
-             s.total_baseline as paid5_total_bl, s.total_6month as paid5_total_6m,
-             s.converted_baseline as paid5_conv_bl, s.converted_6month as paid5_conv_6m,
-             s.distress_baseline, s.distress_6month,
-             pp.sessions_attended, pp.line_engagement, pp.line_interaction,
-             ae.has_event as adverse_event, ae.description as adverse_desc,
-             fu.status as follow_up_status, fu.withdrawal_reason, fu.end_date,
-             hl.q1_find_food_info as hl_q1, hl.q2_ask_medication as hl_q2,
-             hl.q3_read_med_label as hl_q3, hl.q4_foot_care_inst as hl_q4,
-             hl.q5_hypo_symptoms as hl_q5, hl.q6_reliable_info as hl_q6,
-             hl.q7_choose_food as hl_q7, hl.q8_adjust_eating as hl_q8,
-             hl.q9_med_on_time as hl_q9, hl.q10_exercise as hl_q10,
-             hl.total_score as hl_total,
-             sc.q1_rice_portion as sc_q1, sc.q2_avoid_sweets as sc_q2,
-             sc.q3_vegetables as sc_q3, sc.q4_exercise_30min as sc_q4,
-             sc.q5_move_body as sc_q5, sc.q6_stop_abnormal as sc_q6,
-             sc.q7_med_daily as sc_q7, sc.q8_no_stop_med as sc_q8,
-             sc.q9_carry_sweets as sc_q9, sc.q10_foot_inspect as sc_q10,
-             sc.q11_closed_shoes as sc_q11, sc.q12_see_provider as sc_q12,
-             sc.total_score as sc_total
+            `SELECT p.patient_id, p.study_group, p.gender, p.first_name, p.last_name,
+             p.weight, p.height, p.bmi, p.waist, p.age,
+             c.hba1c_baseline, c.fbs, c.gfr, c.dtx1, c.hba1c_6month,
+             s.q1_baseline as paid1_bl, s.q2_baseline as paid2_bl, s.q3_baseline as paid3_bl,
+             s.q4_baseline as paid4_bl, s.q5_baseline as paid5_bl,
+             s.q1_6month as paid1_6m, s.q2_6month as paid2_6m, s.q3_6month as paid3_6m,
+             s.q4_6month as paid4_6m, s.q5_6month as paid5_6m,
+             s.total_baseline as paid_total_bl, s.total_6month as paid_total_6m,
+             hl.q1_baseline as hl1_bl, hl.q2_baseline as hl2_bl, hl.q3_baseline as hl3_bl,
+             hl.q4_baseline as hl4_bl, hl.q5_baseline as hl5_bl, hl.q6_baseline as hl6_bl,
+             hl.q7_baseline as hl7_bl, hl.q8_baseline as hl8_bl, hl.q9_baseline as hl9_bl,
+             hl.q10_baseline as hl10_bl,
+             hl.q1_6month as hl1_6m, hl.q2_6month as hl2_6m, hl.q3_6month as hl3_6m,
+             hl.q4_6month as hl4_6m, hl.q5_6month as hl5_6m, hl.q6_6month as hl6_6m,
+             hl.q7_6month as hl7_6m, hl.q8_6month as hl8_6m, hl.q9_6month as hl9_6m,
+             hl.q10_6month as hl10_6m,
+             hl.total_baseline as hl_total_bl, hl.total_6month as hl_total_6m,
+             sc.q1_baseline as h1_bl, sc.q2_baseline as h2_bl, sc.q3_baseline as h3_bl,
+             sc.q4_baseline as h4_bl, sc.q5_baseline as h5_bl, sc.q6_baseline as h6_bl,
+             sc.q7_baseline as h7_bl, sc.q8_baseline as h8_bl, sc.q9_baseline as h9_bl,
+             sc.q10_baseline as h10_bl, sc.q11_baseline as h11_bl, sc.q12_baseline as h12_bl,
+             sc.q1_6month as h1_6m, sc.q2_6month as h2_6m, sc.q3_6month as h3_6m,
+             sc.q4_6month as h4_6m, sc.q5_6month as h5_6m, sc.q6_6month as h6_6m,
+             sc.q7_6month as h7_6m, sc.q8_6month as h8_6m, sc.q9_6month as h9_6m,
+             sc.q10_6month as h10_6m, sc.q11_6month as h11_6m, sc.q12_6month as h12_6m,
+             sc.total_baseline as h_total_bl, sc.total_6month as h_total_6m
              FROM patients p
              LEFT JOIN clinical_outcomes c ON p.patient_id = c.patient_id
              LEFT JOIN paid5_scores s ON p.patient_id = s.patient_id
-             LEFT JOIN program_participation pp ON p.patient_id = pp.patient_id
-             LEFT JOIN adverse_events ae ON p.patient_id = ae.patient_id
-             LEFT JOIN follow_up_status fu ON p.patient_id = fu.patient_id
              LEFT JOIN health_literacy hl ON p.patient_id = hl.patient_id
              LEFT JOIN self_care sc ON p.patient_id = sc.patient_id
              ORDER BY p.patient_id`
@@ -608,17 +605,58 @@ app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
             return res.status(404).json({ error: 'No data to export' });
         }
 
-        const headers = Object.keys(rows[0]).filter(k => k !== 'meta');
-        let csv = '\uFEFF' + headers.join(',') + '\n';
+        // Map DB columns to user-friendly CSV headers matching template format
+        const csvHeaders = [
+            'ID',
+            'Group (1=Intervention,0=Control)',
+            'Sex (1=Male,2=Female,3=Other)',
+            'ชื่อ', 'นามสกุล',
+            'BW', 'Ht', 'BMI', 'เอว', 'Age',
+            'HbA1c_baseline', 'FBS', 'GFR', 'DTX 1', 'HbA1c_6m',
+            'PAID1_baseline', 'PAID2_baseline', 'PAID3_baseline', 'PAID4_baseline', 'PAID5_baseline',
+            'PAID1_6m', 'PAID2_6m', 'PAID3_6m', 'PAID4_6m', 'PAID5_6m',
+            'PAID_total_baseline', 'PAID_total_6m',
+            'HL1_baseline', 'HL2_baseline', 'HL3_baseline', 'HL4_baseline', 'HL5_baseline',
+            'HL6_baseline', 'HL7_baseline', 'HL8_baseline', 'HL9_baseline', 'HL10_baseline',
+            'HL1_6m', 'HL2_6m', 'HL3_6m', 'HL4_6m', 'HL5_6m',
+            'HL6_6m', 'HL7_6m', 'HL8_6m', 'HL9_6m', 'HL10_6m',
+            'HL_total_baseline', 'HL_total_6m',
+            'H1_baseline', 'H2_baseline', 'H3_baseline', 'H4_baseline', 'H5_baseline', 'H6_baseline',
+            'H7_baseline', 'H8_baseline', 'H9_baseline', 'H10_baseline', 'H11_baseline', 'H12_baseline',
+            'H1_6m', 'H2_6m', 'H3_6m', 'H4_6m', 'H5_6m', 'H6_6m',
+            'H7_6m', 'H8_6m', 'H9_6m', 'H10_6m', 'H11_6m', 'H12_6m',
+            'H_baseline', 'H_6month'
+        ];
+
+        const groupMap = { 'experimental': '1', 'control': '0' };
+        const sexMap = { 'male': '1', 'female': '2', 'other': '3' };
+
+        let csv = '\uFEFF' + csvHeaders.join(',') + '\n';
         rows.forEach(row => {
-            const values = headers.map(h => {
-                let val = row[h];
-                if (val === null || val === undefined) return '';
-                val = String(val).replace(/"/g, '""');
-                if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-                    return `"${val}"`;
-                }
-                return val;
+            const values = [
+                row.patient_id || '',
+                groupMap[row.study_group] || '',
+                sexMap[row.gender] || '',
+                row.first_name || '', row.last_name || '',
+                row.weight || '', row.height || '', row.bmi || '', row.waist || '', row.age || '',
+                row.hba1c_baseline || '', row.fbs || '', row.gfr || '', row.dtx1 || '', row.hba1c_6month || '',
+                row.paid1_bl || '', row.paid2_bl || '', row.paid3_bl || '', row.paid4_bl || '', row.paid5_bl || '',
+                row.paid1_6m || '', row.paid2_6m || '', row.paid3_6m || '', row.paid4_6m || '', row.paid5_6m || '',
+                row.paid_total_bl || '', row.paid_total_6m || '',
+                row.hl1_bl || '', row.hl2_bl || '', row.hl3_bl || '', row.hl4_bl || '', row.hl5_bl || '',
+                row.hl6_bl || '', row.hl7_bl || '', row.hl8_bl || '', row.hl9_bl || '', row.hl10_bl || '',
+                row.hl1_6m || '', row.hl2_6m || '', row.hl3_6m || '', row.hl4_6m || '', row.hl5_6m || '',
+                row.hl6_6m || '', row.hl7_6m || '', row.hl8_6m || '', row.hl9_6m || '', row.hl10_6m || '',
+                row.hl_total_bl || '', row.hl_total_6m || '',
+                row.h1_bl || '', row.h2_bl || '', row.h3_bl || '', row.h4_bl || '', row.h5_bl || '', row.h6_bl || '',
+                row.h7_bl || '', row.h8_bl || '', row.h9_bl || '', row.h10_bl || '', row.h11_bl || '', row.h12_bl || '',
+                row.h1_6m || '', row.h2_6m || '', row.h3_6m || '', row.h4_6m || '', row.h5_6m || '', row.h6_6m || '',
+                row.h7_6m || '', row.h8_6m || '', row.h9_6m || '', row.h10_6m || '', row.h11_6m || '', row.h12_6m || '',
+                row.h_total_bl || '', row.h_total_6m || ''
+            ].map(v => {
+                if (v === null || v === undefined) return '';
+                const s = String(v).replace(/"/g, '""');
+                return (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s}"` : s;
             });
             csv += values.join(',') + '\n';
         });
@@ -637,26 +675,41 @@ app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
 app.get('/api/import/template', (req, res) => {
     const BOM = '\uFEFF';
     const headers = [
-        'patient_id', 'enrollment_date', 'study_group', 'gender', 'age',
-        'education_level', 'occupation', 'diabetes_duration_years',
-        'comorbidities', 'diabetes_treatment', 'line_usage',
-        'hba1c_baseline', 'hba1c_6month',
-        'paid5_q1_baseline', 'paid5_q1_6month',
-        'paid5_q2_baseline', 'paid5_q2_6month',
-        'paid5_q3_baseline', 'paid5_q3_6month',
-        'paid5_q4_baseline', 'paid5_q4_6month',
-        'paid5_q5_baseline', 'paid5_q5_6month',
-        'sessions_attended', 'line_engagement', 'line_interaction',
-        'follow_up_status', 'end_date'
+        'ID',
+        'Group (1=Intervention,0=Control)',
+        'Sex (1=Male,2=Female,3=Other)',
+        'ชื่อ', 'นามสกุล',
+        'BW', 'Ht', 'BMI', 'เอว', 'Age',
+        'HbA1c_baseline', 'FBS', 'GFR', 'DTX 1', 'HbA1c_6m',
+        'PAID1_baseline', 'PAID2_baseline', 'PAID3_baseline', 'PAID4_baseline', 'PAID5_baseline',
+        'PAID1_6m', 'PAID2_6m', 'PAID3_6m', 'PAID4_6m', 'PAID5_6m',
+        'PAID_total_baseline', 'PAID_total_6m',
+        'HL1_baseline', 'HL2_baseline', 'HL3_baseline', 'HL4_baseline', 'HL5_baseline',
+        'HL6_baseline', 'HL7_baseline', 'HL8_baseline', 'HL9_baseline', 'HL10_baseline',
+        'HL1_6m', 'HL2_6m', 'HL3_6m', 'HL4_6m', 'HL5_6m',
+        'HL6_6m', 'HL7_6m', 'HL8_6m', 'HL9_6m', 'HL10_6m',
+        'HL_total_baseline', 'HL_total_6m',
+        'H1_baseline', 'H2_baseline', 'H3_baseline', 'H4_baseline', 'H5_baseline', 'H6_baseline',
+        'H7_baseline', 'H8_baseline', 'H9_baseline', 'H10_baseline', 'H11_baseline', 'H12_baseline',
+        'H1_6m', 'H2_6m', 'H3_6m', 'H4_6m', 'H5_6m', 'H6_6m',
+        'H7_6m', 'H8_6m', 'H9_6m', 'H10_6m', 'H11_6m', 'H12_6m',
+        'H_baseline', 'H_6month'
     ];
     const example = [
-        'DM-001', '2025-01-15', 'experimental', 'female', '55',
-        'primary', 'เกษตรกรรม', '5',
-        'hypertension;dyslipidemia', 'oral', 'regular',
-        '8.5', '7.2',
-        '3', '1', '2', '1', '3', '2', '2', '1', '4', '2',
-        '4_plus', 'regular', 'sometimes',
-        'complete', '2025-07-15'
+        'DM-001',
+        '1', '2',
+        'สมศรี', 'มั่นคง',
+        '65', '158', '26.0', '88', '55',
+        '8.5', '130', '75', '180', '7.2',
+        '3', '2', '3', '2', '4',
+        '1', '1', '2', '1', '2',
+        '14', '7',
+        '3', '3', '2', '3', '2', '3', '2', '3', '3', '2',
+        '2', '3', '3', '3', '3', '3', '3', '3', '3', '3',
+        '26', '29',
+        '2', '3', '2', '2', '3', '2', '3', '3', '2', '3', '2', '3',
+        '3', '3', '3', '3', '3', '3', '3', '3', '3', '3', '3', '3',
+        '30', '36'
     ];
     const csv = BOM + headers.join(',') + '\n' + example.join(',') + '\n';
 
@@ -672,14 +725,54 @@ app.post('/api/import/csv', authMiddleware, adminOnly, upload.single('file'), as
     if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
+    // Map CSV header names to normalized keys
+    function normalizeHeader(h) {
+        h = h.trim();
+        // First column: ID
+        if (/^ID$/i.test(h)) return 'ID';
+        if (/^Group/i.test(h)) return 'Group';
+        if (/^Sex/i.test(h)) return 'Sex';
+        if (h === 'ชื่อ') return 'first_name';
+        if (h === 'นามสกุล') return 'last_name';
+        if (/^BW$/i.test(h)) return 'BW';
+        if (/^Ht$/i.test(h)) return 'Ht';
+        if (/^BMI$/i.test(h)) return 'BMI';
+        if (h === 'เอว') return 'waist';
+        if (/^Age$/i.test(h)) return 'Age';
+        if (/^HbA1c_baseline$/i.test(h)) return 'HbA1c_baseline';
+        if (/^FBS$/i.test(h)) return 'FBS';
+        if (/^GFR$/i.test(h)) return 'GFR';
+        if (/^DTX\s*1$/i.test(h)) return 'DTX1';
+        if (/^HbA1c_6m$/i.test(h)) return 'HbA1c_6m';
+        // PAID
+        const paidMatch = h.match(/^PAID(\d+)_(baseline|6m)$/i);
+        if (paidMatch) return `PAID${paidMatch[1]}_${paidMatch[2].toLowerCase()}`;
+        if (/^PAID_total_baseline$/i.test(h)) return 'PAID_total_baseline';
+        if (/^PAID_total_6m$/i.test(h)) return 'PAID_total_6m';
+        // HL
+        const hlMatch = h.match(/^HL(\d+)_(baseline|6m)$/i);
+        if (hlMatch) return `HL${hlMatch[1]}_${hlMatch[2].toLowerCase()}`;
+        if (/^HL_total_baseline$/i.test(h)) return 'HL_total_baseline';
+        if (/^HL_total_6m$/i.test(h)) return 'HL_total_6m';
+        // H (self-care)
+        const hMatch = h.match(/^H(\d+)_(baseline|6m)$/i);
+        if (hMatch) return `H${hMatch[1]}_${hMatch[2].toLowerCase()}`;
+        if (/^H_\s*baseline$/i.test(h)) return 'H_baseline';
+        if (/^H_\s*6\s*month$/i.test(h)) return 'H_6month';
+        // Fallback: also support old format
+        if (/^patient_id$/i.test(h)) return 'ID';
+        return h;
+    }
+
     try {
         const content = req.file.buffer.toString('utf-8').replace(/^\uFEFF/, '');
         const lines = content.split(/\r?\n/).filter(l => l.trim());
         if (lines.length < 2) return res.status(400).json({ error: 'CSV must have header + at least 1 data row' });
 
-        const headers = parseCSVLine(lines[0]);
-        const pidIdx = headers.indexOf('patient_id');
-        if (pidIdx < 0) return res.status(400).json({ error: 'Missing required column: patient_id' });
+        const rawHeaders = parseCSVLine(lines[0]);
+        const headers = rawHeaders.map(normalizeHeader);
+        const idIdx = headers.indexOf('ID');
+        if (idIdx < 0) return res.status(400).json({ error: 'Missing required column: ID (patient_id)' });
 
         let imported = 0;
         let errors = [];
@@ -689,73 +782,89 @@ app.post('/api/import/csv', authMiddleware, adminOnly, upload.single('file'), as
             if (values.length === 0) continue;
 
             const row = {};
-            headers.forEach((h, idx) => { row[h] = values[idx] || null; });
+            headers.forEach((h, idx) => { row[h] = values[idx] != null ? values[idx].trim() : null; });
 
-            if (!row.patient_id) {
-                errors.push(`Row ${i + 1}: missing patient_id`);
+            if (!row.ID) {
+                errors.push(`Row ${i + 1}: missing ID`);
                 continue;
             }
+
+            // Map Group: 1=experimental, 0=control
+            let studyGroup = null;
+            if (row.Group === '1') studyGroup = 'experimental';
+            else if (row.Group === '0') studyGroup = 'control';
+
+            // Map Sex: 1=male, 2=female, 3=other
+            let gender = null;
+            if (row.Sex === '1') gender = 'male';
+            else if (row.Sex === '2') gender = 'female';
+            else if (row.Sex === '3') gender = 'other';
 
             try {
                 // Insert patient
                 await query(
-                    `INSERT INTO patients (patient_id, enrollment_date, study_group, gender, age,
-                     education_level, occupation, diabetes_duration_years, comorbidities,
-                     diabetes_treatment, line_usage)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `INSERT INTO patients (patient_id, study_group, gender, first_name, last_name,
+                     weight, height, bmi, waist, age)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                      ON DUPLICATE KEY UPDATE
-                     enrollment_date=VALUES(enrollment_date), study_group=VALUES(study_group),
-                     gender=VALUES(gender), age=VALUES(age), education_level=VALUES(education_level),
-                     occupation=VALUES(occupation), diabetes_duration_years=VALUES(diabetes_duration_years),
-                     comorbidities=VALUES(comorbidities),
-                     diabetes_treatment=VALUES(diabetes_treatment), line_usage=VALUES(line_usage)`,
+                     study_group=VALUES(study_group), gender=VALUES(gender),
+                     first_name=VALUES(first_name), last_name=VALUES(last_name),
+                     weight=VALUES(weight), height=VALUES(height), bmi=VALUES(bmi),
+                     waist=VALUES(waist), age=VALUES(age)`,
                     [
-                        row.patient_id,
-                        row.enrollment_date || null,
-                        row.study_group || null,
-                        row.gender || null,
-                        row.age ? parseInt(row.age) : null,
-                        row.education_level || null,
-                        row.occupation || null,
-                        row.diabetes_duration_years ? parseFloat(row.diabetes_duration_years) : null,
-                        row.comorbidities ? JSON.stringify(row.comorbidities.split(';').map(s => s.trim())) : '[]',
-                        row.diabetes_treatment || null,
-                        row.line_usage || null
+                        row.ID,
+                        studyGroup,
+                        gender,
+                        row.first_name || null,
+                        row.last_name || null,
+                        row.BW ? parseFloat(row.BW) : null,
+                        row.Ht ? parseFloat(row.Ht) : null,
+                        row.BMI ? parseFloat(row.BMI) : null,
+                        row.waist ? parseFloat(row.waist) : null,
+                        row.Age ? parseInt(row.Age) : null
                     ]
                 );
 
                 // Insert clinical outcomes
-                if (row.hba1c_baseline || row.hba1c_6month) {
+                if (row.HbA1c_baseline || row.HbA1c_6m || row.FBS || row.GFR || row.DTX1) {
                     await query(
-                        `INSERT INTO clinical_outcomes (patient_id, hba1c_baseline, hba1c_6month)
-                         VALUES (?, ?, ?)
-                         ON DUPLICATE KEY UPDATE hba1c_baseline=VALUES(hba1c_baseline), hba1c_6month=VALUES(hba1c_6month)`,
+                        `INSERT INTO clinical_outcomes (patient_id, hba1c_baseline, hba1c_6month, fbs, gfr, dtx1)
+                         VALUES (?, ?, ?, ?, ?, ?)
+                         ON DUPLICATE KEY UPDATE
+                         hba1c_baseline=VALUES(hba1c_baseline), hba1c_6month=VALUES(hba1c_6month),
+                         fbs=VALUES(fbs), gfr=VALUES(gfr), dtx1=VALUES(dtx1)`,
                         [
-                            row.patient_id,
-                            row.hba1c_baseline ? parseFloat(row.hba1c_baseline) : null,
-                            row.hba1c_6month ? parseFloat(row.hba1c_6month) : null
+                            row.ID,
+                            row.HbA1c_baseline ? parseFloat(row.HbA1c_baseline) : null,
+                            row.HbA1c_6m ? parseFloat(row.HbA1c_6m) : null,
+                            row.FBS ? parseFloat(row.FBS) : null,
+                            row.GFR ? parseFloat(row.GFR) : null,
+                            row.DTX1 ? parseFloat(row.DTX1) : null
                         ]
                     );
                 }
 
                 // Insert PAID-5 scores
-                const hasP5 = headers.some(h => h.startsWith('paid5_q'));
-                if (hasP5) {
+                const hasPaid = headers.some(h => /^PAID\d+_/.test(h));
+                if (hasPaid) {
                     const p5 = {};
                     for (let q = 1; q <= 5; q++) {
-                        p5[`q${q}_bl`] = row[`paid5_q${q}_baseline`] ? parseInt(row[`paid5_q${q}_baseline`]) : null;
-                        p5[`q${q}_6m`] = row[`paid5_q${q}_6month`] ? parseInt(row[`paid5_q${q}_6month`]) : null;
+                        p5[`q${q}_bl`] = row[`PAID${q}_baseline`] ? parseInt(row[`PAID${q}_baseline`]) : null;
+                        p5[`q${q}_6m`] = row[`PAID${q}_6m`] ? parseInt(row[`PAID${q}_6m`]) : null;
                     }
-                    const totalBL = [p5.q1_bl, p5.q2_bl, p5.q3_bl, p5.q4_bl, p5.q5_bl].filter(v => v != null);
-                    const total6m = [p5.q1_6m, p5.q2_6m, p5.q3_6m, p5.q4_6m, p5.q5_6m].filter(v => v != null);
-                    const sumBL = totalBL.length > 0 ? totalBL.reduce((a, b) => a + b, 0) : null;
-                    const sum6m = total6m.length > 0 ? total6m.reduce((a, b) => a + b, 0) : null;
-                    const convBL = sumBL != null ? (sumBL / 20) * 100 : null;
-                    const conv6m = sum6m != null ? (sum6m / 20) * 100 : null;
+                    // Use provided totals or calculate
+                    const totalBL = row.PAID_total_baseline ? parseInt(row.PAID_total_baseline) :
+                        ([p5.q1_bl, p5.q2_bl, p5.q3_bl, p5.q4_bl, p5.q5_bl].filter(v => v != null).length > 0
+                            ? [p5.q1_bl, p5.q2_bl, p5.q3_bl, p5.q4_bl, p5.q5_bl].filter(v => v != null).reduce((a, b) => a + b, 0) : null);
+                    const total6m = row.PAID_total_6m ? parseInt(row.PAID_total_6m) :
+                        ([p5.q1_6m, p5.q2_6m, p5.q3_6m, p5.q4_6m, p5.q5_6m].filter(v => v != null).length > 0
+                            ? [p5.q1_6m, p5.q2_6m, p5.q3_6m, p5.q4_6m, p5.q5_6m].filter(v => v != null).reduce((a, b) => a + b, 0) : null);
+                    const convBL = totalBL != null ? (totalBL / 20) * 100 : null;
+                    const conv6m = total6m != null ? (total6m / 20) * 100 : null;
                     const distBL = convBL != null ? (convBL >= 40 ? 'high' : 'low') : null;
                     const dist6m = conv6m != null ? (conv6m >= 40 ? 'high' : 'low') : null;
 
-                    if (sumBL != null || sum6m != null) {
+                    if (totalBL != null || total6m != null) {
                         await query(
                             `INSERT INTO paid5_scores (patient_id, q1_baseline, q1_6month, q2_baseline, q2_6month,
                              q3_baseline, q3_6month, q4_baseline, q4_6month, q5_baseline, q5_6month,
@@ -772,41 +881,107 @@ app.post('/api/import/csv', authMiddleware, adminOnly, upload.single('file'), as
                              converted_baseline=VALUES(converted_baseline), converted_6month=VALUES(converted_6month),
                              distress_baseline=VALUES(distress_baseline), distress_6month=VALUES(distress_6month)`,
                             [
-                                row.patient_id,
+                                row.ID,
                                 p5.q1_bl, p5.q1_6m, p5.q2_bl, p5.q2_6m,
                                 p5.q3_bl, p5.q3_6m, p5.q4_bl, p5.q4_6m,
                                 p5.q5_bl, p5.q5_6m,
-                                sumBL, sum6m, convBL, conv6m, distBL, dist6m
+                                totalBL, total6m, convBL, conv6m, distBL, dist6m
                             ]
                         );
                     }
                 }
 
-                // Insert program participation (experimental only)
-                if (row.study_group === 'experimental' && (row.sessions_attended || row.line_engagement || row.line_interaction)) {
-                    await query(
-                        `INSERT INTO program_participation (patient_id, sessions_attended, line_engagement, line_interaction)
-                         VALUES (?, ?, ?, ?)
-                         ON DUPLICATE KEY UPDATE
-                         sessions_attended=VALUES(sessions_attended), line_engagement=VALUES(line_engagement),
-                         line_interaction=VALUES(line_interaction)`,
-                        [row.patient_id, row.sessions_attended || null, row.line_engagement || null, row.line_interaction || null]
-                    );
+                // Insert Health Literacy (10 items, baseline + 6m)
+                const hasHL = headers.some(h => /^HL\d+_/.test(h));
+                if (hasHL) {
+                    const hl = {};
+                    for (let q = 1; q <= 10; q++) {
+                        hl[`q${q}_bl`] = row[`HL${q}_baseline`] ? parseInt(row[`HL${q}_baseline`]) : null;
+                        hl[`q${q}_6m`] = row[`HL${q}_6m`] ? parseInt(row[`HL${q}_6m`]) : null;
+                    }
+                    const totalBL = row.HL_total_baseline ? parseInt(row.HL_total_baseline) : null;
+                    const total6m = row.HL_total_6m ? parseInt(row.HL_total_6m) : null;
+
+                    if (totalBL != null || total6m != null || Object.values(hl).some(v => v != null)) {
+                        await query(
+                            `INSERT INTO health_literacy (patient_id,
+                             q1_baseline, q1_6month, q2_baseline, q2_6month, q3_baseline, q3_6month,
+                             q4_baseline, q4_6month, q5_baseline, q5_6month, q6_baseline, q6_6month,
+                             q7_baseline, q7_6month, q8_baseline, q8_6month, q9_baseline, q9_6month,
+                             q10_baseline, q10_6month, total_baseline, total_6month)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                             ON DUPLICATE KEY UPDATE
+                             q1_baseline=VALUES(q1_baseline), q1_6month=VALUES(q1_6month),
+                             q2_baseline=VALUES(q2_baseline), q2_6month=VALUES(q2_6month),
+                             q3_baseline=VALUES(q3_baseline), q3_6month=VALUES(q3_6month),
+                             q4_baseline=VALUES(q4_baseline), q4_6month=VALUES(q4_6month),
+                             q5_baseline=VALUES(q5_baseline), q5_6month=VALUES(q5_6month),
+                             q6_baseline=VALUES(q6_baseline), q6_6month=VALUES(q6_6month),
+                             q7_baseline=VALUES(q7_baseline), q7_6month=VALUES(q7_6month),
+                             q8_baseline=VALUES(q8_baseline), q8_6month=VALUES(q8_6month),
+                             q9_baseline=VALUES(q9_baseline), q9_6month=VALUES(q9_6month),
+                             q10_baseline=VALUES(q10_baseline), q10_6month=VALUES(q10_6month),
+                             total_baseline=VALUES(total_baseline), total_6month=VALUES(total_6month)`,
+                            [
+                                row.ID,
+                                hl.q1_bl, hl.q1_6m, hl.q2_bl, hl.q2_6m, hl.q3_bl, hl.q3_6m,
+                                hl.q4_bl, hl.q4_6m, hl.q5_bl, hl.q5_6m, hl.q6_bl, hl.q6_6m,
+                                hl.q7_bl, hl.q7_6m, hl.q8_bl, hl.q8_6m, hl.q9_bl, hl.q9_6m,
+                                hl.q10_bl, hl.q10_6m, totalBL, total6m
+                            ]
+                        );
+                    }
                 }
 
-                // Insert follow-up status
-                if (row.follow_up_status) {
-                    await query(
-                        `INSERT INTO follow_up_status (patient_id, status, end_date)
-                         VALUES (?, ?, ?)
-                         ON DUPLICATE KEY UPDATE status=VALUES(status), end_date=VALUES(end_date)`,
-                        [row.patient_id, row.follow_up_status, row.end_date || null]
-                    );
+                // Insert Self-Care (12 items, baseline + 6m)
+                const hasH = headers.some(h => /^H\d+_/.test(h));
+                if (hasH) {
+                    const sc = {};
+                    for (let q = 1; q <= 12; q++) {
+                        sc[`q${q}_bl`] = row[`H${q}_baseline`] ? parseInt(row[`H${q}_baseline`]) : null;
+                        sc[`q${q}_6m`] = row[`H${q}_6m`] ? parseInt(row[`H${q}_6m`]) : null;
+                    }
+                    const totalBL = row.H_baseline ? parseInt(row.H_baseline) : null;
+                    const total6m = row.H_6month ? parseInt(row.H_6month) : null;
+
+                    if (totalBL != null || total6m != null || Object.values(sc).some(v => v != null)) {
+                        await query(
+                            `INSERT INTO self_care (patient_id,
+                             q1_baseline, q1_6month, q2_baseline, q2_6month, q3_baseline, q3_6month,
+                             q4_baseline, q4_6month, q5_baseline, q5_6month, q6_baseline, q6_6month,
+                             q7_baseline, q7_6month, q8_baseline, q8_6month, q9_baseline, q9_6month,
+                             q10_baseline, q10_6month, q11_baseline, q11_6month, q12_baseline, q12_6month,
+                             total_baseline, total_6month)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                             ON DUPLICATE KEY UPDATE
+                             q1_baseline=VALUES(q1_baseline), q1_6month=VALUES(q1_6month),
+                             q2_baseline=VALUES(q2_baseline), q2_6month=VALUES(q2_6month),
+                             q3_baseline=VALUES(q3_baseline), q3_6month=VALUES(q3_6month),
+                             q4_baseline=VALUES(q4_baseline), q4_6month=VALUES(q4_6month),
+                             q5_baseline=VALUES(q5_baseline), q5_6month=VALUES(q5_6month),
+                             q6_baseline=VALUES(q6_baseline), q6_6month=VALUES(q6_6month),
+                             q7_baseline=VALUES(q7_baseline), q7_6month=VALUES(q7_6month),
+                             q8_baseline=VALUES(q8_baseline), q8_6month=VALUES(q8_6month),
+                             q9_baseline=VALUES(q9_baseline), q9_6month=VALUES(q9_6month),
+                             q10_baseline=VALUES(q10_baseline), q10_6month=VALUES(q10_6month),
+                             q11_baseline=VALUES(q11_baseline), q11_6month=VALUES(q11_6month),
+                             q12_baseline=VALUES(q12_baseline), q12_6month=VALUES(q12_6month),
+                             total_baseline=VALUES(total_baseline), total_6month=VALUES(total_6month)`,
+                            [
+                                row.ID,
+                                sc.q1_bl, sc.q1_6m, sc.q2_bl, sc.q2_6m, sc.q3_bl, sc.q3_6m,
+                                sc.q4_bl, sc.q4_6m, sc.q5_bl, sc.q5_6m, sc.q6_bl, sc.q6_6m,
+                                sc.q7_bl, sc.q7_6m, sc.q8_bl, sc.q8_6m, sc.q9_bl, sc.q9_6m,
+                                sc.q10_bl, sc.q10_6m, sc.q11_bl, sc.q11_6m, sc.q12_bl, sc.q12_6m,
+                                totalBL, total6m
+                            ]
+                        );
+                    }
                 }
 
                 imported++;
             } catch (rowErr) {
-                errors.push(`Row ${i + 1} (${row.patient_id}): ${rowErr.message}`);
+                errors.push(`Row ${i + 1} (${row.ID}): ${rowErr.message}`);
             }
         }
 
