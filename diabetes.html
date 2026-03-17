@@ -1361,23 +1361,6 @@
 <script src="js/diabetes-tracking.js?v=20260317"></script>
 <script src="js/diabetes-linebot.js?v=20260317"></script>
 
-<!-- DEBUG: Remove after fixing -->
-<script>
-(function(){
-    console.log('=== DEBUG TAB DIAGNOSIS ===');
-    console.log('1. Total nav buttons:', document.querySelectorAll('.bottom-nav-btn').length);
-    console.log('2. Tab list:', [...document.querySelectorAll('.bottom-nav-btn')].map(b => b.dataset.tab));
-    console.log('3. linebot button:', document.querySelector('[data-tab="linebot"]'));
-    console.log('4. tab-linebot content:', document.getElementById('tab-linebot'));
-    console.log('5. All tab-content IDs:', [...document.querySelectorAll('.tab-content')].map(el => el.id));
-    console.log('6. All data-role elements:', [...document.querySelectorAll('[data-role]')].map(el => el.tagName + ':' + el.dataset.tab + '=' + el.dataset.role));
-    console.log('7. Nav HTML:', document.querySelector('.bottom-nav')?.innerHTML?.substring(0, 500));
-    console.log('8. Auth user:', localStorage.getItem('dt_auth_user'));
-    console.log('9. Page URL:', location.href);
-    console.log('10. Last-Modified:', document.lastModified);
-    console.log('=== END DEBUG ===');
-})();
-</script>
 
 </body>
 </html>
