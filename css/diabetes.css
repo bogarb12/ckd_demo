@@ -107,6 +107,8 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .logo-box {
@@ -147,6 +149,9 @@ body {
     white-space: nowrap;
     border: 1px solid var(--border);
 }
+
+/* Mobile: hide db-status text, show dot only */
+.db-status #db-text { display: none; }
 
 .db-status .dot {
     width: 8px;
@@ -920,11 +925,16 @@ textarea { min-height: 80px; resize: vertical; }
     line-height: 1.3;
 }
 
-/* Tablet: 4 columns */
+/* Tablet (600px+): show full header elements */
 @media (min-width: 600px) {
     .stat-grid {
         grid-template-columns: repeat(4, 1fr);
     }
+
+    .db-status #db-text { display: inline; }
+
+    .btn-header-login span { display: inline; }
+    .btn-header-login { padding: 6px 12px; }
 }
 
 /* ============ Action Grid (Dashboard buttons) ============ */
@@ -1341,7 +1351,7 @@ textarea { min-height: 80px; resize: vertical; }
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 6px 12px;
+    padding: 6px 8px;
     border: 1.5px solid var(--primary);
     border-radius: var(--radius-full);
     background: var(--primary-subtle);
@@ -1352,7 +1362,11 @@ textarea { min-height: 80px; resize: vertical; }
     cursor: pointer;
     transition: var(--transition);
     white-space: nowrap;
+    flex-shrink: 0;
 }
+
+/* Mobile: hide "Admin" text, show icon only */
+.btn-header-login span { display: none; }
 
 .btn-header-login:hover {
     background: var(--primary);
@@ -1402,6 +1416,7 @@ textarea { min-height: 80px; resize: vertical; }
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .user-menu {
