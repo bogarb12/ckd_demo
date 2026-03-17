@@ -1107,44 +1107,31 @@ const DiabetesDashboard = {
 
             showLoading();
 
-            // If DB connected, use API
-            if (typeof DiabetesApp !== 'undefined' && DiabetesApp.dbConnected) {
-                try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-
-                    const baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
-                    const headers = {};
-                    if (window.Auth && Auth.getToken()) {
-                        headers['Authorization'] = 'Bearer ' + Auth.getToken();
-                    }
-
-                    const response = await fetch(baseUrl + '/api/import/csv', {
-                        method: 'POST',
-                        headers: headers,
-                        body: formData
-                    });
-
-                    const result = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(result.error || 'Import failed');
-                    }
-
-                    this._showImportResult(result);
-                    hideLoading();
-                    await this.init();
-                    return;
-                } catch (err) {
-                    console.warn('API import failed, trying local import:', err.message);
-                }
-            }
-
-            // localStorage fallback: parse CSV client-side
             try {
-                const text = await file.text();
-                const result = this.importCSVLocal(text);
-                this._showImportResult(result);
+                // Always import to localStorage first (primary data source)
+                const csvText = await file.text();
+                const localResult = this.importCSVLocal(csvText);
+
+                // Also try API import if DB connected
+                if (typeof DiabetesApp !== 'undefined' && DiabetesApp.dbConnected) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        const baseUrl = (window.API && window.API.baseUrl) ? window.API.baseUrl : '';
+                        const response = await fetch(baseUrl + '/api/import/csv', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (response.ok) {
+                            const apiResult = await response.json();
+                            console.log('API import also succeeded:', apiResult);
+                        }
+                    } catch (apiErr) {
+                        console.warn('API import skipped:', apiErr.message);
+                    }
+                }
+
+                this._showImportResult(localResult);
                 hideLoading();
                 await this.init();
             } catch (err) {

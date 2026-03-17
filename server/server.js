@@ -720,11 +720,11 @@ app.get('/api/import/template', (req, res) => {
 });
 
 // ============================================
-// API: CSV Import (Admin only)
+// API: CSV Import (Public - no auth required)
 // ============================================
-app.post('/api/import/csv', authMiddleware, adminOnly, upload.single('file'), async (req, res) => {
-    if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
+app.post('/api/import/csv', upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    if (!dbConnected) return res.json({ success: true, imported: 0, total: 0, errors: [], mode: 'localStorage', message: 'DB not connected - use client-side import' });
 
     // Map CSV header names to normalized keys
     // "note" appears twice: after อาชีพ (occupation_note) and after D7 (comorbidity_note)
