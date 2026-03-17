@@ -1124,18 +1124,200 @@ const DiabetesDashboard = {
     },
 
     _showImportResult(result) {
-        const banner = document.getElementById('import-result');
-        const text = document.getElementById('import-result-text');
+        var self = this;
+
+        // Update banner summary
+        var banner = document.getElementById('import-result');
+        var text = document.getElementById('import-result-text');
         if (banner && text) {
-            let msg = 'นำเข้าสำเร็จ ' + result.imported + '/' + result.total + ' รายการ';
-            if (result.errors && result.errors.length > 0) {
-                msg += ' (ข้อผิดพลาด ' + result.errors.length + ' รายการ)';
-            }
+            var hasErrors = result.errors && result.errors.length > 0;
+            var hasWarnings = result.warnings && result.warnings.length > 0;
+            var msg = 'นำเข้าสำเร็จ ' + result.imported + '/' + result.total + ' รายการ';
+            if (result.newCount) msg += ' (ใหม่ ' + result.newCount + ')';
+            if (result.updatedCount) msg += ' (อัปเดต ' + result.updatedCount + ')';
+            if (hasErrors) msg += ' | ข้อผิดพลาด ' + result.errors.length;
+            if (hasWarnings) msg += ' | คำเตือน ' + result.warnings.length;
             text.textContent = msg;
+
+            // Color banner based on status
+            if (hasErrors) {
+                banner.style.background = '#fef2f2'; banner.style.borderColor = '#fca5a5'; banner.style.color = '#991b1b';
+                banner.querySelector('i').className = 'fa-solid fa-circle-exclamation';
+            } else if (hasWarnings) {
+                banner.style.background = '#fffbeb'; banner.style.borderColor = '#fcd34d'; banner.style.color = '#92400e';
+                banner.querySelector('i').className = 'fa-solid fa-triangle-exclamation';
+            } else {
+                banner.style.background = '#f0fdf4'; banner.style.borderColor = '#86efac'; banner.style.color = '#166534';
+                banner.querySelector('i').className = 'fa-solid fa-circle-check';
+            }
+
             banner.classList.remove('hidden');
-            setTimeout(() => banner.classList.add('hidden'), 8000);
+            // Click banner to show detail modal
+            banner.onclick = function() { self._showImportReportModal(result); };
         }
-        showToast('นำเข้าข้อมูลสำเร็จ ' + result.imported + ' รายการ', 'success');
+
+        // Auto-show modal
+        this._showImportReportModal(result);
+
+        if (result.imported > 0) {
+            showToast('นำเข้าข้อมูลสำเร็จ ' + result.imported + ' รายการ', 'success');
+        } else {
+            showToast('ไม่สามารถนำเข้าข้อมูลได้', 'error');
+        }
+    },
+
+    _showImportReportModal(result) {
+        var modal = document.getElementById('import-report-modal');
+        if (!modal) return;
+
+        var hasErrors = result.errors && result.errors.length > 0;
+        var hasWarnings = result.warnings && result.warnings.length > 0;
+
+        // Header icon & color
+        var iconEl = document.getElementById('import-report-icon');
+        var titleEl = document.getElementById('import-report-title');
+        var subtitleEl = document.getElementById('import-report-subtitle');
+
+        if (hasErrors && result.imported === 0) {
+            iconEl.style.background = '#fef2f2'; iconEl.innerHTML = '<i class="fa-solid fa-circle-xmark" style="color:#dc2626"></i>';
+            titleEl.textContent = 'นำเข้าไม่สำเร็จ';
+        } else if (hasErrors) {
+            iconEl.style.background = '#fffbeb'; iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:#d97706"></i>';
+            titleEl.textContent = 'นำเข้าสำเร็จบางส่วน';
+        } else if (hasWarnings) {
+            iconEl.style.background = '#fffbeb'; iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:#d97706"></i>';
+            titleEl.textContent = 'นำเข้าสำเร็จ (มีคำเตือน)';
+        } else {
+            iconEl.style.background = '#f0fdf4'; iconEl.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#16a34a"></i>';
+            titleEl.textContent = 'นำเข้าสำเร็จ';
+        }
+        subtitleEl.textContent = 'ประมวลผล ' + result.total + ' แถว, ' + result.columnCount + ' คอลัมน์';
+
+        // Build body
+        var body = document.getElementById('import-report-body');
+        var html = '';
+
+        // ── Summary Cards ──
+        html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px">';
+        html += this._reportCard(result.imported, 'นำเข้าสำเร็จ', '#16a34a', '#f0fdf4', 'fa-check');
+        html += this._reportCard(result.newCount || 0, 'เพิ่มใหม่', '#2563eb', '#eff6ff', 'fa-plus');
+        html += this._reportCard(result.updatedCount || 0, 'อัปเดต', '#7c3aed', '#f5f3ff', 'fa-pen');
+        html += this._reportCard(result.errors ? result.errors.length : 0, 'ข้อผิดพลาด', '#dc2626', '#fef2f2', 'fa-xmark');
+        html += this._reportCard(result.warnings ? result.warnings.length : 0, 'คำเตือน', '#d97706', '#fffbeb', 'fa-exclamation');
+        html += '</div>';
+
+        // ── Group Distribution ──
+        if (result.groupCounts) {
+            var gc = result.groupCounts;
+            var totalG = gc.experimental + gc.control + gc.unknown;
+            html += '<div style="margin-bottom:16px">';
+            html += '<div style="font-weight:700;font-size:14px;margin-bottom:8px"><i class="fa-solid fa-users" style="color:#6366f1;margin-right:6px"></i>การกระจายกลุ่ม</div>';
+            html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">';
+            if (gc.experimental > 0) {
+                var pctExp = Math.round(gc.experimental / totalG * 100);
+                html += '<div style="flex:' + gc.experimental + ';background:#dbeafe;border-radius:6px;padding:8px 12px;text-align:center;font-size:13px">';
+                html += '<div style="font-weight:700;color:#1d4ed8">' + gc.experimental + '</div><div style="color:#3b82f6;font-size:11px">ทดลอง (' + pctExp + '%)</div></div>';
+            }
+            if (gc.control > 0) {
+                var pctCtrl = Math.round(gc.control / totalG * 100);
+                html += '<div style="flex:' + gc.control + ';background:#fce7f3;border-radius:6px;padding:8px 12px;text-align:center;font-size:13px">';
+                html += '<div style="font-weight:700;color:#be185d">' + gc.control + '</div><div style="color:#ec4899;font-size:11px">ควบคุม (' + pctCtrl + '%)</div></div>';
+            }
+            if (gc.unknown > 0) {
+                html += '<div style="flex:' + gc.unknown + ';background:#f3f4f6;border-radius:6px;padding:8px 12px;text-align:center;font-size:13px">';
+                html += '<div style="font-weight:700;color:#6b7280">' + gc.unknown + '</div><div style="color:#9ca3af;font-size:11px">ไม่ระบุ</div></div>';
+            }
+            html += '</div></div>';
+        }
+
+        // ── Field Coverage ──
+        if (result.fieldCoverage) {
+            html += '<div style="margin-bottom:16px">';
+            html += '<div style="font-weight:700;font-size:14px;margin-bottom:8px"><i class="fa-solid fa-chart-bar" style="color:#8b5cf6;margin-right:6px"></i>ความครบถ้วนของข้อมูล</div>';
+            html += '<div style="display:flex;flex-direction:column;gap:6px">';
+            Object.keys(result.fieldCoverage).forEach(function(key) {
+                var sec = result.fieldCoverage[key];
+                var pct = sec.total > 0 ? Math.round(sec.filled / sec.total * 100) : 0;
+                var barColor = pct >= 80 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626';
+                html += '<div style="display:flex;align-items:center;gap:10px;font-size:13px">';
+                html += '<div style="min-width:120px;font-weight:600">' + sec.label + '</div>';
+                html += '<div style="flex:1;background:#f3f4f6;border-radius:999px;height:10px;overflow:hidden">';
+                html += '<div style="width:' + pct + '%;background:' + barColor + ';height:100%;border-radius:999px;transition:width 0.5s"></div></div>';
+                html += '<div style="min-width:48px;text-align:right;font-weight:700;color:' + barColor + '">' + pct + '%</div>';
+                html += '</div>';
+            });
+            html += '</div></div>';
+        }
+
+        // ── Errors Section ──
+        if (hasErrors) {
+            html += '<div style="margin-bottom:16px">';
+            html += '<div style="font-weight:700;font-size:14px;margin-bottom:8px;color:#dc2626"><i class="fa-solid fa-circle-xmark" style="margin-right:6px"></i>ข้อผิดพลาด (' + result.errors.length + ')</div>';
+            html += '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;overflow:hidden;max-height:180px;overflow-y:auto">';
+            html += '<table style="width:100%;font-size:12px;border-collapse:collapse">';
+            html += '<thead><tr style="background:#fee2e2"><th style="padding:6px 10px;text-align:left">แถว</th><th style="padding:6px 10px;text-align:left">ID</th><th style="padding:6px 10px;text-align:left">รายละเอียด</th></tr></thead><tbody>';
+            result.errors.forEach(function(e) {
+                html += '<tr style="border-top:1px solid #fecaca"><td style="padding:5px 10px">' + (e.row || '-') + '</td><td style="padding:5px 10px;font-family:monospace">' + (e.id || '-') + '</td><td style="padding:5px 10px">' + (e.message || e) + '</td></tr>';
+            });
+            html += '</tbody></table></div></div>';
+        }
+
+        // ── Warnings Section ──
+        if (hasWarnings) {
+            html += '<div style="margin-bottom:16px">';
+            html += '<div style="font-weight:700;font-size:14px;margin-bottom:8px;color:#d97706"><i class="fa-solid fa-triangle-exclamation" style="margin-right:6px"></i>คำเตือน (' + result.warnings.length + ')</div>';
+            html += '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;overflow:hidden;max-height:180px;overflow-y:auto">';
+            html += '<table style="width:100%;font-size:12px;border-collapse:collapse">';
+            html += '<thead><tr style="background:#fef3c7"><th style="padding:6px 10px;text-align:left">แถว</th><th style="padding:6px 10px;text-align:left">ID</th><th style="padding:6px 10px;text-align:left">รายละเอียด</th></tr></thead><tbody>';
+            result.warnings.forEach(function(w) {
+                html += '<tr style="border-top:1px solid #fde68a"><td style="padding:5px 10px">' + w.row + '</td><td style="padding:5px 10px;font-family:monospace">' + w.id + '</td><td style="padding:5px 10px">' + w.message + '</td></tr>';
+            });
+            html += '</tbody></table></div></div>';
+        }
+
+        // ── Row Details (collapsible) ──
+        if (result.rowDetails && result.rowDetails.length > 0) {
+            html += '<div style="margin-bottom:8px">';
+            html += '<details><summary style="font-weight:700;font-size:14px;cursor:pointer;padding:6px 0"><i class="fa-solid fa-list-check" style="color:#2563eb;margin-right:6px"></i>รายละเอียดแต่ละแถว (' + result.rowDetails.length + ' รายการ)</summary>';
+            html += '<div style="margin-top:8px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;max-height:240px;overflow-y:auto">';
+            html += '<table style="width:100%;font-size:12px;border-collapse:collapse">';
+            html += '<thead><tr style="background:#f9fafb;position:sticky;top:0"><th style="padding:6px 10px;text-align:left">แถว</th><th style="padding:6px 10px;text-align:left">ID</th><th style="padding:6px 10px;text-align:left">สถานะ</th><th style="padding:6px 10px;text-align:left">หมายเหตุ</th></tr></thead><tbody>';
+            var statusIcons = {
+                'new': '<span style="color:#16a34a"><i class="fa-solid fa-plus-circle"></i> เพิ่มใหม่</span>',
+                'updated': '<span style="color:#7c3aed"><i class="fa-solid fa-pen-to-square"></i> อัปเดต</span>',
+                'error': '<span style="color:#dc2626"><i class="fa-solid fa-circle-xmark"></i> ผิดพลาด</span>'
+            };
+            result.rowDetails.forEach(function(rd) {
+                var warnNote = (rd.warnings && rd.warnings.length > 0) ? '<br><span style="color:#d97706;font-size:11px"><i class="fa-solid fa-exclamation"></i> ' + rd.warnings.join(', ') + '</span>' : '';
+                html += '<tr style="border-top:1px solid #f3f4f6">';
+                html += '<td style="padding:5px 10px">' + rd.row + '</td>';
+                html += '<td style="padding:5px 10px;font-family:monospace;font-weight:600">' + rd.id + '</td>';
+                html += '<td style="padding:5px 10px">' + (statusIcons[rd.status] || rd.status) + '</td>';
+                html += '<td style="padding:5px 10px">' + rd.message + warnNote + '</td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table></div></details></div>';
+        }
+
+        body.innerHTML = html;
+
+        // Show modal
+        modal.style.display = 'flex';
+
+        // Close handlers
+        var closeBtn = document.getElementById('import-report-close');
+        var okBtn = document.getElementById('import-report-ok');
+        var closeModal = function() { modal.style.display = 'none'; };
+        closeBtn.onclick = closeModal;
+        okBtn.onclick = closeModal;
+        modal.onclick = function(e) { if (e.target === modal) closeModal(); };
+    },
+
+    _reportCard(value, label, color, bg, icon) {
+        return '<div style="background:' + bg + ';border-radius:10px;padding:12px;text-align:center">'
+            + '<div style="font-size:24px;font-weight:800;color:' + color + '">' + value + '</div>'
+            + '<div style="font-size:11px;color:' + color + ';opacity:0.8;margin-top:2px"><i class="fa-solid ' + icon + '" style="margin-right:3px"></i>' + label + '</div>'
+            + '</div>';
     },
 
     // Parse CSV line respecting quoted fields
@@ -1221,7 +1403,29 @@ const DiabetesDashboard = {
         const sexMap = { '1': 'male', '2': 'female', '3': 'other' };
 
         let imported = 0;
+        let newCount = 0;
+        let updatedCount = 0;
         const errors = [];
+        const warnings = [];
+        const rowDetails = [];
+
+        // Field coverage tracking
+        const fieldSections = {
+            demographic: { label: 'ข้อมูลพื้นฐาน', fields: ['ID','Group','Sex','Age','BW','Ht','BMI','waist'], filled: 0, total: 0 },
+            clinical: { label: 'ข้อมูลทางคลินิก', fields: ['HbA1c_baseline','FBS','GFR','DTX1','HbA1c_6m','dm_duration','medication'], filled: 0, total: 0 },
+            paid5: { label: 'PAID-5', fields: [], filled: 0, total: 0 },
+            health_literacy: { label: 'Health Literacy', fields: [], filled: 0, total: 0 },
+            self_care: { label: 'Self-Care', fields: [], filled: 0, total: 0 }
+        };
+        for (let q = 1; q <= 5; q++) { fieldSections.paid5.fields.push('PAID' + q + '_baseline', 'PAID' + q + '_6m'); }
+        fieldSections.paid5.fields.push('PAID_total_baseline', 'PAID_total_6m');
+        for (let q = 1; q <= 10; q++) { fieldSections.health_literacy.fields.push('HL' + q + '_baseline', 'HL' + q + '_6m'); }
+        fieldSections.health_literacy.fields.push('HL_total_baseline', 'HL_total_6m');
+        for (let q = 1; q <= 12; q++) { fieldSections.self_care.fields.push('H' + q + '_baseline', 'H' + q + '_6m'); }
+        fieldSections.self_care.fields.push('H_baseline', 'H_6month');
+
+        // Group counters
+        const groupCounts = { experimental: 0, control: 0, unknown: 0 };
 
         for (let i = 1; i < lines.length; i++) {
             const values = this._parseCSVLine(lines[i]);
@@ -1230,7 +1434,43 @@ const DiabetesDashboard = {
             const row = {};
             headers.forEach((h, idx) => { row[h] = values[idx] || null; });
 
-            if (!row.ID) { errors.push('Row ' + (i + 1) + ': missing ID'); continue; }
+            if (!row.ID) {
+                errors.push({ row: i + 1, id: '-', message: 'ไม่มี ID', type: 'error' });
+                rowDetails.push({ row: i + 1, id: '-', status: 'error', message: 'ไม่มี ID' });
+                continue;
+            }
+
+            // Track field coverage per section
+            Object.keys(fieldSections).forEach(function(sec) {
+                fieldSections[sec].fields.forEach(function(f) {
+                    fieldSections[sec].total++;
+                    if (row[f] && row[f].trim && row[f].trim() !== '') fieldSections[sec].filled++;
+                });
+            });
+
+            // Validate numeric fields
+            var rowWarnings = [];
+            if (row.Age && (parseInt(row.Age) < 18 || parseInt(row.Age) > 120)) {
+                rowWarnings.push('อายุผิดปกติ: ' + row.Age);
+            }
+            if (row.HbA1c_baseline && (parseFloat(row.HbA1c_baseline) < 3 || parseFloat(row.HbA1c_baseline) > 20)) {
+                rowWarnings.push('HbA1c baseline ผิดปกติ: ' + row.HbA1c_baseline);
+            }
+            if (row.HbA1c_6m && (parseFloat(row.HbA1c_6m) < 3 || parseFloat(row.HbA1c_6m) > 20)) {
+                rowWarnings.push('HbA1c 6m ผิดปกติ: ' + row.HbA1c_6m);
+            }
+            if (row.BMI && (parseFloat(row.BMI) < 10 || parseFloat(row.BMI) > 80)) {
+                rowWarnings.push('BMI ผิดปกติ: ' + row.BMI);
+            }
+            if (row.FBS && (parseFloat(row.FBS) < 20 || parseFloat(row.FBS) > 600)) {
+                rowWarnings.push('FBS ผิดปกติ: ' + row.FBS);
+            }
+            if (row.GFR && (parseFloat(row.GFR) < 0 || parseFloat(row.GFR) > 200)) {
+                rowWarnings.push('GFR ผิดปกติ: ' + row.GFR);
+            }
+            if (rowWarnings.length > 0) {
+                rowWarnings.forEach(function(w) { warnings.push({ row: i + 1, id: row.ID, message: w }); });
+            }
 
             const patient = {
                 patient_id: row.ID,
@@ -1291,6 +1531,11 @@ const DiabetesDashboard = {
             if (row.H_baseline) patient.self_care.total_baseline = parseInt(row.H_baseline);
             if (row.H_6month) patient.self_care.total_6month = parseInt(row.H_6month);
 
+            // Track group
+            if (patient.study_group === 'experimental') groupCounts.experimental++;
+            else if (patient.study_group === 'control') groupCounts.control++;
+            else groupCounts.unknown++;
+
             // Save to localStorage
             if (typeof LocalDB !== 'undefined') {
                 try {
@@ -1298,20 +1543,39 @@ const DiabetesDashboard = {
                     const idx = existing.findIndex(p => p.patient_id === patient.patient_id);
                     if (idx >= 0) {
                         existing[idx] = Object.assign(existing[idx], patient);
+                        updatedCount++;
+                        rowDetails.push({ row: i + 1, id: patient.patient_id, status: 'updated', message: 'อัปเดตข้อมูล', warnings: rowWarnings });
                     } else {
                         existing.push(patient);
+                        newCount++;
+                        rowDetails.push({ row: i + 1, id: patient.patient_id, status: 'new', message: 'เพิ่มใหม่', warnings: rowWarnings });
                     }
                     localStorage.setItem('diabetes_patients', JSON.stringify(existing));
                     imported++;
                 } catch (e) {
-                    errors.push('Row ' + (i + 1) + ': ' + e.message);
+                    errors.push({ row: i + 1, id: patient.patient_id, message: e.message, type: 'error' });
+                    rowDetails.push({ row: i + 1, id: patient.patient_id, status: 'error', message: e.message });
                 }
             } else {
-                errors.push('Row ' + (i + 1) + ': LocalDB not available');
+                errors.push({ row: i + 1, id: row.ID, message: 'LocalDB not available', type: 'error' });
+                rowDetails.push({ row: i + 1, id: row.ID, status: 'error', message: 'LocalDB not available' });
             }
         }
 
-        return { success: true, imported, total: lines.length - 1, errors };
+        return {
+            success: true,
+            imported: imported,
+            total: lines.length - 1,
+            newCount: newCount,
+            updatedCount: updatedCount,
+            errors: errors,
+            warnings: warnings,
+            rowDetails: rowDetails,
+            groupCounts: groupCounts,
+            fieldCoverage: fieldSections,
+            columnCount: headers.length,
+            headersMapped: headers.filter(function(h) { return h !== null; }).length
+        };
     },
 
     // =====================
