@@ -666,6 +666,9 @@ async function initApp() {
     if (window.DiabetesEducation && typeof window.DiabetesEducation.init === 'function') {
         window.DiabetesEducation.init();
     }
+    if (window.LineBotGenerator && typeof window.LineBotGenerator.init === 'function') {
+        window.LineBotGenerator.init();
+    }
 
     hideLoading();
 }
