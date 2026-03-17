@@ -11,7 +11,9 @@ const DiabetesDashboard = {
     // Initialization
     // =====================
 
-    async init() {
+    async init(options) {
+        options = options || {};
+
         // Auth guard: only logged-in admin can see patient data
         var authOverlay = document.getElementById('dashboard-auth-overlay');
         var dashContent = document.getElementById('dashboard-content');
@@ -26,13 +28,11 @@ const DiabetesDashboard = {
 
         var isAdmin = window.Auth && Auth.isLoggedIn() && Auth.isAdmin();
         if (!isAdmin) {
-            // Show lock overlay, hide content
             if (authOverlay) authOverlay.classList.remove('hidden');
             if (dashContent) dashContent.style.display = 'none';
             return;
         }
 
-        // Admin logged in: hide overlay, show content
         if (authOverlay) authOverlay.classList.add('hidden');
         if (dashContent) dashContent.style.display = '';
 
@@ -41,8 +41,24 @@ const DiabetesDashboard = {
             let patients = [];
             let usingDemo = false;
 
-            if (typeof DiabetesApp !== 'undefined') {
+            if (options.forceLocal && typeof LocalDB !== 'undefined') {
+                // After CSV import: use localStorage directly
+                patients = LocalDB.getAll();
+            } else if (typeof DiabetesApp !== 'undefined') {
                 patients = await DiabetesApp.loadAllPatients();
+            }
+
+            // Also merge localStorage data if DB returned results
+            // (imported CSV data lives in localStorage, DB may have different data)
+            if (!options.forceLocal && typeof LocalDB !== 'undefined') {
+                var localPatients = LocalDB.getAll();
+                if (localPatients.length > 0) {
+                    // Merge: localStorage patients override DB patients by patient_id
+                    var merged = {};
+                    patients.forEach(function(p) { if (p.patient_id) merged[p.patient_id] = p; });
+                    localPatients.forEach(function(p) { if (p.patient_id) merged[p.patient_id] = Object.assign(merged[p.patient_id] || {}, p); });
+                    patients = Object.values(merged);
+                }
             }
 
             if (!patients || patients.length === 0) {
@@ -1153,7 +1169,7 @@ const DiabetesDashboard = {
 
                 this._showImportResult(localResult);
                 hideLoading();
-                await this.init();
+                await this.init({ forceLocal: true });
             } catch (err) {
                 hideLoading();
                 console.error('Import error:', err);
