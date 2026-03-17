@@ -103,6 +103,10 @@ const Auth = {
                 headers: { 'Authorization': 'Bearer ' + token }
             });
             if (!response.ok) {
+                // Backend ไม่ได้รัน หรือ token หมดอายุ — เก็บ auth ไว้ถ้ามี user data
+                if (this.getUser()) {
+                    return true;
+                }
                 this.clearAuth();
                 return false;
             }
