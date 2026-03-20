@@ -229,7 +229,7 @@ app.get('/api/patients', async (req, res) => {
         try {
             rows = await query(
                 `SELECT p.*,
-                 c.hba1c_baseline, c.hba1c_6month, c.fbs, c.gfr, c.dtx1,
+                 c.hba1c_baseline, c.hba1c_6month, c.fbs, c.gfr, c.dtx1, c.dtx2, c.dtx3, c.dtx4, c.dtx5, c.dtx6, c.dtx_avg,
                  s.total_baseline as paid5_total_baseline, s.total_6month as paid5_total_6month,
                  s.converted_baseline as paid5_converted_baseline, s.converted_6month as paid5_converted_6month,
                  s.distress_baseline as paid5_distress_baseline, s.distress_6month as paid5_distress_6month,
@@ -390,13 +390,19 @@ app.post('/api/patients', async (req, res) => {
 
         // Section 2: Clinical outcomes
         if (d.hba1c_baseline !== undefined || d.hba1c_6month !== undefined || d.fbs !== undefined || d.gfr !== undefined || d.dtx1 !== undefined) {
+            // Calculate DTX average from available values
+            const dtxVals = [d.dtx1, d.dtx2, d.dtx3, d.dtx4, d.dtx5, d.dtx6].map(v => v ? parseFloat(v) : NaN).filter(v => !isNaN(v));
+            const dtxAvg = dtxVals.length > 0 ? parseFloat((dtxVals.reduce((a, b) => a + b, 0) / dtxVals.length).toFixed(1)) : null;
+
             await query(
-                `INSERT INTO clinical_outcomes (patient_id, hba1c_baseline, hba1c_6month, fbs, gfr, dtx1)
-                 VALUES (?, ?, ?, ?, ?, ?)
+                `INSERT INTO clinical_outcomes (patient_id, hba1c_baseline, hba1c_6month, fbs, gfr, dtx1, dtx2, dtx3, dtx4, dtx5, dtx6, dtx_avg)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE hba1c_baseline=VALUES(hba1c_baseline), hba1c_6month=VALUES(hba1c_6month),
-                 fbs=VALUES(fbs), gfr=VALUES(gfr), dtx1=VALUES(dtx1)`,
+                 fbs=VALUES(fbs), gfr=VALUES(gfr), dtx1=VALUES(dtx1), dtx2=VALUES(dtx2), dtx3=VALUES(dtx3),
+                 dtx4=VALUES(dtx4), dtx5=VALUES(dtx5), dtx6=VALUES(dtx6), dtx_avg=VALUES(dtx_avg)`,
                 [d.patient_id, d.hba1c_baseline || null, d.hba1c_6month || null,
-                 d.fbs || null, d.gfr || null, d.dtx1 || null]
+                 d.fbs || null, d.gfr || null, d.dtx1 || null, d.dtx2 || null, d.dtx3 || null,
+                 d.dtx4 || null, d.dtx5 || null, d.dtx6 || null, dtxAvg]
             );
         }
 
@@ -467,6 +473,53 @@ app.post('/api/patients', async (req, res) => {
         }
 
         res.json({ success: true, patient_id: d.patient_id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST save DTX values for a patient
+app.post('/api/dtx/:id', async (req, res) => {
+    if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
+    try {
+        const id = req.params.id;
+        const d = req.body;
+        // Calculate average from provided values
+        const dtxVals = [d.dtx1, d.dtx2, d.dtx3, d.dtx4, d.dtx5, d.dtx6].map(v => v ? parseFloat(v) : NaN).filter(v => !isNaN(v));
+        const dtxAvg = dtxVals.length > 0 ? parseFloat((dtxVals.reduce((a, b) => a + b, 0) / dtxVals.length).toFixed(1)) : null;
+
+        await query(
+            `INSERT INTO clinical_outcomes (patient_id, dtx1, dtx2, dtx3, dtx4, dtx5, dtx6, dtx_avg)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+             dtx1=VALUES(dtx1), dtx2=VALUES(dtx2), dtx3=VALUES(dtx3),
+             dtx4=VALUES(dtx4), dtx5=VALUES(dtx5), dtx6=VALUES(dtx6), dtx_avg=VALUES(dtx_avg)`,
+            [id, d.dtx1 || null, d.dtx2 || null, d.dtx3 || null,
+             d.dtx4 || null, d.dtx5 || null, d.dtx6 || null, dtxAvg]
+        );
+        res.json({ success: true, dtx_avg: dtxAvg });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET DTX values with comparison data for analysis
+app.get('/api/dtx/:id', async (req, res) => {
+    if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
+    try {
+        const id = req.params.id;
+        const [clinical] = await query('SELECT * FROM clinical_outcomes WHERE patient_id = ?', [id]);
+        const [patient] = await query('SELECT weight, height, bmi FROM patients WHERE patient_id = ?', [id]);
+        const [paid5] = await query('SELECT converted_baseline, converted_6month, distress_baseline, distress_6month FROM paid5_scores WHERE patient_id = ?', [id]);
+        const [hl] = await query('SELECT total_baseline, total_6month FROM health_literacy WHERE patient_id = ?', [id]);
+
+        res.json({
+            dtx: clinical ? { dtx1: clinical.dtx1, dtx2: clinical.dtx2, dtx3: clinical.dtx3, dtx4: clinical.dtx4, dtx5: clinical.dtx5, dtx6: clinical.dtx6, dtx_avg: clinical.dtx_avg } : {},
+            hba1c: clinical ? { baseline: clinical.hba1c_baseline, sixMonth: clinical.hba1c_6month } : {},
+            patient: patient || {},
+            paid5: paid5 || {},
+            healthLiteracy: hl || {}
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -666,7 +719,7 @@ app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
              p.diabetes_duration_years,
              p.d1, p.d2, p.d3, p.d4, p.d5, p.d6, p.d7,
              p.comorbidity_note, p.medication, p.line_usage,
-             c.hba1c_baseline, c.fbs, c.gfr, c.dtx1, c.hba1c_6month,
+             c.hba1c_baseline, c.fbs, c.gfr, c.dtx1, c.dtx2, c.dtx3, c.dtx4, c.dtx5, c.dtx6, c.dtx_avg, c.hba1c_6month,
              s.q1_baseline as paid1_bl, s.q2_baseline as paid2_bl, s.q3_baseline as paid3_bl,
              s.q4_baseline as paid4_bl, s.q5_baseline as paid5_bl,
              s.q1_6month as paid1_6m, s.q2_6month as paid2_6m, s.q3_6month as paid3_6m,
@@ -707,7 +760,7 @@ app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
             'ชื่อ', 'นามสกุล', 'BW', 'Ht', 'BMI', 'เอว', 'Age',
             'ระดับการศึกษา', 'อาชีพ', 'note', 'ระยะเวลา DM',
             'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'note', 'ยา', 'Line',
-            'HbA1c_baseline', 'FBS', 'GFR', 'DTX 1', 'HbA1c_6m',
+            'HbA1c_baseline', 'FBS', 'GFR', 'DTX 1', 'DTX 2', 'DTX 3', 'DTX 4', 'DTX 5', 'DTX 6', 'DTX AVG', 'HbA1c_6m',
             'PAID1_baseline', 'PAID2_baseline', 'PAID3_baseline', 'PAID4_baseline', 'PAID5_baseline',
             'PAID1_6m', 'PAID2_6m', 'PAID3_6m', 'PAID4_6m', 'PAID5_6m',
             'PAID_total_baseline', 'PAID_total_6m',
@@ -738,7 +791,7 @@ app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
                 row.diabetes_duration_years || '',
                 row.d1 || '', row.d2 || '', row.d3 || '', row.d4 || '', row.d5 || '', row.d6 || '', row.d7 || '',
                 row.comorbidity_note || '', row.medication || '', row.line_usage || '',
-                row.hba1c_baseline || '', row.fbs || '', row.gfr || '', row.dtx1 || '', row.hba1c_6month || '',
+                row.hba1c_baseline || '', row.fbs || '', row.gfr || '', row.dtx1 || '', row.dtx2 || '', row.dtx3 || '', row.dtx4 || '', row.dtx5 || '', row.dtx6 || '', row.dtx_avg || '', row.hba1c_6month || '',
                 row.paid1_bl || '', row.paid2_bl || '', row.paid3_bl || '', row.paid4_bl || '', row.paid5_bl || '',
                 row.paid1_6m || '', row.paid2_6m || '', row.paid3_6m || '', row.paid4_6m || '', row.paid5_6m || '',
                 row.paid_total_bl || '', row.paid_total_6m || '',
@@ -778,7 +831,7 @@ app.get('/api/import/template', (req, res) => {
         'ชื่อ', 'นามสกุล', 'BW', 'Ht', 'BMI', 'เอว', 'Age',
         'ระดับการศึกษา', 'อาชีพ', 'note', 'ระยะเวลา DM',
         'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'note', 'ยา', 'Line',
-        'HbA1c_baseline', 'FBS', 'GFR', 'DTX 1', 'HbA1c_6m',
+        'HbA1c_baseline', 'FBS', 'GFR', 'DTX 1', 'DTX 2', 'DTX 3', 'DTX 4', 'DTX 5', 'DTX 6', 'DTX AVG', 'HbA1c_6m',
         'PAID1_baseline', 'PAID2_baseline', 'PAID3_baseline', 'PAID4_baseline', 'PAID5_baseline',
         'PAID1_6m', 'PAID2_6m', 'PAID3_6m', 'PAID4_6m', 'PAID5_6m',
         'PAID_total_baseline', 'PAID_total_6m',
@@ -798,7 +851,7 @@ app.get('/api/import/template', (req, res) => {
         'สมศรี', 'มั่นคง', '65', '158', '26.0', '88', '55',
         '1', '5', '', '5',
         '1', '1', '0', '0', '0', '0', '0', '', '1', '1',
-        '8.5', '130', '75', '180', '7.2',
+        '8.5', '130', '75', '180', '165', '190', '170', '155', '175', '172.5', '7.2',
         '3', '2', '3', '2', '4', '1', '1', '2', '1', '2', '14', '7',
         '3', '3', '2', '3', '2', '3', '2', '3', '3', '2',
         '2', '3', '3', '3', '3', '3', '3', '3', '3', '3', '26', '29',
@@ -853,6 +906,12 @@ app.post('/api/import/csv', upload.single('file'), async (req, res) => {
             if (/^FBS$/i.test(h)) return 'FBS';
             if (/^GFR$/i.test(h)) return 'GFR';
             if (/^DTX\s*1$/i.test(h)) return 'DTX1';
+            if (/^DTX\s*2$/i.test(h)) return 'DTX2';
+            if (/^DTX\s*3$/i.test(h)) return 'DTX3';
+            if (/^DTX\s*4$/i.test(h)) return 'DTX4';
+            if (/^DTX\s*5$/i.test(h)) return 'DTX5';
+            if (/^DTX\s*6$/i.test(h)) return 'DTX6';
+            if (/^DTX\s*AVG$/i.test(h)) return 'DTX_AVG';
             if (/^HbA1c_6m$/i.test(h)) return 'HbA1c_6m';
             const paidMatch = h.match(/^PAID(\d+)_(baseline|6m)$/i);
             if (paidMatch) return `PAID${paidMatch[1]}_${paidMatch[2].toLowerCase()}`;
@@ -963,19 +1022,28 @@ app.post('/api/import/csv', upload.single('file'), async (req, res) => {
 
                 // Insert clinical outcomes
                 if (row.HbA1c_baseline || row.HbA1c_6m || row.FBS || row.GFR || row.DTX1) {
+                    const dtxVals = [row.DTX1, row.DTX2, row.DTX3, row.DTX4, row.DTX5, row.DTX6].map(v => safeFloat(v)).filter(v => v != null);
+                    const dtxAvgCalc = dtxVals.length > 0 ? parseFloat((dtxVals.reduce((a, b) => a + b, 0) / dtxVals.length).toFixed(1)) : safeFloat(row.DTX_AVG);
                     await query(
-                        `INSERT INTO clinical_outcomes (patient_id, hba1c_baseline, hba1c_6month, fbs, gfr, dtx1)
-                         VALUES (?, ?, ?, ?, ?, ?)
+                        `INSERT INTO clinical_outcomes (patient_id, hba1c_baseline, hba1c_6month, fbs, gfr, dtx1, dtx2, dtx3, dtx4, dtx5, dtx6, dtx_avg)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                          ON DUPLICATE KEY UPDATE
                          hba1c_baseline=VALUES(hba1c_baseline), hba1c_6month=VALUES(hba1c_6month),
-                         fbs=VALUES(fbs), gfr=VALUES(gfr), dtx1=VALUES(dtx1)`,
+                         fbs=VALUES(fbs), gfr=VALUES(gfr), dtx1=VALUES(dtx1), dtx2=VALUES(dtx2), dtx3=VALUES(dtx3),
+                         dtx4=VALUES(dtx4), dtx5=VALUES(dtx5), dtx6=VALUES(dtx6), dtx_avg=VALUES(dtx_avg)`,
                         [
                             row.ID,
                             safeFloat(row.HbA1c_baseline),
                             safeFloat(row.HbA1c_6m),
                             safeFloat(row.FBS),
                             safeFloat(row.GFR),
-                            safeFloat(row.DTX1)
+                            safeFloat(row.DTX1),
+                            safeFloat(row.DTX2),
+                            safeFloat(row.DTX3),
+                            safeFloat(row.DTX4),
+                            safeFloat(row.DTX5),
+                            safeFloat(row.DTX6),
+                            dtxAvgCalc
                         ]
                     );
                 }
@@ -1296,6 +1364,12 @@ async function ensureSchema() {
             "ALTER TABLE clinical_outcomes ADD COLUMN IF NOT EXISTS fbs DECIMAL(6,1) DEFAULT NULL",
             "ALTER TABLE clinical_outcomes ADD COLUMN IF NOT EXISTS gfr DECIMAL(6,1) DEFAULT NULL",
             "ALTER TABLE clinical_outcomes ADD COLUMN IF NOT EXISTS dtx1 DECIMAL(6,1) DEFAULT NULL",
+            "ALTER TABLE clinical_outcomes ADD COLUMN IF NOT EXISTS dtx2 DECIMAL(6,1) DEFAULT NULL",
+            "ALTER TABLE clinical_outcomes ADD COLUMN IF NOT EXISTS dtx3 DECIMAL(6,1) DEFAULT NULL",
+            "ALTER TABLE clinical_outcomes ADD COLUMN IF NOT EXISTS dtx4 DECIMAL(6,1) DEFAULT NULL",
+            "ALTER TABLE clinical_outcomes ADD COLUMN IF NOT EXISTS dtx5 DECIMAL(6,1) DEFAULT NULL",
+            "ALTER TABLE clinical_outcomes ADD COLUMN IF NOT EXISTS dtx6 DECIMAL(6,1) DEFAULT NULL",
+            "ALTER TABLE clinical_outcomes ADD COLUMN IF NOT EXISTS dtx_avg DECIMAL(6,1) DEFAULT NULL",
             // Relax NOT NULL constraints on patients table
             "ALTER TABLE patients MODIFY COLUMN enrollment_date DATE DEFAULT NULL",
             "ALTER TABLE patients MODIFY COLUMN study_group VARCHAR(20) DEFAULT NULL",

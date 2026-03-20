@@ -51,11 +51,19 @@
 | `hba1c_6month` | DECIMAL(4,1) | HbA1c ที่ 6 เดือน (%) | สีเขียว = ลดลง, สีแดง = เพิ่มขึ้น |
 | `fbs` | DECIMAL(6,1) | Fasting Blood Sugar (mg/dL) | ปกติ <100, เสี่ยง 100–125, สูง ≥126 |
 | `gfr` | DECIMAL(6,1) | อัตราการกรองของไต GFR (mL/min) | ≥90 ปกติ, 60–89 ลดเล็กน้อย, 30–59 ลดปานกลาง, <30 วิกฤต |
-| `dtx1` | DECIMAL(6,1) | DTX ครั้งที่ 1 | ค่าน้ำตาลปลายนิ้ว |
+| `dtx1` | DECIMAL(6,1) | DTX ครั้งที่ 1 | ค่าน้ำตาลปลายนิ้ว (mg/dL) |
+| `dtx2` | DECIMAL(6,1) | DTX ครั้งที่ 2 | ค่าน้ำตาลปลายนิ้ว (mg/dL) |
+| `dtx3` | DECIMAL(6,1) | DTX ครั้งที่ 3 | ค่าน้ำตาลปลายนิ้ว (mg/dL) |
+| `dtx4` | DECIMAL(6,1) | DTX ครั้งที่ 4 | ค่าน้ำตาลปลายนิ้ว (mg/dL) |
+| `dtx5` | DECIMAL(6,1) | DTX ครั้งที่ 5 | ค่าน้ำตาลปลายนิ้ว (mg/dL) |
+| `dtx6` | DECIMAL(6,1) | DTX ครั้งที่ 6 | ค่าน้ำตาลปลายนิ้ว (mg/dL) |
+| `dtx_avg` | DECIMAL(6,1) | DTX เฉลี่ย (คำนวณอัตโนมัติ) | ค่าเฉลี่ยจาก dtx1-dtx6 ที่มีข้อมูล |
 | `created_at` | TIMESTAMP | | auto |
 | `updated_at` | TIMESTAMP | | auto |
 
 > **Unique constraint:** 1 record ต่อ 1 patient
+>
+> **DTX เกณฑ์อ้างอิง:** ปกติ 70-100 | ก่อนอาหาร 80-130 | หลังอาหาร <180 | ต่ำ <70 (Hypoglycemia) | สูง >250 (Hyperglycemia)
 
 ---
 
@@ -196,6 +204,11 @@
 | GFR เฉลี่ย | `clinical_outcomes.gfr` | AVG(gfr) mL/min |
 | อัตราติดตาม | `follow_up_status` | (ทั้งหมด − lost − withdrawn) / ทั้งหมด × 100 |
 
+### Summary Cards (แถว 3)
+| การ์ด | แหล่งข้อมูล | การคำนวณ |
+|-------|-----------|---------|
+| DTX เฉลี่ย | `clinical_outcomes.dtx_avg` | AVG(dtx_avg) mg/dL |
+
 ### Charts
 | กราฟ | ชนิด | แหล่งข้อมูล |
 |------|------|-----------|
@@ -206,7 +219,17 @@
 | Self-care | Grouped Bar | `self_care.total_*` แยกกลุ่ม |
 | BMI Distribution | Doughnut | `patients.bmi` จัดกลุ่มตามเกณฑ์เอเชีย |
 | Comorbidities | Horizontal Bar | `patients.d1`–`d5` |
+| DTX เฉลี่ย ตามกลุ่ม | Bar | `clinical_outcomes.dtx_avg` แยกกลุ่ม exp/ctrl |
 | Age Distribution | Bar | `patients.age` จัดกลุ่มอายุ |
+
+### DTX Analysis — การวิเคราะห์เปรียบเทียบ DTX (เมนูย่อย DTX)
+| กราฟ | ชนิด | แหล่งข้อมูล |
+|------|------|-----------|
+| DTX 6 ครั้ง Trend | Line | `clinical_outcomes.dtx1`–`dtx6` |
+| DTX vs HbA1c | Bar | `dtx_avg` vs `hba1c_baseline`, `hba1c_6month` |
+| DTX vs PAID-5 | Bar | `dtx_avg` vs `paid5_scores.converted_*` |
+| DTX vs Health Literacy | Bar | `dtx_avg` vs `health_literacy.total_*` |
+| DTX vs BMI & BW | Bar | `dtx_avg` vs `patients.bmi`, `patients.weight` |
 
 ### Patient Table — คอลัมน์ตารางผู้ป่วย
 | คอลัมน์ | สิทธิ์ | Color Coding |
@@ -221,6 +244,7 @@
 | HbA1c 6m | ทุกคน | เขียว = ลดลง, แดง = เพิ่มขึ้น |
 | FBS | ทุกคน | แดง >130, เหลือง ≥100 |
 | GFR | ทุกคน | แดง <30, เหลือง <60 |
+| DTX AVG | ทุกคน | เขียว 70-130, ส้ม >180, แดง >250, เหลือง <70 |
 | PAID-5 BL | ทุกคน | — |
 | PAID-5 6m | ทุกคน | — |
 | Distress | ทุกคน | เขียว = ต่ำ, แดง = สูง |

@@ -71,6 +71,7 @@ const DiabetesDashboard = {
             this.createSelfCareChart(summaryData);
             this.createBMIChart(summaryData);
             this.createComorbidityChart(summaryData);
+            this.createDTXGroupChart(summaryData);
             this.createAgeChart(summaryData);
 
             // Render patient table
@@ -99,6 +100,7 @@ const DiabetesDashboard = {
             this.createSelfCareChart(demoData);
             this.createBMIChart(demoData);
             this.createComorbidityChart(demoData);
+            this.createDTXGroupChart(demoData);
             this.createAgeChart(demoData);
             this.renderPatientTable(demoData.patients, 'all');
         }
@@ -210,6 +212,14 @@ const DiabetesDashboard = {
         const allGfr = patients.map(p => toNum(p.gfr)).filter(v => !isNaN(v));
         const avgGfr = allGfr.length > 0 ? (allGfr.reduce((a, b) => a + b, 0) / allGfr.length).toFixed(1) : '-';
 
+        // DTX average across all patients
+        const allDtxAvg = patients.map(p => toNum(p.dtx_avg)).filter(v => !isNaN(v));
+        const avgDtx = allDtxAvg.length > 0 ? (allDtxAvg.reduce((a, b) => a + b, 0) / allDtxAvg.length).toFixed(0) : '-';
+
+        // DTX by group
+        const expDtxAvg = experimental.map(p => toNum(p.dtx_avg)).filter(v => !isNaN(v));
+        const ctrlDtxAvg = control.map(p => toNum(p.dtx_avg)).filter(v => !isNaN(v));
+
         // Follow-up rate
         const completedCount = patients.filter(p => p.followUp && (p.followUp.status === 'complete' || p.followUp.status === 'completed')).length;
         const lostCount = patients.filter(p => p.followUp && (p.followUp.status === 'lost' || p.followUp.status === 'withdrawn')).length;
@@ -277,6 +287,7 @@ const DiabetesDashboard = {
             avgBmi: avgBmi,
             avgFbs: avgFbs,
             avgGfr: avgGfr,
+            avgDtx: avgDtx,
             followUpRate: followUpRate,
             hba1c: {
                 expBaseline: avg(expBaseline),
@@ -301,6 +312,9 @@ const DiabetesDashboard = {
             distress: { low: lowDistress, high: highDistress },
             bmiDist: bmiDist,
             comorbCounts: comorbCounts,
+            dtxGroup: {
+                expAvg: avg(expDtxAvg), ctrlAvg: avg(ctrlDtxAvg)
+            },
             ageDist: ageDist,
             patients: patients.map(p => this.normalizePatientForTable(p))
         };
@@ -342,6 +356,7 @@ const DiabetesDashboard = {
             hba1c_6month: p.hba1c_6month != null ? parseFloat(p.hba1c_6month) : null,
             fbs: p.fbs != null ? parseFloat(p.fbs) : null,
             gfr: p.gfr != null ? parseFloat(p.gfr) : null,
+            dtx_avg: p.dtx_avg != null ? parseFloat(p.dtx_avg) : null,
             paid5_baseline: getConverted('baseline'),
             paid5_6month: getConverted('6month'),
             distress: getDistress(),
@@ -380,6 +395,10 @@ const DiabetesDashboard = {
         if (fbsEl) fbsEl.textContent = data.avgFbs || '-';
         if (gfrEl) gfrEl.textContent = data.avgGfr || '-';
         if (fuEl) fuEl.textContent = data.followUpRate || '-';
+
+        // Row 3 DTX card
+        const dtxEl = document.getElementById('dash-avg-dtx');
+        if (dtxEl) dtxEl.textContent = data.avgDtx || '-';
     },
 
     // =====================
@@ -913,6 +932,49 @@ const DiabetesDashboard = {
     // Age Distribution Chart
     // =====================
 
+    createDTXGroupChart(data) {
+        const canvas = document.getElementById('chart-dtx-group');
+        if (!canvas) return;
+        if (this.charts.dtxGroup) { this.charts.dtxGroup.destroy(); this.charts.dtxGroup = null; }
+
+        const dtx = data.dtxGroup || {};
+        this.charts.dtxGroup = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: ['กลุ่มทดลอง', 'กลุ่มควบคุม'],
+                datasets: [{
+                    label: 'DTX เฉลี่ย (mg/dL)',
+                    data: [dtx.expAvg || 0, dtx.ctrlAvg || 0],
+                    backgroundColor: ['rgba(44,175,254,0.7)', 'rgba(254,106,53,0.7)'],
+                    borderColor: ['#2CAFFE', '#FE6A35'],
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return 'DTX เฉลี่ย: ' + ctx.parsed.y.toFixed(1) + ' mg/dL';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'mg/dL', font: { family: 'Athiti' } }
+                    },
+                    x: { ticks: { font: { family: 'Athiti' } } }
+                }
+            }
+        });
+    },
+
     createAgeChart(data) {
         const canvas = document.getElementById('chart-age');
         if (!canvas) return;
@@ -970,7 +1032,7 @@ const DiabetesDashboard = {
 
         // If no data, show placeholder
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:32px;color:#94a3b8;font-family:Athiti,sans-serif;font-size:14px;">ยังไม่มีข้อมูล</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:32px;color:#94a3b8;font-family:Athiti,sans-serif;font-size:14px;">ยังไม่มีข้อมูล</td></tr>';
             this.renderPagination(0);
             return;
         }
@@ -1081,6 +1143,19 @@ const DiabetesDashboard = {
             html += '<td style="' + hba1c6mStyle + '">' + hba1c6mDisplay + '</td>';
             html += '<td style="' + fbsStyle + '">' + fbsDisplay + '</td>';
             html += '<td style="' + gfrStyle + '">' + gfrDisplay + '</td>';
+
+            // DTX AVG color coding
+            const dtxAvgVal = p.dtx_avg != null ? parseFloat(p.dtx_avg) : null;
+            let dtxAvgDisplay = dtxAvgVal != null && !isNaN(dtxAvgVal) ? dtxAvgVal.toFixed(0) : '-';
+            let dtxAvgStyle = '';
+            if (dtxAvgVal != null) {
+                if (dtxAvgVal > 250) dtxAvgStyle = 'color:#dc2626;font-weight:600;';
+                else if (dtxAvgVal > 180) dtxAvgStyle = 'color:#f59e0b;font-weight:600;';
+                else if (dtxAvgVal < 70) dtxAvgStyle = 'color:#f59e0b;font-weight:600;';
+                else if (dtxAvgVal >= 70 && dtxAvgVal <= 130) dtxAvgStyle = 'color:#16a34a;';
+            }
+            html += '<td style="' + dtxAvgStyle + '">' + dtxAvgDisplay + '</td>';
+
             html += '<td>' + paid5BLDisplay + '</td>';
             html += '<td>' + paid56mDisplay + '</td>';
             html += '<td style="' + distressStyle + '">' + distressDisplay + '</td>';
@@ -1922,6 +1997,7 @@ const DiabetesDashboard = {
             avgBmi: '26.3',
             avgFbs: '142',
             avgGfr: '72.5',
+            avgDtx: '158',
             followUpRate: '92',
             hba1c: {
                 expBaseline: avg(expHba1cBL),
@@ -1943,6 +2019,7 @@ const DiabetesDashboard = {
             },
             bmiDist: { underweight: 2, normal: 12, overweight: 16, obese1: 22, obese2: 8 },
             comorbCounts: { hypertension: 38, dyslipidemia: 28, cvd: 8, ckd: 5, gout: 12 },
+            dtxGroup: { expAvg: 148.5, ctrlAvg: 167.2 },
             ageDist: { '<40': 3, '40-49': 10, '50-59': 22, '60-69': 18, '70+': 7 },
             patients: patients
         };

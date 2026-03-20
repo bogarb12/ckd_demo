@@ -904,6 +904,116 @@
 </div>
 
 <!-- ============================================ -->
+<!-- TAB: บันทึกผล DTX (6 ครั้ง) -->
+<!-- ============================================ -->
+<div class="tab-content" id="tab-dtx">
+    <div class="section-title"><i class="fa-solid fa-droplet"></i> บันทึกผลตรวจ DTX (น้ำตาลปลายนิ้ว)</div>
+
+    <!-- Patient Selector -->
+    <div class="card" style="margin-bottom:12px;">
+        <label class="form-label" style="font-weight:600;">เลือกผู้ป่วย</label>
+        <select id="dtx-patient-select" class="form-control">
+            <option value="">-- เลือกผู้ป่วย --</option>
+        </select>
+    </div>
+
+    <!-- DTX Input Form -->
+    <div class="card" style="margin-bottom:12px;">
+        <div class="card-header"><span class="icon"><i class="fa-solid fa-syringe"></i></span> ค่า DTX 6 ครั้ง (mg/dL)</div>
+        <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:12px">
+            บันทึกค่าน้ำตาลปลายนิ้ว (Dextrostix) จำนวน 6 ครั้ง เพื่อนำไปวิเคราะห์เปรียบเทียบ
+        </p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+            <div class="form-group" style="margin:0">
+                <label style="font-size:0.75rem;">DTX ครั้งที่ 1</label>
+                <input type="number" id="dtx-val-1" min="30" max="600" step="0.1" placeholder="mg/dL" class="form-control dtx-input">
+            </div>
+            <div class="form-group" style="margin:0">
+                <label style="font-size:0.75rem;">DTX ครั้งที่ 2</label>
+                <input type="number" id="dtx-val-2" min="30" max="600" step="0.1" placeholder="mg/dL" class="form-control dtx-input">
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+            <div class="form-group" style="margin:0">
+                <label style="font-size:0.75rem;">DTX ครั้งที่ 3</label>
+                <input type="number" id="dtx-val-3" min="30" max="600" step="0.1" placeholder="mg/dL" class="form-control dtx-input">
+            </div>
+            <div class="form-group" style="margin:0">
+                <label style="font-size:0.75rem;">DTX ครั้งที่ 4</label>
+                <input type="number" id="dtx-val-4" min="30" max="600" step="0.1" placeholder="mg/dL" class="form-control dtx-input">
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+            <div class="form-group" style="margin:0">
+                <label style="font-size:0.75rem;">DTX ครั้งที่ 5</label>
+                <input type="number" id="dtx-val-5" min="30" max="600" step="0.1" placeholder="mg/dL" class="form-control dtx-input">
+            </div>
+            <div class="form-group" style="margin:0">
+                <label style="font-size:0.75rem;">DTX ครั้งที่ 6</label>
+                <input type="number" id="dtx-val-6" min="30" max="600" step="0.1" placeholder="mg/dL" class="form-control dtx-input">
+            </div>
+        </div>
+
+        <!-- DTX Average Display -->
+        <div style="background:var(--primary-subtle);padding:12px 16px;border-radius:10px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:0.85rem;font-weight:600;color:var(--primary);"><i class="fa-solid fa-calculator"></i> ค่าเฉลี่ย DTX</span>
+            <span id="dtx-avg-display" style="font-size:1.2rem;font-weight:700;color:var(--primary);">- mg/dL</span>
+        </div>
+
+        <!-- DTX Reference -->
+        <div style="padding:8px 12px;background:#fef3c7;border-radius:6px;font-size:0.7rem;line-height:1.6;margin-bottom:14px;">
+            <strong>เกณฑ์อ้างอิง DTX:</strong><br>
+            ปกติ: 70-100 mg/dL | ก่อนอาหาร: 80-130 mg/dL | หลังอาหาร: &lt;180 mg/dL<br>
+            ⚠️ ต่ำ &lt;70 (Hypoglycemia) | 🔴 สูง &gt;250 (Hyperglycemia)
+        </div>
+
+        <button class="btn btn-primary btn-lg" id="btn-save-dtx" style="width:100%;">
+            <i class="fa-solid fa-floppy-disk"></i> บันทึกค่า DTX
+        </button>
+    </div>
+
+    <!-- DTX Trend Chart -->
+    <div class="card" id="dtx-trend-card" style="margin-bottom:12px;display:none;">
+        <div class="card-header"><span class="icon"><i class="fa-solid fa-chart-line"></i></span> กราฟค่า DTX 6 ครั้ง</div>
+        <canvas id="chart-dtx-trend" height="220"></canvas>
+    </div>
+
+    <!-- DTX Analysis Section -->
+    <div id="dtx-analysis-section" style="display:none;">
+        <div class="section-title" style="margin-top:8px;"><i class="fa-solid fa-magnifying-glass-chart"></i> วิเคราะห์เปรียบเทียบ DTX</div>
+
+        <!-- DTX vs HbA1c -->
+        <div class="card" style="margin-bottom:12px;">
+            <div class="card-header"><span class="icon"><i class="fa-solid fa-flask"></i></span> DTX เฉลี่ย vs HbA1c</div>
+            <div id="dtx-vs-hba1c-info" style="font-size:0.8rem;line-height:1.8;"></div>
+            <canvas id="chart-dtx-vs-hba1c" height="200"></canvas>
+        </div>
+
+        <!-- DTX vs PAID-5 -->
+        <div class="card" style="margin-bottom:12px;">
+            <div class="card-header"><span class="icon"><i class="fa-solid fa-brain"></i></span> DTX เฉลี่ย vs ความเครียด PAID-5</div>
+            <div id="dtx-vs-paid5-info" style="font-size:0.8rem;line-height:1.8;"></div>
+            <canvas id="chart-dtx-vs-paid5" height="200"></canvas>
+        </div>
+
+        <!-- DTX vs Health Literacy -->
+        <div class="card" style="margin-bottom:12px;">
+            <div class="card-header"><span class="icon"><i class="fa-solid fa-book-open"></i></span> DTX เฉลี่ย vs ความรอบรู้สุขภาพ</div>
+            <div id="dtx-vs-hl-info" style="font-size:0.8rem;line-height:1.8;"></div>
+            <canvas id="chart-dtx-vs-hl" height="200"></canvas>
+        </div>
+
+        <!-- DTX vs BMI & BW -->
+        <div class="card" style="margin-bottom:12px;">
+            <div class="card-header"><span class="icon"><i class="fa-solid fa-weight-scale"></i></span> DTX เฉลี่ย vs BMI & น้ำหนัก (BW)</div>
+            <div id="dtx-vs-bmi-info" style="font-size:0.8rem;line-height:1.8;"></div>
+            <canvas id="chart-dtx-vs-bmi" height="200"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
 <!-- TAB 5: Dashboard -->
 <!-- ============================================ -->
 <div class="tab-content" id="tab-dashboard">
@@ -961,6 +1071,13 @@
         <div class="stat-card" style="border-left:3px solid #10b981">
             <div class="stat-value" id="dash-follow-up">-</div>
             <div class="stat-label">อัตราติดตาม (%)</div>
+        </div>
+    </div>
+    <!-- Summary Stats Row 3 - DTX -->
+    <div class="stat-grid" style="margin-top:8px">
+        <div class="stat-card" style="border-left:3px solid #ef4444">
+            <div class="stat-value" id="dash-avg-dtx">-</div>
+            <div class="stat-label">DTX เฉลี่ย (mg/dL)</div>
         </div>
     </div>
 
@@ -1060,6 +1177,11 @@
     </div>
 
     <div class="chart-container">
+        <div class="chart-title">DTX เฉลี่ย เปรียบเทียบตามกลุ่ม</div>
+        <canvas id="chart-dtx-group" height="250"></canvas>
+    </div>
+
+    <div class="chart-container">
         <div class="chart-title">การกระจายอายุผู้ป่วย</div>
         <canvas id="chart-age" height="220"></canvas>
     </div>
@@ -1079,6 +1201,7 @@
                     <th>HbA1c 6m</th>
                     <th>FBS</th>
                     <th>GFR</th>
+                    <th>DTX AVG</th>
                     <th>PAID-5 BL</th>
                     <th>PAID-5 6m</th>
                     <th>Distress</th>
@@ -1086,7 +1209,7 @@
                 </tr>
             </thead>
             <tbody id="dash-patient-table">
-                <tr><td colspan="14" class="text-center text-muted" style="padding:24px">กำลังโหลดข้อมูล...</td></tr>
+                <tr><td colspan="15" class="text-center text-muted" style="padding:24px">กำลังโหลดข้อมูล...</td></tr>
             </tbody>
         </table>
     </div>
@@ -1418,6 +1541,10 @@
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20V10"/><path d="M6 20v-4"/><path d="M18 20v-8"/><rect x="2" y="3" width="20" height="18" rx="2"/></svg>
         <span>บันทึก</span>
     </button>
+    <button class="bottom-nav-btn" data-tab="dtx">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v6l3 3"/><circle cx="12" cy="14" r="8"/><path d="M12 10v4l2 2"/></svg>
+        <span>DTX</span>
+    </button>
     <button class="bottom-nav-btn" data-tab="linebot" data-role="staff">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M8 10h.01"/><path d="M12 10h.01"/><path d="M16 10h.01"/></svg>
         <span>LINE Bot</span>
@@ -1452,6 +1579,7 @@
 <script src="js/diabetes-education.js?v=20260317"></script>
 <script src="js/diabetes-dashboard.js?v=20260317f"></script>
 <script src="js/diabetes-tracking.js?v=20260317"></script>
+<script src="js/diabetes-dtx.js?v=20260320"></script>
 <script src="js/diabetes-linebot.js?v=20260317"></script>
 
 

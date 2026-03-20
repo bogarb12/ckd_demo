@@ -259,6 +259,10 @@ function initNavigation() {
 
             if (targetTab === 'home') {
                 initHome();
+            } else if (targetTab === 'dtx') {
+                if (window.DiabetesDTX && typeof window.DiabetesDTX.init === 'function') {
+                    window.DiabetesDTX.refreshPatientList();
+                }
             } else if (targetTab === 'dashboard') {
                 if (window.DiabetesDashboard && typeof window.DiabetesDashboard.init === 'function') {
                     window.DiabetesDashboard.init();
@@ -413,6 +417,9 @@ async function initApp() {
     }
     if (window.LineBotGenerator && typeof window.LineBotGenerator.init === 'function') {
         window.LineBotGenerator.init();
+    }
+    if (window.DiabetesDTX && typeof window.DiabetesDTX.init === 'function') {
+        window.DiabetesDTX.init();
     }
 
     hideLoading();
