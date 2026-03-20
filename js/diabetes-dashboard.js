@@ -36,7 +36,7 @@ const DiabetesDashboard = {
 
         // Show admin-only columns (patient name)
         document.querySelectorAll('.admin-only-col').forEach(el => {
-            el.style.display = '';
+            el.style.display = 'table-cell';
         });
 
         try {
@@ -1051,7 +1051,7 @@ const DiabetesDashboard = {
 
         // Check admin status once for the whole table
         const _isAdmin = window.Auth && Auth.isLoggedIn() && Auth.isAdmin();
-        const adminColStyle = _isAdmin ? '' : 'display:none';
+        const adminColStyle = _isAdmin ? 'display:table-cell' : 'display:none';
 
         let html = '';
         pageData.forEach((p, idx) => {
@@ -1186,7 +1186,7 @@ const DiabetesDashboard = {
         var isAdmin = window.Auth && Auth.isLoggedIn() && Auth.isAdmin();
         if (isAdmin) {
             document.querySelectorAll('.admin-only-col').forEach(el => {
-                el.style.display = '';
+                el.style.display = 'table-cell';
             });
         }
     },
