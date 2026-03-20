@@ -2,14 +2,14 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบติดตามผลโปรแกรมโรงเรียนเบาหวาน + LINE</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Athiti:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="stylesheet" href="css/diabetes.css">
+    <link rel="stylesheet" href="css/diabetes.css?v=20260320a">
 </head>
 <body>
 
@@ -1186,40 +1186,46 @@
         <canvas id="chart-age" height="220"></canvas>
     </div>
 
-    <!-- Patient Table -->
+    <!-- Patient List (responsive: cards on mobile, table on desktop) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;margin-bottom:8px">
         <div class="section-title" style="margin:0"><i class="fa-solid fa-users"></i> ข้อมูลผู้ป่วย</div>
         <button class="btn btn-success" id="btn-add-patient" style="padding:6px 16px;font-size:0.85rem">
             <i class="fa-solid fa-plus"></i> เพิ่มผู้ป่วย
         </button>
     </div>
-    <div class="data-table-wrapper mt-2">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>รหัส</th>
-                    <th class="admin-only-col" style="display:none">ชื่อ</th>
-                    <th class="admin-only-col" style="display:none">นามสกุล</th>
-                    <th>เพศ</th>
-                    <th>อายุ</th>
-                    <th>กลุ่ม</th>
-                    <th>BMI</th>
-                    <th>HbA1c BL</th>
-                    <th>HbA1c 6m</th>
-                    <th>FBS</th>
-                    <th>GFR</th>
-                    <th>DTX AVG</th>
-                    <th>PAID-5 BL</th>
-                    <th>PAID-5 6m</th>
-                    <th>Distress</th>
-                    <th>สถานะ</th>
-                    <th class="admin-only-col" style="display:none">จัดการ</th>
-                </tr>
-            </thead>
-            <tbody id="dash-patient-table">
-                <tr><td colspan="17" class="text-center text-muted" style="padding:24px">กำลังโหลดข้อมูล...</td></tr>
-            </tbody>
-        </table>
+    <div class="patient-list-container" id="patient-list-container">
+        <!-- Mobile: Card view -->
+        <div class="patient-cards" id="patient-cards">
+            <div style="text-align:center;padding:32px;color:#94a3b8">กำลังโหลดข้อมูล...</div>
+        </div>
+        <!-- Desktop: Table view -->
+        <div class="patient-table-desktop" id="patient-table-desktop">
+            <div class="data-table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>รหัส</th>
+                            <th class="admin-only-col" style="display:none">ชื่อ-นามสกุล</th>
+                            <th>เพศ</th>
+                            <th>อายุ</th>
+                            <th>กลุ่ม</th>
+                            <th>BMI</th>
+                            <th>HbA1c BL</th>
+                            <th>HbA1c 6m</th>
+                            <th class="col-secondary">FBS</th>
+                            <th class="col-secondary">GFR</th>
+                            <th class="col-secondary">DTX AVG</th>
+                            <th>PAID-5</th>
+                            <th>Distress</th>
+                            <th class="admin-only-col" style="display:none">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dash-patient-table">
+                        <tr><td colspan="14" class="text-center text-muted" style="padding:24px">กำลังโหลดข้อมูล...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
     </div><!-- /dashboard-content -->
 </div>
@@ -1647,7 +1653,7 @@
 <script src="js/diabetes-form.js?v=20260317"></script>
 <script src="js/diabetes-questionnaire.js?v=20260317"></script>
 <script src="js/diabetes-education.js?v=20260317"></script>
-<script src="js/diabetes-dashboard.js?v=20260320a"></script>
+<script src="js/diabetes-dashboard.js?v=20260320b"></script>
 <script src="js/diabetes-tracking.js?v=20260317"></script>
 <script src="js/diabetes-dtx.js?v=20260320"></script>
 <script src="js/diabetes-linebot.js?v=20260317"></script>

@@ -1016,9 +1016,146 @@ const DiabetesDashboard = {
     // Patient Table
     // =====================
 
+    // =====================
+    // Shared helpers for patient data formatting
+    // =====================
+    _formatPatient(p) {
+        const hba1cBL = p.hba1c_baseline != null ? parseFloat(p.hba1c_baseline) : null;
+        const hba1c6m = p.hba1c_6month != null ? parseFloat(p.hba1c_6month) : null;
+        const bmiVal = p.bmi != null ? parseFloat(p.bmi) : null;
+        const fbsVal = p.fbs != null ? parseFloat(p.fbs) : null;
+        const gfrVal = p.gfr != null ? parseFloat(p.gfr) : null;
+        const dtxAvgVal = p.dtx_avg != null ? parseFloat(p.dtx_avg) : null;
+        const paid5BL = p.paid5_baseline;
+        const paid56m = p.paid5_6month;
+
+        // Color classes
+        function valClass(val, thresholds) {
+            if (val == null || isNaN(val)) return 'v-na';
+            for (var i = 0; i < thresholds.length; i++) {
+                if (thresholds[i][0](val)) return thresholds[i][1];
+            }
+            return '';
+        }
+        const hba1cBLClass = valClass(hba1cBL, [[v => v >= 9, 'v-bad'], [v => v >= 7, 'v-warn']]);
+        let hba1c6mClass = valClass(hba1c6m, []);
+        if (hba1cBL != null && hba1c6m != null) {
+            hba1c6mClass = hba1c6m < hba1cBL ? 'v-good' : hba1c6m > hba1cBL ? 'v-bad' : '';
+        }
+        const bmiClass = valClass(bmiVal, [[v => v >= 30, 'v-bad'], [v => v >= 25, 'v-warn'], [v => v >= 23, 'v-warn']]);
+        const fbsClass = valClass(fbsVal, [[v => v > 130, 'v-bad'], [v => v >= 100, 'v-warn']]);
+        const gfrClass = valClass(gfrVal, [[v => v < 30, 'v-bad'], [v => v < 60, 'v-warn']]);
+        const dtxClass = valClass(dtxAvgVal, [[v => v > 250, 'v-bad'], [v => v > 180, 'v-warn'], [v => v < 70, 'v-warn'], [v => v >= 70 && v <= 130, 'v-good']]);
+
+        const distress = p.distress;
+        const distressClass = distress === 'high' ? 'v-bad' : distress === 'low' ? 'v-good' : 'v-na';
+        const distressDisplay = distress === 'high' ? 'สูง' : distress === 'low' ? 'ต่ำ' : '-';
+
+        const groupDisplay = p.group === 'experimental' ? 'ทดลอง' : p.group === 'control' ? 'ควบคุม' : p.group || '-';
+        const genderDisplay = (p.gender === 'M' || p.gender === 'male') ? 'ชาย' : (p.gender === 'F' || p.gender === 'female') ? 'หญิง' : p.gender || '-';
+        const genderClass = (p.gender === 'M' || p.gender === 'male') ? 'pc-badge-male' : (p.gender === 'F' || p.gender === 'female') ? 'pc-badge-female' : '';
+
+        return {
+            hba1cBL: hba1cBL != null && !isNaN(hba1cBL) ? hba1cBL.toFixed(1) : '-',
+            hba1c6m: hba1c6m != null && !isNaN(hba1c6m) ? hba1c6m.toFixed(1) : '-',
+            hba1cBLClass, hba1c6mClass,
+            bmi: bmiVal != null && !isNaN(bmiVal) ? bmiVal.toFixed(1) : '-', bmiClass,
+            fbs: fbsVal != null && !isNaN(fbsVal) ? fbsVal.toFixed(0) : '-', fbsClass,
+            gfr: gfrVal != null && !isNaN(gfrVal) ? gfrVal.toFixed(0) : '-', gfrClass,
+            dtxAvg: dtxAvgVal != null && !isNaN(dtxAvgVal) ? dtxAvgVal.toFixed(0) : '-', dtxClass,
+            paid5BL: paid5BL != null ? paid5BL : '-',
+            paid56m: paid56m != null ? paid56m : '-',
+            distressDisplay, distressClass,
+            groupDisplay, genderDisplay, genderClass,
+            firstName: p.first_name || '', lastName: p.last_name || '',
+            fullName: ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || '-',
+            age: p.age || '-',
+            patientId: p.patient_id
+        };
+    },
+
+    // =====================
+    // Render patient card (mobile)
+    // =====================
+    _renderCard(p, f, isAdmin) {
+        var esc = this.escapeHtml.bind(this);
+        var h = '<div class="patient-card" data-id="' + esc(f.patientId) + '">';
+        // Row 1: ID, Name, Gender badge, Age
+        h += '<div class="pc-row">';
+        h += '<span class="pc-id">#' + esc(f.patientId) + '</span>';
+        if (isAdmin && f.fullName !== '-') {
+            h += '<span class="pc-name">' + esc(f.fullName) + '</span>';
+        }
+        h += '<span class="pc-badge ' + f.genderClass + '">' + f.genderDisplay + '</span>';
+        if (f.age !== '-') h += '<span class="pc-badge pc-badge-age">' + f.age + ' ปี</span>';
+        if (f.groupDisplay !== '-') h += '<span class="pc-badge pc-badge-group">' + f.groupDisplay + '</span>';
+        h += '</div>';
+
+        // Row 2: Metrics
+        h += '<div class="pc-metrics">';
+        h += this._metricCell('BMI', f.bmi, f.bmiClass);
+        h += this._metricCell('HbA1c', f.hba1cBL, f.hba1cBLClass);
+        h += this._metricCell('HbA1c 6m', f.hba1c6m, f.hba1c6mClass);
+        h += this._metricCell('FBS', f.fbs, f.fbsClass);
+        h += this._metricCell('GFR', f.gfr, f.gfrClass);
+        h += this._metricCell('DTX', f.dtxAvg, f.dtxClass);
+        h += this._metricCell('PAID-5', f.paid5BL, f.paid5BL !== '-' && parseFloat(f.paid5BL) >= 40 ? 'v-bad' : f.paid5BL !== '-' ? '' : 'v-na');
+        h += this._metricCell('Distress', f.distressDisplay, f.distressClass);
+        h += '</div>';
+
+        // Row 3: Admin actions
+        if (isAdmin) {
+            h += '<div class="pc-actions">';
+            h += '<button class="btn-icon btn-edit-patient" data-id="' + esc(f.patientId) + '" title="แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>';
+            h += '<button class="btn-icon btn-delete-patient" data-id="' + esc(f.patientId) + '" title="ลบ"><i class="fa-solid fa-trash"></i></button>';
+            h += '</div>';
+        }
+        h += '</div>';
+        return h;
+    },
+
+    _metricCell(label, value, cls) {
+        return '<div class="pc-metric"><span class="pc-metric-label">' + label + '</span><span class="pc-metric-value ' + (cls || '') + '">' + value + '</span></div>';
+    },
+
+    // =====================
+    // Render patient table row (desktop)
+    // =====================
+    _renderRow(p, f, isAdmin, adminColStyle) {
+        var esc = this.escapeHtml.bind(this);
+        function tdStyle(cls) {
+            if (cls === 'v-good') return 'color:#16a34a;font-weight:600';
+            if (cls === 'v-warn') return 'color:#f59e0b;font-weight:600';
+            if (cls === 'v-bad') return 'color:#dc2626;font-weight:600';
+            if (cls === 'v-na') return 'color:#ccc';
+            return '';
+        }
+        var h = '<tr data-id="' + esc(f.patientId) + '">';
+        h += '<td style="font-weight:500">' + esc(f.patientId) + '</td>';
+        h += '<td class="admin-only-col" style="' + adminColStyle + '">' + esc(f.fullName) + '</td>';
+        h += '<td>' + f.genderDisplay + '</td>';
+        h += '<td>' + f.age + '</td>';
+        h += '<td>' + f.groupDisplay + '</td>';
+        h += '<td style="' + tdStyle(f.bmiClass) + '">' + f.bmi + '</td>';
+        h += '<td style="' + tdStyle(f.hba1cBLClass) + '">' + f.hba1cBL + '</td>';
+        h += '<td style="' + tdStyle(f.hba1c6mClass) + '">' + f.hba1c6m + '</td>';
+        h += '<td class="col-secondary" style="' + tdStyle(f.fbsClass) + '">' + f.fbs + '</td>';
+        h += '<td class="col-secondary" style="' + tdStyle(f.gfrClass) + '">' + f.gfr + '</td>';
+        h += '<td class="col-secondary" style="' + tdStyle(f.dtxClass) + '">' + f.dtxAvg + '</td>';
+        h += '<td>' + f.paid5BL + '</td>';
+        h += '<td style="' + tdStyle(f.distressClass) + '">' + f.distressDisplay + '</td>';
+        h += '<td class="admin-only-col" style="' + adminColStyle + ';white-space:nowrap">';
+        h += '<button class="btn-icon btn-edit-patient" data-id="' + esc(f.patientId) + '" title="แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button> ';
+        h += '<button class="btn-icon btn-delete-patient" data-id="' + esc(f.patientId) + '" title="ลบ" style="color:#dc2626"><i class="fa-solid fa-trash"></i></button>';
+        h += '</td>';
+        h += '</tr>';
+        return h;
+    },
+
     renderPatientTable(patients, filter) {
         const tbody = document.getElementById('dash-patient-table');
-        if (!tbody) return;
+        const cardsEl = document.getElementById('patient-cards');
+        if (!tbody && !cardsEl) return;
 
         // Apply filter
         let filtered = patients || [];
@@ -1026,177 +1163,62 @@ const DiabetesDashboard = {
             filtered = filtered.filter(p => p.group === filter);
         }
 
-        // Store filtered patients for pagination
         this.filteredPatients = filtered;
 
-        // Reset to page 1 when filter changes
         if (this._lastFilter !== filter) {
             this.currentPage = 1;
             this._lastFilter = filter;
         }
 
-        // If no data, show placeholder
+        // Empty state
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:32px;color:#94a3b8;font-family:Athiti,sans-serif;font-size:14px;">ยังไม่มีข้อมูล</td></tr>';
+            var emptyMsg = '<div style="text-align:center;padding:32px;color:#94a3b8">ยังไม่มีข้อมูล</div>';
+            if (cardsEl) cardsEl.innerHTML = emptyMsg;
+            if (tbody) tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted" style="padding:24px">ยังไม่มีข้อมูล</td></tr>';
             this.renderPagination(0);
             return;
         }
 
-        // Pagination calculation
+        // Pagination
         const totalPages = Math.ceil(filtered.length / this.pageSize);
         if (this.currentPage > totalPages) this.currentPage = totalPages;
         const startIdx = (this.currentPage - 1) * this.pageSize;
         const endIdx = Math.min(startIdx + this.pageSize, filtered.length);
         const pageData = filtered.slice(startIdx, endIdx);
 
-        // Check admin status once for the whole table
         const _isAdmin = window.Auth && Auth.isLoggedIn() && Auth.isAdmin();
         const adminColStyle = _isAdmin ? 'display:table-cell' : 'display:none';
 
-        let html = '';
-        pageData.forEach((p, idx) => {
-            // HbA1c change color coding
-            const hba1cBL = p.hba1c_baseline != null ? parseFloat(p.hba1c_baseline) : null;
-            const hba1c6m = p.hba1c_6month != null ? parseFloat(p.hba1c_6month) : null;
-            let hba1cBLDisplay = hba1cBL != null && !isNaN(hba1cBL) ? hba1cBL.toFixed(1) : '-';
-            let hba1c6mDisplay = hba1c6m != null && !isNaN(hba1c6m) ? hba1c6m.toFixed(1) : '-';
-            let hba1c6mStyle = '';
+        var cardHtml = '';
+        var tableHtml = '';
+        var self = this;
 
-            if (hba1cBL != null && hba1c6m != null) {
-                if (hba1c6m < hba1cBL) {
-                    hba1c6mStyle = 'color:#16a34a;font-weight:600;';
-                } else if (hba1c6m > hba1cBL) {
-                    hba1c6mStyle = 'color:#dc2626;font-weight:600;';
-                }
-            }
-
-            // PAID-5 displays
-            const paid5BLDisplay = p.paid5_baseline != null ? p.paid5_baseline : '-';
-            const paid56mDisplay = p.paid5_6month != null ? p.paid5_6month : '-';
-
-            // Distress color coding
-            let distressDisplay = '-';
-            let distressStyle = '';
-            if (p.distress === 'low') {
-                distressDisplay = 'ต่ำ (Low)';
-                distressStyle = 'color:#16a34a;font-weight:600;';
-            } else if (p.distress === 'high') {
-                distressDisplay = 'สูง (High)';
-                distressStyle = 'color:#dc2626;font-weight:600;';
-            }
-
-            // Group display
-            const groupDisplay = p.group === 'experimental'
-                ? 'ทดลอง'
-                : p.group === 'control'
-                    ? 'ควบคุม'
-                    : p.group || '-';
-
-            // Gender display
-            const genderDisplay = p.gender === 'M' || p.gender === 'male'
-                ? 'ชาย'
-                : p.gender === 'F' || p.gender === 'female'
-                    ? 'หญิง'
-                    : p.gender || '-';
-
-            // Status display
-            let statusDisplay = '-';
-            let statusStyle = '';
-            if (p.status === 'active' || p.status === 'completed') {
-                statusDisplay = p.status === 'active' ? 'กำลังติดตาม' : 'เสร็จสิ้น';
-                statusStyle = 'color:#16a34a;';
-            } else if (p.status === 'withdrawn' || p.status === 'lost') {
-                statusDisplay = p.status === 'withdrawn' ? 'ถอนตัว' : 'ขาดการติดต่อ';
-                statusStyle = 'color:#dc2626;';
-            }
-
-            // BMI color coding (Asian criteria)
-            const bmiVal = p.bmi;
-            let bmiDisplay = bmiVal != null && !isNaN(bmiVal) ? bmiVal.toFixed(1) : '-';
-            let bmiStyle = '';
-            if (bmiVal != null) {
-                if (bmiVal >= 30) bmiStyle = 'color:#dc2626;font-weight:600;';
-                else if (bmiVal >= 25) bmiStyle = 'color:#f59e0b;font-weight:600;';
-                else if (bmiVal >= 23) bmiStyle = 'color:#ea580c;';
-            }
-
-            // FBS color coding
-            const fbsVal = p.fbs;
-            let fbsDisplay = fbsVal != null && !isNaN(fbsVal) ? fbsVal.toFixed(0) : '-';
-            let fbsStyle = '';
-            if (fbsVal != null) {
-                if (fbsVal > 130) fbsStyle = 'color:#dc2626;font-weight:600;';
-                else if (fbsVal >= 100) fbsStyle = 'color:#f59e0b;';
-            }
-
-            // GFR color coding
-            const gfrVal = p.gfr;
-            let gfrDisplay = gfrVal != null && !isNaN(gfrVal) ? gfrVal.toFixed(0) : '-';
-            let gfrStyle = '';
-            if (gfrVal != null) {
-                if (gfrVal < 30) gfrStyle = 'color:#dc2626;font-weight:600;';
-                else if (gfrVal < 60) gfrStyle = 'color:#f59e0b;font-weight:600;';
-            }
-
-            // Name (admin only) - separate first/last
-            const firstNameDisplay = p.first_name || '-';
-            const lastNameDisplay = p.last_name || '-';
-
-            html += '<tr>';
-            html += '<td style="font-weight:500;">' + this.escapeHtml(p.patient_id) + '</td>';
-            html += '<td class="admin-only-col" style="' + adminColStyle + '">' + this.escapeHtml(firstNameDisplay) + '</td>';
-            html += '<td class="admin-only-col" style="' + adminColStyle + '">' + this.escapeHtml(lastNameDisplay) + '</td>';
-            html += '<td>' + genderDisplay + '</td>';
-            html += '<td>' + (p.age !== '-' ? p.age : '-') + '</td>';
-            html += '<td>' + groupDisplay + '</td>';
-            html += '<td style="' + bmiStyle + '">' + bmiDisplay + '</td>';
-            html += '<td>' + hba1cBLDisplay + '</td>';
-            html += '<td style="' + hba1c6mStyle + '">' + hba1c6mDisplay + '</td>';
-            html += '<td style="' + fbsStyle + '">' + fbsDisplay + '</td>';
-            html += '<td style="' + gfrStyle + '">' + gfrDisplay + '</td>';
-
-            // DTX AVG color coding
-            const dtxAvgVal = p.dtx_avg != null ? parseFloat(p.dtx_avg) : null;
-            let dtxAvgDisplay = dtxAvgVal != null && !isNaN(dtxAvgVal) ? dtxAvgVal.toFixed(0) : '-';
-            let dtxAvgStyle = '';
-            if (dtxAvgVal != null) {
-                if (dtxAvgVal > 250) dtxAvgStyle = 'color:#dc2626;font-weight:600;';
-                else if (dtxAvgVal > 180) dtxAvgStyle = 'color:#f59e0b;font-weight:600;';
-                else if (dtxAvgVal < 70) dtxAvgStyle = 'color:#f59e0b;font-weight:600;';
-                else if (dtxAvgVal >= 70 && dtxAvgVal <= 130) dtxAvgStyle = 'color:#16a34a;';
-            }
-            html += '<td style="' + dtxAvgStyle + '">' + dtxAvgDisplay + '</td>';
-
-            html += '<td>' + paid5BLDisplay + '</td>';
-            html += '<td>' + paid56mDisplay + '</td>';
-            html += '<td style="' + distressStyle + '">' + distressDisplay + '</td>';
-            html += '<td style="' + statusStyle + '">' + statusDisplay + '</td>';
-            html += '<td class="admin-only-col" style="' + adminColStyle + ';white-space:nowrap">';
-            html += '<button class="btn-icon btn-edit-patient" data-id="' + this.escapeHtml(p.patient_id) + '" title="แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button> ';
-            html += '<button class="btn-icon btn-delete-patient" data-id="' + this.escapeHtml(p.patient_id) + '" title="ลบ" style="color:#dc2626"><i class="fa-solid fa-trash"></i></button>';
-            html += '</td>';
-            html += '</tr>';
+        pageData.forEach(function(p) {
+            var f = self._formatPatient(p);
+            cardHtml += self._renderCard(p, f, _isAdmin);
+            tableHtml += self._renderRow(p, f, _isAdmin, adminColStyle);
         });
 
-        tbody.innerHTML = html;
+        if (cardsEl) cardsEl.innerHTML = cardHtml;
+        if (tbody) tbody.innerHTML = tableHtml;
+
         this.renderPagination(filtered.length);
         this.bindTableActions();
 
-        // Show admin-only columns if admin is logged in
-        var isAdmin = window.Auth && Auth.isLoggedIn() && Auth.isAdmin();
-        if (isAdmin) {
-            document.querySelectorAll('.admin-only-col').forEach(el => {
+        // Show admin-only columns in table
+        if (_isAdmin) {
+            document.querySelectorAll('.admin-only-col').forEach(function(el) {
                 el.style.display = 'table-cell';
             });
         }
     },
 
     renderPagination(totalItems) {
-        const wrapper = document.querySelector('.data-table-wrapper');
-        if (!wrapper) return;
+        const container = document.getElementById('patient-list-container');
+        if (!container) return;
 
         // Remove existing pagination
-        const existingPag = wrapper.parentNode.querySelector('.table-pagination-wrap');
+        const existingPag = container.querySelector('.table-pagination-wrap');
         if (existingPag) existingPag.remove();
 
         if (totalItems <= this.pageSize) return;
@@ -1246,10 +1268,10 @@ const DiabetesDashboard = {
         pagHtml += '</select><span>รายการ/หน้า</span></div>';
         pagHtml += '</div>';
 
-        wrapper.insertAdjacentHTML('afterend', pagHtml);
+        container.insertAdjacentHTML('beforeend', pagHtml);
 
         // Bind pagination events
-        const pagWrap = wrapper.parentNode.querySelector('.table-pagination-wrap');
+        const pagWrap = container.querySelector('.table-pagination-wrap');
         if (pagWrap) {
             pagWrap.querySelectorAll('.pagination-btn').forEach(btn => {
                 btn.addEventListener('click', () => {

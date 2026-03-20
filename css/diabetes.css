@@ -986,22 +986,146 @@ textarea { min-height: 80px; resize: vertical; }
     min-width: 160px;
 }
 
-/* Patient Table — NOAH clean style */
+/* ============ Patient List — Responsive Card + Table ============ */
+
+/* Container */
+.patient-list-container {
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+/* === CARD VIEW (default / mobile) === */
+.patient-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.patient-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    transition: var(--transition);
+    cursor: pointer;
+    position: relative;
+}
+.patient-card:active { background: var(--primary-subtle); }
+
+.pc-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.pc-row + .pc-row { margin-top: 8px; }
+
+.pc-id {
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 0.9rem;
+    min-width: 36px;
+}
+.pc-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pc-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.pc-badge-male { background: #dbeafe; color: #1d4ed8; }
+.pc-badge-female { background: #fce7f3; color: #be185d; }
+.pc-badge-group { background: #f3e8ff; color: #7c3aed; }
+.pc-badge-age { background: var(--primary-subtle); color: var(--subtle-dark); }
+
+/* Metrics grid inside card */
+.pc-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 4px 8px;
+    margin-top: 8px;
+}
+.pc-metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 2px;
+    border-radius: 6px;
+    background: #f8fafc;
+}
+.pc-metric-label {
+    font-size: 0.6rem;
+    color: var(--subtle-light);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-weight: 600;
+}
+.pc-metric-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+}
+.pc-metric-value.v-good { color: #16a34a; }
+.pc-metric-value.v-warn { color: #f59e0b; }
+.pc-metric-value.v-bad { color: #dc2626; }
+.pc-metric-value.v-na { color: var(--subtle-light); font-weight: 400; }
+
+/* Card actions */
+.pc-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    justify-content: flex-end;
+}
+.pc-actions .btn-icon {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--subtle-dark);
+    transition: var(--transition);
+}
+.pc-actions .btn-icon:hover { background: var(--primary-subtle); color: var(--primary); }
+.pc-actions .btn-icon.btn-delete-patient { color: #dc2626; }
+.pc-actions .btn-icon.btn-delete-patient:hover { background: #fef2f2; }
+
+/* === TABLE VIEW (desktop) — hidden on mobile === */
+.patient-table-desktop {
+    display: none;
+}
+
+/* Admin-only column (hidden by default, shown via JS for admin) */
+.admin-only-col { display: none; }
+
+/* Desktop table styles */
 .data-table-wrapper {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
     border-radius: var(--radius);
     border: 1px solid var(--border);
     background: var(--surface);
 }
-
 .data-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.8rem;
-    min-width: 700px;
+    font-size: 0.82rem;
 }
-
 .data-table th {
     background: var(--primary-subtle);
     color: var(--text);
@@ -1010,23 +1134,27 @@ textarea { min-height: 80px; resize: vertical; }
     font-weight: 600;
     font-size: 0.75rem;
     white-space: nowrap;
-    position: sticky;
-    top: 0;
     border-bottom: 1px solid var(--border);
 }
-
 .data-table td {
     padding: 10px 8px;
     border-bottom: 1px solid var(--border-light);
-    white-space: nowrap;
 }
-
-.data-table tr:hover { background: var(--primary-subtle); }
-
+.data-table tr:hover { background: var(--primary-subtle); cursor: pointer; }
 .data-table .text-center { text-align: center; }
 
-/* Admin-only column (hidden by default, shown via JS for admin) */
-.admin-only-col { display: none; }
+/* Hide secondary columns on medium desktop */
+.data-table .col-secondary { display: none; }
+
+@media (min-width: 1100px) {
+    .data-table .col-secondary { display: table-cell; }
+}
+
+/* Desktop: show table, hide cards */
+@media (min-width: 768px) {
+    .patient-table-desktop { display: block; }
+    .patient-cards { display: none; }
+}
 
 /* 2-column chart grid responsive */
 @media (max-width: 599px) {
