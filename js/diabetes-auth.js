@@ -224,8 +224,31 @@ const Auth = {
 
     updateHeaderLoginButton() {
         var btn = document.getElementById('btn-header-login');
-        if (!btn) return;
-        btn.style.display = this.isLoggedIn() ? 'none' : 'flex';
+        var visitorLabel = document.getElementById('visitor-label');
+        var loggedIn = this.isLoggedIn();
+        if (btn) btn.style.display = loggedIn ? 'none' : 'flex';
+        if (visitorLabel) visitorLabel.style.display = loggedIn ? 'none' : 'flex';
+        this.updateBottomNavVisibility();
+    },
+
+    updateBottomNavVisibility() {
+        var bottomNav = document.querySelector('.bottom-nav');
+        if (!bottomNav) return;
+        if (this.isLoggedIn()) {
+            // Logged in: show all nav buttons (role-based handled by applyRoleAccess)
+            bottomNav.style.display = '';
+            bottomNav.querySelectorAll('.bottom-nav-btn').forEach(function(btn) {
+                if (!btn.classList.contains('role-hidden')) {
+                    btn.style.display = '';
+                }
+            });
+        } else {
+            // Visitor: only show home tab
+            bottomNav.querySelectorAll('.bottom-nav-btn').forEach(function(btn) {
+                var tab = btn.getAttribute('data-tab');
+                btn.style.display = tab === 'home' ? '' : 'none';
+            });
+        }
     },
 
     // ==========================================

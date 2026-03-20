@@ -59,10 +59,14 @@
                 <span class="dot" id="db-dot"></span>
                 <span id="db-text">กำลังเชื่อมต่อ...</span>
             </div>
+            <!-- Visitor label (shown when not logged in) -->
+            <div id="visitor-label" style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:#64748b;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span>ผู้เยี่ยมชมระบบ</span>
+            </div>
             <!-- Login button (shown when not logged in) -->
             <button class="btn-header-login" id="btn-header-login" title="เข้าสู่ระบบ Admin">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10,17 15,12 10,7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                <span>Admin</span>
             </button>
             <!-- User menu (shown when logged in) -->
             <div class="user-menu" id="user-menu" style="display:none">
