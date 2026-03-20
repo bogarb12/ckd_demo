@@ -402,6 +402,7 @@ async function initApp() {
 
     initNavigation();
     await initHome();
+    await DiabetesApp.loadAllPatients();
 
     if (window.DiabetesForm && typeof window.DiabetesForm.init === 'function') {
         window.DiabetesForm.init();
