@@ -761,7 +761,7 @@ app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
         }
 
         const csvHeaders = [
-            'ID', 'Group (1=Intervention,0=Control)', 'Sex (1=Male,2=Female,3=Other)',
+            'ID', 'Group (1=Intervention 0=Control)', 'Sex (1=Male 2=Female 3=Other)',
             'ชื่อ', 'นามสกุล', 'BW', 'Ht', 'BMI', 'เอว', 'Age',
             'ระดับการศึกษา', 'อาชีพ', 'note', 'ระยะเวลา DM',
             'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'note', 'ยา', 'Line',
@@ -784,7 +784,11 @@ app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
         const groupMap = { 'experimental': '1', 'control': '0' };
         const sexMap = { 'male': '1', 'female': '2', 'other': '3' };
 
-        let csv = '\uFEFF' + csvHeaders.join(',') + '\n';
+        const quoteCSV = v => {
+            const s = String(v == null ? '' : v).replace(/"/g, '""');
+            return (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s}"` : s;
+        };
+        let csv = '\uFEFF' + csvHeaders.map(quoteCSV).join(',') + '\n';
         rows.forEach(row => {
             const values = [
                 row.patient_id || '',
@@ -832,7 +836,7 @@ app.get('/api/export/csv', authMiddleware, adminOnly, async (req, res) => {
 app.get('/api/import/template', (req, res) => {
     const BOM = '\uFEFF';
     const headers = [
-        'ID', 'Group (1=Intervention,0=Control)', 'Sex (1=Male,2=Female,3=Other)',
+        'ID', 'Group (1=Intervention 0=Control)', 'Sex (1=Male 2=Female 3=Other)',
         'ชื่อ', 'นามสกุล', 'BW', 'Ht', 'BMI', 'เอว', 'Age',
         'ระดับการศึกษา', 'อาชีพ', 'note', 'ระยะเวลา DM',
         'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'note', 'ยา', 'Line',
@@ -863,7 +867,11 @@ app.get('/api/import/template', (req, res) => {
         '2', '3', '2', '2', '3', '2', '3', '3', '2', '3', '2', '3',
         '3', '3', '3', '3', '3', '3', '3', '3', '3', '3', '3', '3', '30', '36'
     ];
-    const csv = BOM + headers.join(',') + '\n' + example.join(',') + '\n';
+    const quoteCSV = v => {
+        const s = String(v == null ? '' : v).replace(/"/g, '""');
+        return (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s}"` : s;
+    };
+    const csv = BOM + headers.map(quoteCSV).join(',') + '\n' + example.join(',') + '\n';
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename=diabetes_import_template.csv');
