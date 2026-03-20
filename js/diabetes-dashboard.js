@@ -271,6 +271,10 @@ const DiabetesDashboard = {
             if (parseInt(p.d5)) comorbCounts.gout++;
         });
 
+        // Average age
+        const allAges = patients.map(p => toNum(p.age)).filter(v => !isNaN(v));
+        const avgAge = allAges.length > 0 ? (allAges.reduce((a, b) => a + b, 0) / allAges.length).toFixed(0) : '-';
+
         // Age distribution
         const ageDist = { '<40': 0, '40-49': 0, '50-59': 0, '60-69': 0, '70+': 0 };
         patients.forEach(p => {
@@ -292,6 +296,7 @@ const DiabetesDashboard = {
             avgFbs: avgFbs,
             avgGfr: avgGfr,
             avgDtx: avgDtx,
+            avgAge: avgAge,
             followUpRate: followUpRate,
             hba1c: {
                 expBaseline: avg(expBaseline),
@@ -403,9 +408,13 @@ const DiabetesDashboard = {
         if (gfrEl) gfrEl.textContent = data.avgGfr || '-';
         if (fuEl) fuEl.textContent = data.followUpRate || '-';
 
-        // Row 3 DTX card
+        // Row 2 clinical
         const dtxEl = document.getElementById('dash-avg-dtx');
         if (dtxEl) dtxEl.textContent = data.avgDtx || '-';
+
+        // Row 3 body
+        const ageEl = document.getElementById('dash-avg-age');
+        if (ageEl) ageEl.textContent = data.avgAge || '-';
     },
 
     // =====================
@@ -2038,69 +2047,132 @@ const DiabetesDashboard = {
         const hba1c = data.hba1c || {};
         const paid5 = data.paid5 || {};
         const distress = data.distress || {};
+        const hl = data.healthLiteracy || {};
+        const sc = data.selfCare || {};
         const today = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+        const chg = (a, b) => (a && b) ? (b - a).toFixed(1) : '-';
+        const chgColor = (a, b, lower) => {
+            if (!a || !b) return '#64748b';
+            return lower ? (b < a ? '#16a34a' : b > a ? '#dc2626' : '#64748b') : (b > a ? '#16a34a' : b < a ? '#dc2626' : '#64748b');
+        };
 
-        // Build patient table rows
+        // Build patient table rows with more columns
         let tableRows = '';
         (data.patients || []).forEach((p, i) => {
             const genderTh = p.gender === 'male' || p.gender === 'M' ? 'ชาย' : p.gender === 'female' || p.gender === 'F' ? 'หญิง' : p.gender || '-';
             const groupTh = p.group === 'experimental' ? 'ทดลอง' : p.group === 'control' ? 'ควบคุม' : p.group || '-';
-            const hBL = p.hba1c_baseline != null ? parseFloat(p.hba1c_baseline).toFixed(1) : '-';
-            const h6m = p.hba1c_6month != null ? parseFloat(p.hba1c_6month).toFixed(1) : '-';
-            const pBL = p.paid5_baseline != null ? p.paid5_baseline : '-';
-            const p6m = p.paid5_6month != null ? p.paid5_6month : '-';
-            const dist = p.distress === 'low' ? 'ต่ำ' : p.distress === 'high' ? 'สูง' : '-';
-            tableRows += '<tr><td>' + (i + 1) + '</td><td>' + (p.patient_id || '-') + '</td><td>' + genderTh +
-                '</td><td>' + (p.age || '-') + '</td><td>' + groupTh + '</td><td>' + hBL + '</td><td>' + h6m +
-                '</td><td>' + pBL + '</td><td>' + p6m + '</td><td>' + dist + '</td></tr>';
+            const v = (x) => x != null && x !== '' ? x : '-';
+            const f1 = (x) => x != null ? parseFloat(x).toFixed(1) : '-';
+            tableRows += '<tr>' +
+                '<td>' + (i + 1) + '</td>' +
+                '<td>' + v(p.patient_id) + '</td>' +
+                '<td>' + ([p.first_name, p.last_name].filter(Boolean).join(' ') || '-') + '</td>' +
+                '<td>' + genderTh + '</td>' +
+                '<td>' + v(p.age) + '</td>' +
+                '<td>' + groupTh + '</td>' +
+                '<td>' + v(p.bmi) + '</td>' +
+                '<td>' + f1(p.hba1c_baseline) + '</td>' +
+                '<td>' + f1(p.hba1c_6month) + '</td>' +
+                '<td>' + v(p.fbs) + '</td>' +
+                '<td>' + v(p.dtx_avg) + '</td>' +
+                '<td>' + v(p.paid5_baseline) + '</td>' +
+                '<td>' + v(p.paid5_6month) + '</td>' +
+                '<td>' + (p.distress === 'low' ? 'ต่ำ' : p.distress === 'high' ? 'สูง' : '-') + '</td>' +
+                '</tr>';
         });
 
         const reportHTML = '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">' +
             '<title>รายงานผลโปรแกรมโรงเรียนเบาหวาน</title>' +
             '<style>' +
-            'body{font-family:Athiti,sans-serif;margin:40px;color:#19191B;font-size:14px}' +
-            'h1{font-size:20px;text-align:center;margin-bottom:4px}' +
-            'h2{font-size:16px;margin-top:24px;margin-bottom:8px;border-bottom:2px solid #2A86FF;padding-bottom:4px;color:#2A86FF}' +
-            '.subtitle{text-align:center;color:#61646B;font-size:13px;margin-bottom:24px}' +
-            '.stats{display:flex;gap:16px;margin-bottom:20px}' +
-            '.stat-box{flex:1;background:#F5FAFF;border:1px solid #E5E7EB;border-radius:8px;padding:12px;text-align:center}' +
-            '.stat-box .val{font-size:24px;font-weight:700;color:#2A86FF}' +
-            '.stat-box .lbl{font-size:12px;color:#61646B}' +
-            'table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}' +
-            'th{background:#F5FAFF;padding:6px 4px;text-align:left;border-bottom:2px solid #E5E7EB;font-weight:600;white-space:nowrap}' +
-            'td{padding:5px 4px;border-bottom:1px solid #F3F4F6;white-space:nowrap}' +
-            '.summary-table{width:auto;margin:0 auto}' +
-            '.summary-table td{padding:4px 16px}' +
-            '.footer{margin-top:32px;text-align:center;font-size:11px;color:#AFB1B6;border-top:1px solid #E5E7EB;padding-top:12px}' +
-            '@media print{body{margin:20px}@page{size:A4 landscape;margin:15mm}}' +
+            '@import url("https://fonts.googleapis.com/css2?family=Athiti:wght@400;500;600;700&display=swap");' +
+            'body{font-family:Athiti,sans-serif;margin:32px 40px;color:#1e293b;font-size:13px;line-height:1.6}' +
+            'h1{font-size:22px;text-align:center;margin-bottom:2px;color:#1e293b}' +
+            'h2{font-size:15px;margin-top:22px;margin-bottom:8px;padding:6px 12px;background:#f0f7ff;border-left:4px solid #2A86FF;border-radius:0 6px 6px 0;color:#1e40af}' +
+            '.subtitle{text-align:center;color:#64748b;font-size:13px;margin-bottom:20px}' +
+            '.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}' +
+            '.stat-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 8px;text-align:center}' +
+            '.stat-box .val{font-size:22px;font-weight:700;color:#2A86FF}' +
+            '.stat-box .lbl{font-size:11px;color:#64748b;margin-top:2px}' +
+            '.stat-box.purple .val{color:#8b5cf6}' +
+            '.stat-box.teal .val{color:#14b8a6}' +
+            '.stat-box.orange .val{color:#f97316}' +
+            '.stat-box.green .val{color:#22c55e}' +
+            '.clinical-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}' +
+            '.clinical-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;text-align:center}' +
+            '.clinical-box .val{font-size:18px;font-weight:700}' +
+            '.clinical-box .lbl{font-size:10px;color:#64748b}' +
+            'table{width:100%;border-collapse:collapse;margin-top:6px;font-size:11px}' +
+            'th{background:#f0f7ff;padding:5px 6px;text-align:center;border:1px solid #e2e8f0;font-weight:600;font-size:10px}' +
+            'td{padding:4px 6px;border:1px solid #f1f5f9;text-align:center}' +
+            'tr:nth-child(even){background:#fafbfc}' +
+            '.compare-table{width:auto;margin:0 auto;min-width:500px}' +
+            '.compare-table th,.compare-table td{padding:5px 14px;text-align:center}' +
+            '.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}' +
+            '.footer{margin-top:28px;text-align:center;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px}' +
+            '.page-break{page-break-before:always}' +
+            '@media print{body{margin:16px}@page{size:A4 landscape;margin:12mm}}' +
             '</style></head><body>' +
-            '<h1>รายงานผลโปรแกรมโรงเรียนเบาหวาน + LINE</h1>' +
-            '<div class="subtitle">วันที่พิมพ์: ' + today + '</div>' +
 
-            '<h2>สรุปภาพรวม</h2>' +
+            '<h1>รายงานผลโปรแกรมโรงเรียนเบาหวาน + LINE</h1>' +
+            '<div class="subtitle">Diabetes School Program Report &mdash; วันที่พิมพ์: ' + today + '</div>' +
+
+            // ===== Section 1: Overview =====
+            '<h2>1. สรุปภาพรวมผู้ป่วย</h2>' +
             '<div class="stats">' +
             '<div class="stat-box"><div class="val">' + data.totalPatients + '</div><div class="lbl">ผู้ป่วยทั้งหมด</div></div>' +
-            '<div class="stat-box"><div class="val">' + data.experimental + '</div><div class="lbl">กลุ่มทดลอง</div></div>' +
-            '<div class="stat-box"><div class="val">' + data.control + '</div><div class="lbl">กลุ่มควบคุม</div></div>' +
-            '<div class="stat-box"><div class="val">' + (data.avgHba1c || '-') + '%</div><div class="lbl">HbA1c เฉลี่ย</div></div>' +
+            '<div class="stat-box purple"><div class="val">' + data.experimental + '</div><div class="lbl">กลุ่มทดลอง</div></div>' +
+            '<div class="stat-box teal"><div class="val">' + data.control + '</div><div class="lbl">กลุ่มควบคุม</div></div>' +
+            '<div class="stat-box orange"><div class="val">' + (data.avgAge || '-') + '</div><div class="lbl">อายุเฉลี่ย (ปี)</div></div>' +
+            '<div class="stat-box green"><div class="val">' + (data.followUpRate || '-') + '%</div><div class="lbl">อัตราติดตาม</div></div>' +
+            '</div>' +
+            '<div class="clinical-grid">' +
+            '<div class="clinical-box"><div class="val" style="color:#f97316">' + (data.avgHba1c || '-') + '%</div><div class="lbl">HbA1c เฉลี่ย</div></div>' +
+            '<div class="clinical-box"><div class="val" style="color:#f59e0b">' + (data.avgFbs || '-') + '</div><div class="lbl">FBS เฉลี่ย (mg/dL)</div></div>' +
+            '<div class="clinical-box"><div class="val" style="color:#a855f7">' + (data.avgBmi || '-') + '</div><div class="lbl">BMI เฉลี่ย</div></div>' +
+            '<div class="clinical-box"><div class="val" style="color:#ef4444">' + (data.avgDtx || '-') + '</div><div class="lbl">DTX เฉลี่ย (mg/dL)</div></div>' +
             '</div>' +
 
-            '<h2>ผลลัพธ์ HbA1c เปรียบเทียบ</h2>' +
-            '<table class="summary-table"><tr><th></th><th>Baseline</th><th>6 เดือน</th><th>เปลี่ยนแปลง</th></tr>' +
-            '<tr><td><b>กลุ่มทดลอง</b></td><td>' + (hba1c.expBaseline || '-') + '%</td><td>' + (hba1c.expSixMonth || '-') + '%</td><td style="color:' + (hba1c.expSixMonth < hba1c.expBaseline ? '#16a34a' : '#dc2626') + '">' + (hba1c.expBaseline && hba1c.expSixMonth ? (hba1c.expSixMonth - hba1c.expBaseline).toFixed(2) + '%' : '-') + '</td></tr>' +
-            '<tr><td><b>กลุ่มควบคุม</b></td><td>' + (hba1c.ctrlBaseline || '-') + '%</td><td>' + (hba1c.ctrlSixMonth || '-') + '%</td><td style="color:' + (hba1c.ctrlSixMonth < hba1c.ctrlBaseline ? '#16a34a' : '#dc2626') + '">' + (hba1c.ctrlBaseline && hba1c.ctrlSixMonth ? (hba1c.ctrlSixMonth - hba1c.ctrlBaseline).toFixed(2) + '%' : '-') + '</td></tr></table>' +
+            // ===== Section 2: HbA1c =====
+            '<h2>2. ผลลัพธ์ HbA1c เปรียบเทียบ</h2>' +
+            '<table class="compare-table"><tr><th></th><th>Baseline</th><th>6 เดือน</th><th>เปลี่ยนแปลง</th></tr>' +
+            '<tr><td><b>กลุ่มทดลอง</b></td><td>' + (hba1c.expBaseline || '-') + '%</td><td>' + (hba1c.expSixMonth || '-') + '%</td><td style="color:' + chgColor(hba1c.expBaseline, hba1c.expSixMonth, true) + ';font-weight:600">' + chg(hba1c.expBaseline, hba1c.expSixMonth) + '%</td></tr>' +
+            '<tr><td><b>กลุ่มควบคุม</b></td><td>' + (hba1c.ctrlBaseline || '-') + '%</td><td>' + (hba1c.ctrlSixMonth || '-') + '%</td><td style="color:' + chgColor(hba1c.ctrlBaseline, hba1c.ctrlSixMonth, true) + ';font-weight:600">' + chg(hba1c.ctrlBaseline, hba1c.ctrlSixMonth) + '%</td></tr></table>' +
 
-            '<h2>ผลลัพธ์ PAID-5 เปรียบเทียบ</h2>' +
-            '<table class="summary-table"><tr><th></th><th>Baseline</th><th>6 เดือน</th><th>เปลี่ยนแปลง</th></tr>' +
-            '<tr><td><b>กลุ่มทดลอง</b></td><td>' + (paid5.expBaseline || '-') + '</td><td>' + (paid5.expSixMonth || '-') + '</td><td>' + (paid5.expBaseline && paid5.expSixMonth ? (paid5.expSixMonth - paid5.expBaseline).toFixed(1) : '-') + '</td></tr>' +
-            '<tr><td><b>กลุ่มควบคุม</b></td><td>' + (paid5.ctrlBaseline || '-') + '</td><td>' + (paid5.ctrlSixMonth || '-') + '</td><td>' + (paid5.ctrlBaseline && paid5.ctrlSixMonth ? (paid5.ctrlSixMonth - paid5.ctrlBaseline).toFixed(1) : '-') + '</td></tr></table>' +
+            // ===== Section 3: PAID-5 & Distress =====
+            '<div class="two-col">' +
+            '<div>' +
+            '<h2>3. PAID-5 เปรียบเทียบ</h2>' +
+            '<table class="compare-table"><tr><th></th><th>Baseline</th><th>6 เดือน</th><th>เปลี่ยนแปลง</th></tr>' +
+            '<tr><td><b>ทดลอง</b></td><td>' + (paid5.expBaseline || '-') + '</td><td>' + (paid5.expSixMonth || '-') + '</td><td style="color:' + chgColor(paid5.expBaseline, paid5.expSixMonth, true) + ';font-weight:600">' + chg(paid5.expBaseline, paid5.expSixMonth) + '</td></tr>' +
+            '<tr><td><b>ควบคุม</b></td><td>' + (paid5.ctrlBaseline || '-') + '</td><td>' + (paid5.ctrlSixMonth || '-') + '</td><td style="color:' + chgColor(paid5.ctrlBaseline, paid5.ctrlSixMonth, true) + ';font-weight:600">' + chg(paid5.ctrlBaseline, paid5.ctrlSixMonth) + '</td></tr></table>' +
+            '</div>' +
+            '<div>' +
+            '<h2>4. Diabetes Distress</h2>' +
+            '<table class="compare-table"><tr><th>ระดับ</th><th>จำนวน (ราย)</th></tr>' +
+            '<tr><td>Distress ต่ำ (Low)</td><td style="color:#22c55e;font-weight:700">' + (distress.low || 0) + '</td></tr>' +
+            '<tr><td>Distress สูง (High)</td><td style="color:#ef4444;font-weight:700">' + (distress.high || 0) + '</td></tr></table>' +
+            '</div></div>' +
 
-            '<h2>ระดับ Diabetes Distress</h2>' +
-            '<table class="summary-table"><tr><td>Distress ต่ำ (Low)</td><td><b>' + (distress.low || 0) + '</b> ราย</td></tr>' +
-            '<tr><td>Distress สูง (High)</td><td><b>' + (distress.high || 0) + '</b> ราย</td></tr></table>' +
+            // ===== Section 5: Health Literacy =====
+            '<h2>5. ความรอบรู้ด้านสุขภาพ (Health Literacy)</h2>' +
+            '<table class="compare-table"><tr><th></th><th>Baseline</th><th>6 เดือน</th><th>เปลี่ยนแปลง</th></tr>' +
+            '<tr><td><b>กลุ่มทดลอง</b></td><td>' + (hl.expBaseline || '-') + '</td><td>' + (hl.expSixMonth || '-') + '</td><td style="color:' + chgColor(hl.expBaseline, hl.expSixMonth, false) + ';font-weight:600">' + chg(hl.expBaseline, hl.expSixMonth) + '</td></tr>' +
+            '<tr><td><b>กลุ่มควบคุม</b></td><td>' + (hl.ctrlBaseline || '-') + '</td><td>' + (hl.ctrlSixMonth || '-') + '</td><td style="color:' + chgColor(hl.ctrlBaseline, hl.ctrlSixMonth, false) + ';font-weight:600">' + chg(hl.ctrlBaseline, hl.ctrlSixMonth) + '</td></tr></table>' +
 
-            '<h2>รายชื่อผู้ป่วยทั้งหมด</h2>' +
-            '<table><thead><tr><th>#</th><th>รหัส</th><th>เพศ</th><th>อายุ</th><th>กลุ่ม</th><th>HbA1c BL</th><th>HbA1c 6m</th><th>PAID-5 BL</th><th>PAID-5 6m</th><th>Distress</th></tr></thead><tbody>' +
+            // ===== Section 6: Self-care =====
+            '<h2>6. พฤติกรรมการดูแลตนเอง (Self-care)</h2>' +
+            '<table class="compare-table"><tr><th></th><th>Baseline</th><th>6 เดือน</th><th>เปลี่ยนแปลง</th></tr>' +
+            '<tr><td><b>กลุ่มทดลอง</b></td><td>' + (sc.expBaseline || '-') + '</td><td>' + (sc.expSixMonth || '-') + '</td><td style="color:' + chgColor(sc.expBaseline, sc.expSixMonth, false) + ';font-weight:600">' + chg(sc.expBaseline, sc.expSixMonth) + '</td></tr>' +
+            '<tr><td><b>กลุ่มควบคุม</b></td><td>' + (sc.ctrlBaseline || '-') + '</td><td>' + (sc.ctrlSixMonth || '-') + '</td><td style="color:' + chgColor(sc.ctrlBaseline, sc.ctrlSixMonth, false) + ';font-weight:600">' + chg(sc.ctrlBaseline, sc.ctrlSixMonth) + '</td></tr></table>' +
+
+            // ===== Section 7: Patient List =====
+            '<div class="page-break"></div>' +
+            '<h2>7. รายชื่อผู้ป่วยทั้งหมด (' + data.totalPatients + ' ราย)</h2>' +
+            '<table><thead><tr>' +
+            '<th>#</th><th>รหัส</th><th>ชื่อ-นามสกุล</th><th>เพศ</th><th>อายุ</th><th>กลุ่ม</th><th>BMI</th>' +
+            '<th>HbA1c BL</th><th>HbA1c 6m</th><th>FBS</th><th>DTX</th>' +
+            '<th>PAID BL</th><th>PAID 6m</th><th>Distress</th>' +
+            '</tr></thead><tbody>' +
             tableRows + '</tbody></table>' +
 
             '<div class="footer">ระบบติดตามผลโปรแกรมโรงเรียนเบาหวาน + LINE &mdash; Diabetes Tracking System</div>' +
@@ -2239,6 +2311,7 @@ const DiabetesDashboard = {
             avgFbs: '142',
             avgGfr: '72.5',
             avgDtx: '158',
+            avgAge: '58',
             followUpRate: '92',
             hba1c: {
                 expBaseline: avg(expHba1cBL),

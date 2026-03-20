@@ -1039,49 +1039,63 @@
         <i class="fa-solid fa-triangle-exclamation"></i> ไม่ได้เชื่อมต่อฐานข้อมูล - แสดงข้อมูลตัวอย่าง (Demo)
     </div>
 
-    <!-- Summary Stats Row 1 -->
+    <!-- Summary Stats Row 1 - Patient Counts -->
     <div class="stat-grid">
-        <div class="stat-card">
+        <div class="stat-card stat-primary">
+            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
             <div class="stat-value" id="dash-total">0</div>
             <div class="stat-label">ผู้ป่วยทั้งหมด</div>
         </div>
-        <div class="stat-card accent">
+        <div class="stat-card stat-purple">
+            <div class="stat-icon"><i class="fa-solid fa-flask-vial"></i></div>
             <div class="stat-value" id="dash-experimental">0</div>
             <div class="stat-label">กลุ่มทดลอง</div>
         </div>
-        <div class="stat-card success">
+        <div class="stat-card stat-teal">
+            <div class="stat-icon"><i class="fa-solid fa-shield-halved"></i></div>
             <div class="stat-value" id="dash-control">0</div>
             <div class="stat-label">กลุ่มควบคุม</div>
         </div>
-        <div class="stat-card warning">
-            <div class="stat-value" id="dash-avg-hba1c">-</div>
-            <div class="stat-label">HbA1c เฉลี่ย</div>
-        </div>
-    </div>
-    <!-- Summary Stats Row 2 - Clinical -->
-    <div class="stat-grid" style="margin-top:8px">
-        <div class="stat-card" style="border-left:3px solid #8b5cf6">
-            <div class="stat-value" id="dash-avg-bmi">-</div>
-            <div class="stat-label">BMI เฉลี่ย</div>
-        </div>
-        <div class="stat-card" style="border-left:3px solid #f59e0b">
-            <div class="stat-value" id="dash-avg-fbs">-</div>
-            <div class="stat-label">FBS เฉลี่ย (mg/dL)</div>
-        </div>
-        <div class="stat-card" style="border-left:3px solid #06b6d4">
-            <div class="stat-value" id="dash-avg-gfr">-</div>
-            <div class="stat-label">GFR เฉลี่ย (mL/min)</div>
-        </div>
-        <div class="stat-card" style="border-left:3px solid #10b981">
+        <div class="stat-card stat-green">
+            <div class="stat-icon"><i class="fa-solid fa-clipboard-check"></i></div>
             <div class="stat-value" id="dash-follow-up">-</div>
             <div class="stat-label">อัตราติดตาม (%)</div>
         </div>
     </div>
-    <!-- Summary Stats Row 3 - DTX -->
+    <!-- Summary Stats Row 2 - Clinical -->
     <div class="stat-grid" style="margin-top:8px">
-        <div class="stat-card" style="border-left:3px solid #ef4444">
+        <div class="stat-card stat-orange">
+            <div class="stat-icon"><i class="fa-solid fa-vial"></i></div>
+            <div class="stat-value" id="dash-avg-hba1c">-</div>
+            <div class="stat-label">HbA1c เฉลี่ย (%)</div>
+        </div>
+        <div class="stat-card stat-amber">
+            <div class="stat-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div class="stat-value" id="dash-avg-fbs">-</div>
+            <div class="stat-label">FBS เฉลี่ย (mg/dL)</div>
+        </div>
+        <div class="stat-card stat-cyan">
+            <div class="stat-icon"><i class="fa-solid fa-kidneys"></i></div>
+            <div class="stat-value" id="dash-avg-gfr">-</div>
+            <div class="stat-label">GFR เฉลี่ย (mL/min)</div>
+        </div>
+        <div class="stat-card stat-red">
+            <div class="stat-icon"><i class="fa-solid fa-syringe"></i></div>
             <div class="stat-value" id="dash-avg-dtx">-</div>
             <div class="stat-label">DTX เฉลี่ย (mg/dL)</div>
+        </div>
+    </div>
+    <!-- Summary Stats Row 3 - Body -->
+    <div class="stat-grid stat-grid-2" style="margin-top:8px">
+        <div class="stat-card stat-violet">
+            <div class="stat-icon"><i class="fa-solid fa-weight-scale"></i></div>
+            <div class="stat-value" id="dash-avg-bmi">-</div>
+            <div class="stat-label">BMI เฉลี่ย</div>
+        </div>
+        <div class="stat-card stat-blue">
+            <div class="stat-icon"><i class="fa-solid fa-person"></i></div>
+            <div class="stat-value" id="dash-avg-age">-</div>
+            <div class="stat-label">อายุเฉลี่ย (ปี)</div>
         </div>
     </div>
 
