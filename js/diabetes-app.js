@@ -423,7 +423,211 @@ async function initApp() {
         window.DiabetesDTX.init();
     }
 
+    // Visitor health lookup
+    initVisitorHealthSearch();
+
     hideLoading();
+}
+
+function initVisitorHealthSearch() {
+    var section = document.getElementById('visitor-health-section');
+    var btn = document.getElementById('btn-visitor-search');
+    var input = document.getElementById('visitor-name-input');
+    var resultDiv = document.getElementById('visitor-health-result');
+    if (!btn || !input || !resultDiv) return;
+
+    // Hide section for logged-in users
+    if (window.Auth && Auth.isLoggedIn()) {
+        if (section) section.style.display = 'none';
+    }
+
+    function doSearch() {
+        var name = input.value.trim();
+        if (!name || name.length < 2) {
+            showToast('กรุณาพิมพ์ชื่อจริงอย่างน้อย 2 ตัวอักษร', 'error');
+            return;
+        }
+        showLoading();
+        fetch(API.baseUrl + '/api/visitor/health?name=' + encodeURIComponent(name))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                hideLoading();
+                if (!data.found) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8">' +
+                        '<i class="fa-solid fa-user-xmark" style="font-size:32px;margin-bottom:8px;display:block"></i>' +
+                        'ไม่พบข้อมูลชื่อ "<b>' + name + '</b>" ในระบบ<br>' +
+                        '<span style="font-size:0.75rem">กรุณาตรวจสอบการสะกดชื่อ</span></div>';
+                    return;
+                }
+                renderVisitorDashboard(data.patient, resultDiv);
+            })
+            .catch(function(err) {
+                hideLoading();
+                showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+            });
+    }
+
+    btn.addEventListener('click', doSearch);
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') doSearch();
+    });
+}
+
+function renderVisitorDashboard(p, container) {
+    container.style.display = 'block';
+    var genderTh = p.gender === 'male' ? 'ชาย' : p.gender === 'female' ? 'หญิง' : p.gender || '-';
+
+    // BMI interpretation
+    var bmi = p.bmi ? parseFloat(p.bmi) : null;
+    var bmiLabel = '-', bmiColor = '#64748b';
+    if (bmi) {
+        if (bmi < 18.5) { bmiLabel = 'น้ำหนักต่ำ'; bmiColor = '#3b82f6'; }
+        else if (bmi < 23) { bmiLabel = 'ปกติ'; bmiColor = '#22c55e'; }
+        else if (bmi < 25) { bmiLabel = 'น้ำหนักเกิน'; bmiColor = '#f59e0b'; }
+        else if (bmi < 30) { bmiLabel = 'อ้วนระดับ 1'; bmiColor = '#f97316'; }
+        else { bmiLabel = 'อ้วนระดับ 2'; bmiColor = '#ef4444'; }
+    }
+
+    // DTX interpretation
+    var dtxAvg = p.dtx_avg ? parseFloat(p.dtx_avg) : null;
+    var dtxLabel = '-', dtxColor = '#64748b';
+    if (dtxAvg) {
+        if (dtxAvg < 70) { dtxLabel = 'ต่ำ (Hypoglycemia)'; dtxColor = '#f59e0b'; }
+        else if (dtxAvg <= 130) { dtxLabel = 'ดี (ปกติ)'; dtxColor = '#22c55e'; }
+        else if (dtxAvg <= 180) { dtxLabel = 'สูงเล็กน้อย'; dtxColor = '#f97316'; }
+        else if (dtxAvg <= 250) { dtxLabel = 'สูง'; dtxColor = '#ef4444'; }
+        else { dtxLabel = 'สูงมาก (Hyperglycemia)'; dtxColor = '#dc2626'; }
+    }
+
+    // DTX values for chart
+    var dtxVals = [p.dtx1, p.dtx2, p.dtx3, p.dtx4, p.dtx5, p.dtx6].map(function(v) { return v ? parseFloat(v) : null; });
+    var hasDtx = dtxVals.some(function(v) { return v !== null; });
+
+    var html = '';
+    // Header
+    html += '<div style="background:linear-gradient(135deg,#f0f7ff,#e8f4f8);border-radius:12px;padding:16px;margin-bottom:12px">';
+    html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">';
+    html += '<div style="width:44px;height:44px;border-radius:50%;background:#2A86FF;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px"><i class="fa-solid fa-user"></i></div>';
+    html += '<div><div style="font-size:1.1rem;font-weight:700;color:#1e293b">' + (p.first_name || '-') + '</div>';
+    html += '<div style="font-size:0.75rem;color:#64748b">' + genderTh + (p.age ? ' | อายุ ' + p.age + ' ปี' : '') + '</div></div>';
+    html += '</div></div>';
+
+    // Stats Cards
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
+
+    // BMI Card
+    html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center">';
+    html += '<div style="font-size:0.7rem;color:#64748b;margin-bottom:4px"><i class="fa-solid fa-weight-scale"></i> BMI</div>';
+    html += '<div style="font-size:1.6rem;font-weight:700;color:' + bmiColor + '">' + (bmi ? bmi.toFixed(1) : '-') + '</div>';
+    html += '<div style="font-size:0.72rem;color:' + bmiColor + ';font-weight:600">' + bmiLabel + '</div>';
+    if (p.weight) html += '<div style="font-size:0.65rem;color:#94a3b8;margin-top:4px">น้ำหนัก ' + p.weight + ' kg' + (p.height ? ' | สูง ' + p.height + ' cm' : '') + '</div>';
+    html += '</div>';
+
+    // DTX Card
+    html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center">';
+    html += '<div style="font-size:0.7rem;color:#64748b;margin-bottom:4px"><i class="fa-solid fa-droplet"></i> DTX เฉลี่ย</div>';
+    html += '<div style="font-size:1.6rem;font-weight:700;color:' + dtxColor + '">' + (dtxAvg ? dtxAvg.toFixed(0) : '-') + '</div>';
+    html += '<div style="font-size:0.72rem;color:' + dtxColor + ';font-weight:600">' + dtxLabel + ' mg/dL</div>';
+    html += '</div>';
+
+    html += '</div>';
+
+    // HbA1c & FBS row
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
+    var hba1c = p.hba1c_baseline ? parseFloat(p.hba1c_baseline) : null;
+    var hba1cColor = hba1c ? (hba1c < 7 ? '#22c55e' : hba1c < 8 ? '#f59e0b' : '#ef4444') : '#64748b';
+    html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center">';
+    html += '<div style="font-size:0.7rem;color:#64748b"><i class="fa-solid fa-vial"></i> HbA1c</div>';
+    html += '<div style="font-size:1.3rem;font-weight:700;color:' + hba1cColor + '">' + (hba1c ? hba1c.toFixed(1) + '%' : '-') + '</div>';
+    html += '</div>';
+
+    var fbs = p.fbs ? parseFloat(p.fbs) : null;
+    var fbsColor = fbs ? (fbs < 100 ? '#22c55e' : fbs < 126 ? '#f59e0b' : '#ef4444') : '#64748b';
+    html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center">';
+    html += '<div style="font-size:0.7rem;color:#64748b"><i class="fa-solid fa-flask"></i> FBS</div>';
+    html += '<div style="font-size:1.3rem;font-weight:700;color:' + fbsColor + '">' + (fbs ? fbs.toFixed(0) + ' mg/dL' : '-') + '</div>';
+    html += '</div>';
+    html += '</div>';
+
+    // DTX Chart (6 values)
+    if (hasDtx) {
+        html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:12px">';
+        html += '<div style="font-size:0.78rem;font-weight:600;color:#1e293b;margin-bottom:8px"><i class="fa-solid fa-chart-line"></i> ค่า DTX 6 ครั้ง</div>';
+        html += '<canvas id="visitor-dtx-chart" height="180"></canvas>';
+        html += '</div>';
+    }
+
+    // Reference box
+    html += '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:0.72rem;color:#92400e;line-height:1.7">';
+    html += '<b>เกณฑ์อ้างอิง:</b><br>';
+    html += 'DTX ปกติ: 70-100 mg/dL | ก่อนอาหาร: 80-130 | หลังอาหาร: &lt;180<br>';
+    html += 'BMI ปกติ: 18.5-22.9 | HbA1c เป้าหมาย: &lt;7%';
+    html += '</div>';
+
+    container.innerHTML = html;
+
+    // Render DTX chart
+    if (hasDtx && typeof Chart !== 'undefined') {
+        var canvas = document.getElementById('visitor-dtx-chart');
+        if (canvas) {
+            var labels = ['ครั้งที่ 1', 'ครั้งที่ 2', 'ครั้งที่ 3', 'ครั้งที่ 4', 'ครั้งที่ 5', 'ครั้งที่ 6'];
+            var pointColors = dtxVals.map(function(v) {
+                if (v === null) return '#ccc';
+                if (v < 70) return '#f59e0b';
+                if (v > 250) return '#ef4444';
+                if (v > 180) return '#f97316';
+                return '#22c55e';
+            });
+            new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'DTX (mg/dL)',
+                        data: dtxVals,
+                        borderColor: '#2A86FF',
+                        backgroundColor: 'rgba(42,134,255,0.08)',
+                        pointBackgroundColor: pointColors,
+                        pointBorderColor: pointColors,
+                        pointRadius: 6,
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        spanGaps: true
+                    }, dtxAvg ? {
+                        label: 'เฉลี่ย',
+                        data: labels.map(function() { return dtxAvg; }),
+                        borderColor: '#8b5cf6',
+                        borderDash: [6, 4],
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        fill: false
+                    } : null].filter(Boolean)
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    return ctx.dataset.label + ': ' + (ctx.parsed.y !== null ? ctx.parsed.y + ' mg/dL' : '-');
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: { display: true, text: 'mg/dL', font: { family: 'Athiti', size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+    }
 }
 
 // ============================================================================

@@ -483,6 +483,47 @@ app.post('/api/patients', async (req, res) => {
     }
 });
 
+// GET visitor health lookup by first name (public - no auth)
+app.get('/api/visitor/health', async (req, res) => {
+    if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });
+    const name = (req.query.name || '').trim();
+    if (!name || name.length < 2) return res.status(400).json({ error: 'กรุณาพิมพ์ชื่อจริงอย่างน้อย 2 ตัวอักษร' });
+    try {
+        const rows = await query(
+            `SELECT p.patient_id, p.first_name, p.weight, p.height, p.bmi, p.age, p.gender,
+             c.dtx1, c.dtx2, c.dtx3, c.dtx4, c.dtx5, c.dtx6, c.dtx_avg,
+             c.hba1c_baseline, c.hba1c_6month, c.fbs, c.gfr
+             FROM patients p
+             LEFT JOIN clinical_outcomes c ON p.patient_id = c.patient_id
+             WHERE p.first_name = ?
+             LIMIT 1`,
+            [name]
+        );
+        if (rows.length === 0) return res.json({ found: false });
+        const p = rows[0];
+        res.json({
+            found: true,
+            patient: {
+                first_name: p.first_name,
+                age: p.age,
+                gender: p.gender,
+                weight: p.weight,
+                height: p.height,
+                bmi: p.bmi,
+                dtx1: p.dtx1, dtx2: p.dtx2, dtx3: p.dtx3,
+                dtx4: p.dtx4, dtx5: p.dtx5, dtx6: p.dtx6,
+                dtx_avg: p.dtx_avg,
+                hba1c_baseline: p.hba1c_baseline,
+                hba1c_6month: p.hba1c_6month,
+                fbs: p.fbs,
+                gfr: p.gfr
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // POST save DTX values for a patient
 app.post('/api/dtx/:id', async (req, res) => {
     if (!dbConnected) return res.status(503).json({ error: 'DB not connected' });

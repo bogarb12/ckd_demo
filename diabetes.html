@@ -90,6 +90,22 @@
         <p>งานวิจัย RCT: ผลของโปรแกรมโรงเรียนเบาหวานแบบกลุ่มร่วมกับการติดตามผ่าน LINE ต่อระดับ HbA1c และภาวะความเครียดจากโรคเบาหวานในผู้ป่วยเบาหวานชนิดที่ 2 ในคลินิกปฐมภูมิ</p>
     </div>
 
+    <!-- Visitor: Personal Health Lookup -->
+    <div id="visitor-health-section" class="card" style="margin-bottom:16px">
+        <div class="card-header"><span class="icon"><i class="fa-solid fa-heart-pulse"></i></span> ดูผลสุขภาพส่วนบุคคล</div>
+        <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px">พิมพ์ชื่อจริงของท่านเพื่อดูผลตรวจสุขภาพ</p>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+            <div style="position:relative;flex:1">
+                <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px"></i>
+                <input type="text" id="visitor-name-input" placeholder="พิมพ์ชื่อจริง เช่น สมศรี" style="width:100%;padding:10px 12px 10px 36px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.9rem;font-family:Athiti,sans-serif;outline:none" onfocus="this.style.borderColor='#2A86FF'" onblur="this.style.borderColor='#e2e8f0'">
+            </div>
+            <button class="btn btn-primary" id="btn-visitor-search" style="padding:10px 20px;white-space:nowrap">
+                <i class="fa-solid fa-search"></i> ค้นหา
+            </button>
+        </div>
+        <div id="visitor-health-result" style="display:none"></div>
+    </div>
+
     <div class="home-admin-chart" id="home-stats" data-role="admin" style="display:none">
         <div class="card-header"><span class="icon"><i class="fa-solid fa-chart-pie"></i></span> สรุปจำนวนผู้ป่วย</div>
         <div class="home-chart-row">

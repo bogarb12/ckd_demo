@@ -225,9 +225,11 @@ const Auth = {
     updateHeaderLoginButton() {
         var btn = document.getElementById('btn-header-login');
         var visitorLabel = document.getElementById('visitor-label');
+        var visitorHealth = document.getElementById('visitor-health-section');
         var loggedIn = this.isLoggedIn();
         if (btn) btn.style.display = loggedIn ? 'none' : 'flex';
         if (visitorLabel) visitorLabel.style.display = loggedIn ? 'none' : 'flex';
+        if (visitorHealth) visitorHealth.style.display = loggedIn ? 'none' : '';
         this.updateBottomNavVisibility();
     },
 
