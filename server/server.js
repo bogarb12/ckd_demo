@@ -12,7 +12,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 const { pool, query, testConnection } = require('./db');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dt-secret-2024-diabetes-tracking';
 const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
 
