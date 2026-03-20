@@ -1193,6 +1193,12 @@
             <i class="fa-solid fa-plus"></i> เพิ่มผู้ป่วย
         </button>
     </div>
+    <div style="margin-bottom:10px">
+        <div style="position:relative">
+            <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px"></i>
+            <input type="text" id="patient-search-input" placeholder="ค้นหาผู้ป่วย (รหัส, ชื่อ, นามสกุล)" style="width:100%;padding:8px 12px 8px 36px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.85rem;font-family:Athiti,sans-serif;outline:none;transition:border-color 0.2s" onfocus="this.style.borderColor='#2A86FF'" onblur="this.style.borderColor='#e2e8f0'">
+        </div>
+    </div>
     <div class="patient-list-container" id="patient-list-container">
         <!-- Mobile: Card view -->
         <div class="patient-cards" id="patient-cards">

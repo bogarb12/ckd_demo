@@ -6,6 +6,7 @@ const DiabetesDashboard = {
     currentPage: 1,
     pageSize: 10,
     filteredPatients: [],
+    searchTerm: '',
 
     // =====================
     // Initialization
@@ -85,6 +86,7 @@ const DiabetesDashboard = {
                 this.setupTemplateDownload();
                 this.setupPrintReport();
                 this.setupCRUD();
+                this.setupSearch();
                 this.initialized = true;
             }
 
@@ -1157,10 +1159,22 @@ const DiabetesDashboard = {
         const cardsEl = document.getElementById('patient-cards');
         if (!tbody && !cardsEl) return;
 
-        // Apply filter
+        // Apply group filter
         let filtered = patients || [];
         if (filter && filter !== 'all') {
             filtered = filtered.filter(p => p.group === filter);
+        }
+
+        // Apply search filter
+        if (this.searchTerm) {
+            const term = this.searchTerm;
+            filtered = filtered.filter(p => {
+                const id = (p.patient_id || p.id || p.hn || '').toString().toLowerCase();
+                const firstName = (p.first_name || '').toLowerCase();
+                const lastName = (p.last_name || '').toLowerCase();
+                const fullName = firstName + ' ' + lastName;
+                return id.includes(term) || firstName.includes(term) || lastName.includes(term) || fullName.includes(term);
+            });
         }
 
         this.filteredPatients = filtered;
@@ -1504,6 +1518,24 @@ const DiabetesDashboard = {
                     this.createAgeChart(filteredData);
                 }
             }
+        });
+    },
+
+    setupSearch() {
+        const input = document.getElementById('patient-search-input');
+        if (!input) return;
+
+        let debounceTimer;
+        input.addEventListener('input', (e) => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                this.searchTerm = e.target.value.trim().toLowerCase();
+                this.currentPage = 1;
+                const data = this._cachedSummaryData;
+                if (data) {
+                    this.renderPatientTable(data.patients, this.currentFilter);
+                }
+            }, 200);
         });
     },
 
