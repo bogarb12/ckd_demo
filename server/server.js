@@ -1392,6 +1392,19 @@ async function ensureSchema() {
             }
         }
 
+        // Handle clinical_outcomes table: check if it has old schema (missing dtx2-dtx6)
+        try {
+            const coCols = await query("SHOW COLUMNS FROM clinical_outcomes");
+            const coColNames = coCols.map(c => c.Field);
+            if (!coColNames.includes('dtx2')) {
+                // Old schema - drop and recreate with full dtx1-dtx6 columns
+                await query("DROP TABLE IF EXISTS clinical_outcomes");
+                const coCreate = statements.find(s => s.includes('clinical_outcomes'));
+                if (coCreate) await query(coCreate);
+                console.log('clinical_outcomes table recreated with dtx1-dtx6 columns');
+            }
+        } catch (e) { /* table might not exist yet */ }
+
         // Handle health_literacy table: check if it has old column names
         try {
             const hlCols = await query("SHOW COLUMNS FROM health_literacy");

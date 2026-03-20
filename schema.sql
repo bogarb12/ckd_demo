@@ -45,15 +45,24 @@ CREATE TABLE IF NOT EXISTS patients (
 -- Table: clinical_outcomes (HbA1c)
 -- ============================================
 CREATE TABLE IF NOT EXISTS clinical_outcomes (
-    patient_id VARCHAR(50) PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_id VARCHAR(20) NOT NULL,
     hba1c_baseline DECIMAL(4,1),
     hba1c_6month DECIMAL(4,1),
-    fbs DECIMAL(5,1),
-    gfr DECIMAL(5,1),
-    dtx1 DECIMAL(5,1),
+    fbs DECIMAL(6,1) DEFAULT NULL,
+    gfr DECIMAL(6,1) DEFAULT NULL,
+    dtx1 DECIMAL(6,1) DEFAULT NULL,
+    dtx2 DECIMAL(6,1) DEFAULT NULL,
+    dtx3 DECIMAL(6,1) DEFAULT NULL,
+    dtx4 DECIMAL(6,1) DEFAULT NULL,
+    dtx5 DECIMAL(6,1) DEFAULT NULL,
+    dtx6 DECIMAL(6,1) DEFAULT NULL,
+    dtx_avg DECIMAL(6,1) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON DELETE CASCADE
-);
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON DELETE CASCADE,
+    UNIQUE KEY uk_patient (patient_id)
+) ENGINE=InnoDB;
 
 -- ============================================
 -- Table: paid5_scores (PAID-5 ความเครียดจากเบาหวาน)
