@@ -1397,18 +1397,18 @@ async function ensureSchema() {
             }
         }
 
-        // Handle clinical_outcomes table: ensure dtx2-dtx6 columns exist
+        // Handle clinical_outcomes table: create if missing, add columns if needed
         try {
             const coCols = await query("SHOW COLUMNS FROM clinical_outcomes");
             const coColNames = coCols.map(c => c.Field);
             const dtxCols = [
+                { name: 'dtx1', def: 'DECIMAL(6,1) DEFAULT NULL' },
                 { name: 'dtx2', def: 'DECIMAL(6,1) DEFAULT NULL' },
                 { name: 'dtx3', def: 'DECIMAL(6,1) DEFAULT NULL' },
                 { name: 'dtx4', def: 'DECIMAL(6,1) DEFAULT NULL' },
                 { name: 'dtx5', def: 'DECIMAL(6,1) DEFAULT NULL' },
                 { name: 'dtx6', def: 'DECIMAL(6,1) DEFAULT NULL' },
                 { name: 'dtx_avg', def: 'DECIMAL(6,1) DEFAULT NULL' },
-                { name: 'dtx1', def: 'DECIMAL(6,1) DEFAULT NULL' },
                 { name: 'fbs', def: 'DECIMAL(6,1) DEFAULT NULL' },
                 { name: 'gfr', def: 'DECIMAL(6,1) DEFAULT NULL' },
                 { name: 'updated_at', def: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP' }
@@ -1423,7 +1423,37 @@ async function ensureSchema() {
                     }
                 }
             }
-        } catch (e) { /* table might not exist yet */ }
+        } catch (e) {
+            // Table doesn't exist - create it matching patients table's patient_id type
+            console.log('clinical_outcomes table missing, creating...');
+            try {
+                // Get patient_id column type from patients table to match FK
+                const patCols = await query("SHOW COLUMNS FROM patients WHERE Field = 'patient_id'");
+                const pidType = patCols.length > 0 ? patCols[0].Type.toUpperCase() : 'VARCHAR(20)';
+                await query(`CREATE TABLE clinical_outcomes (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    patient_id ${pidType} NOT NULL,
+                    hba1c_baseline DECIMAL(4,1),
+                    hba1c_6month DECIMAL(4,1),
+                    fbs DECIMAL(6,1) DEFAULT NULL,
+                    gfr DECIMAL(6,1) DEFAULT NULL,
+                    dtx1 DECIMAL(6,1) DEFAULT NULL,
+                    dtx2 DECIMAL(6,1) DEFAULT NULL,
+                    dtx3 DECIMAL(6,1) DEFAULT NULL,
+                    dtx4 DECIMAL(6,1) DEFAULT NULL,
+                    dtx5 DECIMAL(6,1) DEFAULT NULL,
+                    dtx6 DECIMAL(6,1) DEFAULT NULL,
+                    dtx_avg DECIMAL(6,1) DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON DELETE CASCADE,
+                    UNIQUE KEY uk_patient (patient_id)
+                ) ENGINE=InnoDB`);
+                console.log('clinical_outcomes table created successfully');
+            } catch (createErr) {
+                console.error('Failed to create clinical_outcomes:', createErr.message);
+            }
+        }
 
         // Handle health_literacy table: check if it has old column names
         try {
