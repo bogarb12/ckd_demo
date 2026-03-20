@@ -113,6 +113,7 @@ const DiabetesDashboard = {
             this.setupImport();
             this.setupTemplateDownload();
             this.setupPrintReport();
+            this.setupCRUD();
             this.initialized = true;
         }
     },
@@ -1048,6 +1049,10 @@ const DiabetesDashboard = {
         const endIdx = Math.min(startIdx + this.pageSize, filtered.length);
         const pageData = filtered.slice(startIdx, endIdx);
 
+        // Check admin status once for the whole table
+        const _isAdmin = window.Auth && Auth.isLoggedIn() && Auth.isAdmin();
+        const adminColStyle = _isAdmin ? '' : 'display:none';
+
         let html = '';
         pageData.forEach((p, idx) => {
             // HbA1c change color coding
@@ -1139,8 +1144,8 @@ const DiabetesDashboard = {
 
             html += '<tr>';
             html += '<td style="font-weight:500;">' + this.escapeHtml(p.patient_id) + '</td>';
-            html += '<td class="admin-only-col" style="display:none">' + this.escapeHtml(firstNameDisplay) + '</td>';
-            html += '<td class="admin-only-col" style="display:none">' + this.escapeHtml(lastNameDisplay) + '</td>';
+            html += '<td class="admin-only-col" style="' + adminColStyle + '">' + this.escapeHtml(firstNameDisplay) + '</td>';
+            html += '<td class="admin-only-col" style="' + adminColStyle + '">' + this.escapeHtml(lastNameDisplay) + '</td>';
             html += '<td>' + genderDisplay + '</td>';
             html += '<td>' + (p.age !== '-' ? p.age : '-') + '</td>';
             html += '<td>' + groupDisplay + '</td>';
@@ -1166,7 +1171,7 @@ const DiabetesDashboard = {
             html += '<td>' + paid56mDisplay + '</td>';
             html += '<td style="' + distressStyle + '">' + distressDisplay + '</td>';
             html += '<td style="' + statusStyle + '">' + statusDisplay + '</td>';
-            html += '<td class="admin-only-col" style="display:none;white-space:nowrap">';
+            html += '<td class="admin-only-col" style="' + adminColStyle + ';white-space:nowrap">';
             html += '<button class="btn-icon btn-edit-patient" data-id="' + this.escapeHtml(p.patient_id) + '" title="แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button> ';
             html += '<button class="btn-icon btn-delete-patient" data-id="' + this.escapeHtml(p.patient_id) + '" title="ลบ" style="color:#dc2626"><i class="fa-solid fa-trash"></i></button>';
             html += '</td>';
