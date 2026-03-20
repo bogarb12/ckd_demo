@@ -1123,7 +1123,7 @@ const DiabetesDashboard = {
     // =====================
     _renderRow(p, f, isAdmin, adminColStyle) {
         var esc = this.escapeHtml.bind(this);
-        function tdStyle(cls) {
+        function tdS(cls) {
             if (cls === 'v-good') return 'color:#16a34a;font-weight:600';
             if (cls === 'v-warn') return 'color:#f59e0b;font-weight:600';
             if (cls === 'v-bad') return 'color:#dc2626;font-weight:600';
@@ -1131,20 +1131,20 @@ const DiabetesDashboard = {
             return '';
         }
         var h = '<tr data-id="' + esc(f.patientId) + '">';
-        h += '<td style="font-weight:500">' + esc(f.patientId) + '</td>';
-        h += '<td class="admin-only-col" style="' + adminColStyle + '">' + esc(f.fullName) + '</td>';
-        h += '<td>' + f.genderDisplay + '</td>';
-        h += '<td>' + f.age + '</td>';
-        h += '<td>' + f.groupDisplay + '</td>';
-        h += '<td style="' + tdStyle(f.bmiClass) + '">' + f.bmi + '</td>';
-        h += '<td style="' + tdStyle(f.hba1cBLClass) + '">' + f.hba1cBL + '</td>';
-        h += '<td style="' + tdStyle(f.hba1c6mClass) + '">' + f.hba1c6m + '</td>';
-        h += '<td class="col-secondary" style="' + tdStyle(f.fbsClass) + '">' + f.fbs + '</td>';
-        h += '<td class="col-secondary" style="' + tdStyle(f.gfrClass) + '">' + f.gfr + '</td>';
-        h += '<td class="col-secondary" style="' + tdStyle(f.dtxClass) + '">' + f.dtxAvg + '</td>';
-        h += '<td>' + f.paid5BL + '</td>';
-        h += '<td style="' + tdStyle(f.distressClass) + '">' + f.distressDisplay + '</td>';
-        h += '<td class="admin-only-col" style="' + adminColStyle + ';white-space:nowrap">';
+        h += '<td class="col-id" style="font-weight:500">' + esc(f.patientId) + '</td>';
+        h += '<td class="col-name admin-only-col" style="' + adminColStyle + '" title="' + esc(f.fullName) + '">' + esc(f.fullName) + '</td>';
+        h += '<td class="col-gender">' + f.genderDisplay + '</td>';
+        h += '<td class="col-age">' + f.age + '</td>';
+        h += '<td class="col-num col-secondary">' + f.groupDisplay + '</td>';
+        h += '<td class="col-num" style="' + tdS(f.bmiClass) + '">' + f.bmi + '</td>';
+        h += '<td class="col-num" style="' + tdS(f.hba1cBLClass) + '">' + f.hba1cBL + '</td>';
+        h += '<td class="col-num" style="' + tdS(f.hba1c6mClass) + '">' + f.hba1c6m + '</td>';
+        h += '<td class="col-num col-secondary" style="' + tdS(f.fbsClass) + '">' + f.fbs + '</td>';
+        h += '<td class="col-num col-secondary" style="' + tdS(f.gfrClass) + '">' + f.gfr + '</td>';
+        h += '<td class="col-num col-secondary" style="' + tdS(f.dtxClass) + '">' + f.dtxAvg + '</td>';
+        h += '<td class="col-num">' + f.paid5BL + '</td>';
+        h += '<td class="col-distress" style="' + tdS(f.distressClass) + '">' + f.distressDisplay + '</td>';
+        h += '<td class="col-actions admin-only-col" style="' + adminColStyle + '">';
         h += '<button class="btn-icon btn-edit-patient" data-id="' + esc(f.patientId) + '" title="แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button> ';
         h += '<button class="btn-icon btn-delete-patient" data-id="' + esc(f.patientId) + '" title="ลบ" style="color:#dc2626"><i class="fa-solid fa-trash"></i></button>';
         h += '</td>';
