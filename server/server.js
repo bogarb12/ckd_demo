@@ -247,7 +247,12 @@ app.get('/api/patients', async (req, res) => {
         } catch (joinErr) {
             // Fallback: some joined tables may not exist yet
             console.warn('GET /api/patients JOIN failed, using simple query:', joinErr.message);
-            rows = await query('SELECT p.*, c.hba1c_baseline, c.hba1c_6month FROM patients p LEFT JOIN clinical_outcomes c ON p.patient_id = c.patient_id ORDER BY p.created_at DESC');
+            try {
+                rows = await query('SELECT p.*, c.hba1c_baseline, c.hba1c_6month FROM patients p LEFT JOIN clinical_outcomes c ON p.patient_id = c.patient_id ORDER BY p.created_at DESC');
+            } catch (fallbackErr) {
+                console.warn('Fallback JOIN also failed, using patients only:', fallbackErr.message);
+                rows = await query('SELECT * FROM patients ORDER BY created_at DESC');
+            }
         }
         rows.forEach(r => {
             // Build comorbidities array from d1-d7 flags for backward compatibility
@@ -1392,16 +1397,31 @@ async function ensureSchema() {
             }
         }
 
-        // Handle clinical_outcomes table: check if it has old schema (missing dtx2-dtx6)
+        // Handle clinical_outcomes table: ensure dtx2-dtx6 columns exist
         try {
             const coCols = await query("SHOW COLUMNS FROM clinical_outcomes");
             const coColNames = coCols.map(c => c.Field);
-            if (!coColNames.includes('dtx2')) {
-                // Old schema - drop and recreate with full dtx1-dtx6 columns
-                await query("DROP TABLE IF EXISTS clinical_outcomes");
-                const coCreate = statements.find(s => s.includes('clinical_outcomes'));
-                if (coCreate) await query(coCreate);
-                console.log('clinical_outcomes table recreated with dtx1-dtx6 columns');
+            const dtxCols = [
+                { name: 'dtx2', def: 'DECIMAL(6,1) DEFAULT NULL' },
+                { name: 'dtx3', def: 'DECIMAL(6,1) DEFAULT NULL' },
+                { name: 'dtx4', def: 'DECIMAL(6,1) DEFAULT NULL' },
+                { name: 'dtx5', def: 'DECIMAL(6,1) DEFAULT NULL' },
+                { name: 'dtx6', def: 'DECIMAL(6,1) DEFAULT NULL' },
+                { name: 'dtx_avg', def: 'DECIMAL(6,1) DEFAULT NULL' },
+                { name: 'dtx1', def: 'DECIMAL(6,1) DEFAULT NULL' },
+                { name: 'fbs', def: 'DECIMAL(6,1) DEFAULT NULL' },
+                { name: 'gfr', def: 'DECIMAL(6,1) DEFAULT NULL' },
+                { name: 'updated_at', def: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP' }
+            ];
+            for (const col of dtxCols) {
+                if (!coColNames.includes(col.name)) {
+                    try {
+                        await query(`ALTER TABLE clinical_outcomes ADD COLUMN ${col.name} ${col.def}`);
+                        console.log('Added column clinical_outcomes.' + col.name);
+                    } catch (addErr) {
+                        console.warn('Could not add column ' + col.name + ':', addErr.message);
+                    }
+                }
             }
         } catch (e) { /* table might not exist yet */ }
 
