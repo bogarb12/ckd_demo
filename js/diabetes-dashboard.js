@@ -1176,6 +1176,14 @@ const DiabetesDashboard = {
         tbody.innerHTML = html;
         this.renderPagination(filtered.length);
         this.bindTableActions();
+
+        // Show admin-only columns if admin is logged in
+        var isAdmin = window.Auth && Auth.isLoggedIn() && Auth.isAdmin();
+        if (isAdmin) {
+            document.querySelectorAll('.admin-only-col').forEach(el => {
+                el.style.display = '';
+            });
+        }
     },
 
     renderPagination(totalItems) {
