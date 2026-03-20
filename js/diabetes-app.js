@@ -486,7 +486,14 @@ const DiabetesApp = {
 
     async apiGet(url) {
         const response = await authFetch(API.baseUrl + url);
-        if (!response.ok) throw new Error('API GET failed: ' + url);
+        if (!response.ok) {
+            var errMsg = 'GET ' + url + ' → ' + response.status;
+            try {
+                var errData = await response.json();
+                if (errData.error) errMsg = errData.error;
+            } catch(e) {}
+            throw new Error(errMsg);
+        }
         return response.json();
     },
 
@@ -496,7 +503,14 @@ const DiabetesApp = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        if (!response.ok) throw new Error('API POST failed: ' + url);
+        if (!response.ok) {
+            var errMsg = 'POST ' + url + ' → ' + response.status;
+            try {
+                var errData = await response.json();
+                if (errData.error) errMsg = errData.error;
+            } catch(e) {}
+            throw new Error(errMsg);
+        }
         return response.json();
     }
 };
