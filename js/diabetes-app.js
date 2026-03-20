@@ -476,8 +476,9 @@ const DiabetesApp = {
         DiabetesApp.patients.forEach(function (patient) {
             var opt = document.createElement('option');
             opt.value = patient.patient_id || patient.id || patient.hn || '';
+            var fullName = [patient.first_name, patient.last_name].filter(Boolean).join(' ');
             opt.textContent = (patient.patient_id || patient.hn || patient.id || '?') +
-                (patient.first_name ? ' - ' + patient.first_name : '') +
+                (fullName ? ' - ' + fullName : '') +
                 (patient.study_group ? ' (' + patient.study_group + ')' : '');
             selector.appendChild(opt);
         });

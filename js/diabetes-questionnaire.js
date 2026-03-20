@@ -76,11 +76,11 @@ const DiabetesQuestionnaire = {
             if (!pid) return;
             const option = document.createElement('option');
             option.value = pid;
-            const name = patient.name || patient.patient_name || '';
-            const group = patient.group || patient.enrollment_group || '';
+            const fullName = [patient.first_name, patient.last_name].filter(Boolean).join(' ') || patient.name || patient.patient_name || '';
+            const group = patient.study_group || patient.group || patient.enrollment_group || '';
             let label = pid;
-            if (name) {
-                label += ` - ${name}`;
+            if (fullName) {
+                label += ` - ${fullName}`;
             }
             if (group) {
                 label += ` (${group})`;

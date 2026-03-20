@@ -46,8 +46,9 @@ const DailyTracking = {
             (patients || []).forEach(p => {
                 const opt = document.createElement('option');
                 opt.value = p.patient_id || p.id || '';
+                var fullName = [p.first_name, p.last_name].filter(Boolean).join(' ');
                 opt.textContent = (p.patient_id || p.id || '?') +
-                    (p.first_name ? ' - ' + p.first_name : '') +
+                    (fullName ? ' - ' + fullName : '') +
                     (p.study_group ? ' (' + p.study_group + ')' : '');
                 selector.appendChild(opt);
             });

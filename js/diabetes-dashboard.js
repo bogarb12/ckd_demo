@@ -84,6 +84,7 @@ const DiabetesDashboard = {
                 this.setupImport();
                 this.setupTemplateDownload();
                 this.setupPrintReport();
+                this.setupCRUD();
                 this.initialized = true;
             }
 
@@ -351,6 +352,9 @@ const DiabetesDashboard = {
             gender: p.gender || '-',
             age: p.age != null ? p.age : '-',
             group: p.study_group || p.enrollment_group || '-',
+            study_group: p.study_group || p.enrollment_group || '',
+            weight: p.weight != null ? parseFloat(p.weight) : null,
+            height: p.height != null ? parseFloat(p.height) : null,
             bmi: p.bmi != null ? parseFloat(p.bmi) : null,
             hba1c_baseline: p.hba1c_baseline != null ? parseFloat(p.hba1c_baseline) : null,
             hba1c_6month: p.hba1c_6month != null ? parseFloat(p.hba1c_6month) : null,
@@ -1129,12 +1133,14 @@ const DiabetesDashboard = {
                 else if (gfrVal < 60) gfrStyle = 'color:#f59e0b;font-weight:600;';
             }
 
-            // Name (admin only)
-            const nameDisplay = [p.first_name, p.last_name].filter(Boolean).join(' ') || '-';
+            // Name (admin only) - separate first/last
+            const firstNameDisplay = p.first_name || '-';
+            const lastNameDisplay = p.last_name || '-';
 
             html += '<tr>';
             html += '<td style="font-weight:500;">' + this.escapeHtml(p.patient_id) + '</td>';
-            html += '<td class="admin-only-col" style="display:none">' + this.escapeHtml(nameDisplay) + '</td>';
+            html += '<td class="admin-only-col" style="display:none">' + this.escapeHtml(firstNameDisplay) + '</td>';
+            html += '<td class="admin-only-col" style="display:none">' + this.escapeHtml(lastNameDisplay) + '</td>';
             html += '<td>' + genderDisplay + '</td>';
             html += '<td>' + (p.age !== '-' ? p.age : '-') + '</td>';
             html += '<td>' + groupDisplay + '</td>';
@@ -1160,11 +1166,16 @@ const DiabetesDashboard = {
             html += '<td>' + paid56mDisplay + '</td>';
             html += '<td style="' + distressStyle + '">' + distressDisplay + '</td>';
             html += '<td style="' + statusStyle + '">' + statusDisplay + '</td>';
+            html += '<td class="admin-only-col" style="display:none;white-space:nowrap">';
+            html += '<button class="btn-icon btn-edit-patient" data-id="' + this.escapeHtml(p.patient_id) + '" title="แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button> ';
+            html += '<button class="btn-icon btn-delete-patient" data-id="' + this.escapeHtml(p.patient_id) + '" title="ลบ" style="color:#dc2626"><i class="fa-solid fa-trash"></i></button>';
+            html += '</td>';
             html += '</tr>';
         });
 
         tbody.innerHTML = html;
         this.renderPagination(filtered.length);
+        this.bindTableActions();
     },
 
     renderPagination(totalItems) {
@@ -1246,6 +1257,169 @@ const DiabetesDashboard = {
                 });
             }
         }
+    },
+
+    // =====================
+    // CRUD Patient Management
+    // =====================
+
+    setupCRUD() {
+        const addBtn = document.getElementById('btn-add-patient');
+        if (addBtn && !addBtn._bound) {
+            addBtn._bound = true;
+            addBtn.addEventListener('click', () => this.openPatientModal());
+        }
+
+        const closeBtn = document.getElementById('patient-modal-close');
+        const cancelBtn = document.getElementById('pm-cancel-btn');
+        const saveBtn = document.getElementById('pm-save-btn');
+        const modal = document.getElementById('patient-crud-modal');
+
+        if (closeBtn) closeBtn.addEventListener('click', () => this.closePatientModal());
+        if (cancelBtn) cancelBtn.addEventListener('click', () => this.closePatientModal());
+        if (modal) modal.addEventListener('click', (e) => {
+            if (e.target === modal) this.closePatientModal();
+        });
+        if (saveBtn && !saveBtn._bound) {
+            saveBtn._bound = true;
+            saveBtn.addEventListener('click', () => this.savePatient());
+        }
+    },
+
+    _editingPatientId: null,
+
+    openPatientModal(patientId) {
+        const modal = document.getElementById('patient-crud-modal');
+        const title = document.getElementById('patient-modal-title');
+        const idInput = document.getElementById('pm-patient-id');
+        if (!modal) return;
+
+        // Reset form
+        ['pm-patient-id', 'pm-first-name', 'pm-last-name', 'pm-gender', 'pm-age', 'pm-study-group', 'pm-weight', 'pm-height'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+
+        if (patientId) {
+            // Edit mode
+            this._editingPatientId = patientId;
+            title.textContent = 'แก้ไขข้อมูลผู้ป่วย';
+            idInput.value = patientId;
+            idInput.readOnly = true;
+            idInput.style.background = '#f3f4f6';
+
+            // Find patient data
+            const patients = (this._cachedSummaryData && this._cachedSummaryData.patients) || [];
+            const p = patients.find(pt => pt.patient_id === patientId);
+            if (p) {
+                document.getElementById('pm-first-name').value = p.first_name || '';
+                document.getElementById('pm-last-name').value = p.last_name || '';
+                document.getElementById('pm-gender').value = p.gender || '';
+                document.getElementById('pm-age').value = p.age || '';
+                document.getElementById('pm-study-group').value = p.study_group || p.group || '';
+                document.getElementById('pm-weight').value = p.weight || '';
+                document.getElementById('pm-height').value = p.height || '';
+            }
+        } else {
+            // Add mode
+            this._editingPatientId = null;
+            title.textContent = 'เพิ่มผู้ป่วยใหม่';
+            idInput.readOnly = false;
+            idInput.style.background = '';
+        }
+
+        modal.style.display = 'flex';
+    },
+
+    closePatientModal() {
+        const modal = document.getElementById('patient-crud-modal');
+        if (modal) modal.style.display = 'none';
+        this._editingPatientId = null;
+    },
+
+    async savePatient() {
+        const patientId = document.getElementById('pm-patient-id').value.trim();
+        if (!patientId) {
+            showToast('กรุณาระบุรหัสผู้ป่วย', 'error');
+            return;
+        }
+
+        const data = {
+            patient_id: patientId,
+            first_name: document.getElementById('pm-first-name').value.trim() || null,
+            last_name: document.getElementById('pm-last-name').value.trim() || null,
+            gender: document.getElementById('pm-gender').value || null,
+            age: document.getElementById('pm-age').value ? parseInt(document.getElementById('pm-age').value) : null,
+            study_group: document.getElementById('pm-study-group').value || null,
+            weight: document.getElementById('pm-weight').value ? parseFloat(document.getElementById('pm-weight').value) : null,
+            height: document.getElementById('pm-height').value ? parseFloat(document.getElementById('pm-height').value) : null
+        };
+
+        // Calculate BMI if weight and height provided
+        if (data.weight && data.height) {
+            const hm = data.height / 100;
+            data.bmi = parseFloat((data.weight / (hm * hm)).toFixed(1));
+        }
+
+        try {
+            const isEdit = !!this._editingPatientId;
+            const url = isEdit
+                ? API.baseUrl + '/api/patients/' + encodeURIComponent(this._editingPatientId)
+                : API.baseUrl + '/api/patients';
+            const method = isEdit ? 'PUT' : 'POST';
+
+            const response = await authFetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || 'บันทึกไม่สำเร็จ');
+            }
+
+            showToast(isEdit ? 'แก้ไขข้อมูลผู้ป่วยสำเร็จ' : 'เพิ่มผู้ป่วยสำเร็จ', 'success');
+            this.closePatientModal();
+            await this.init(); // Reload dashboard
+        } catch (err) {
+            showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+        }
+    },
+
+    async deletePatient(patientId) {
+        if (!confirm('ต้องการลบผู้ป่วย ' + patientId + ' หรือไม่?\nข้อมูลที่เกี่ยวข้องทั้งหมดจะถูกลบ')) {
+            return;
+        }
+
+        try {
+            const response = await authFetch(API.baseUrl + '/api/patients/' + encodeURIComponent(patientId), {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || 'ลบไม่สำเร็จ');
+            }
+
+            showToast('ลบผู้ป่วย ' + patientId + ' สำเร็จ', 'success');
+            await this.init(); // Reload dashboard
+        } catch (err) {
+            showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+        }
+    },
+
+    bindTableActions() {
+        document.querySelectorAll('.btn-edit-patient').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.openPatientModal(btn.dataset.id);
+            });
+        });
+        document.querySelectorAll('.btn-delete-patient').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.deletePatient(btn.dataset.id);
+            });
+        });
     },
 
     escapeHtml(str) {
