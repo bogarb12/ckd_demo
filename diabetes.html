@@ -48,15 +48,18 @@
 <header class="app-header">
     <div class="header-row">
         <div class="header-logo">
-            <div class="logo-box">DT</div>
+            <div class="logo-box-wrap">
+                <div class="logo-box">DT</div>
+                <span class="db-dot-mini" id="db-dot" title="กำลังเชื่อมต่อ..."></span>
+            </div>
             <div>
                 <h1>Diabetes Tracking</h1>
                 <p class="subtitle">ระบบติดตามโปรแกรมเบาหวาน + LINE</p>
             </div>
         </div>
         <div class="header-right">
-            <div class="db-status" id="db-status">
-                <span class="dot" id="db-dot"></span>
+            <div class="db-status" id="db-status" style="display:none">
+                <span class="dot"></span>
                 <span id="db-text">กำลังเชื่อมต่อ...</span>
             </div>
             <!-- Visitor label (shown when not logged in) -->
@@ -1341,9 +1344,10 @@
     <!-- Add User Form -->
     <div class="card">
         <div class="card-header"><span class="icon"><i class="fa-solid fa-user-plus"></i></span> เพิ่มผู้ใช้ใหม่</div>
+        <form id="add-user-form" autocomplete="off">
         <div class="form-group">
             <label>ชื่อผู้ใช้ (username) *</label>
-            <input type="text" id="new-username" placeholder="เช่น nurse01">
+            <input type="text" id="new-username" placeholder="เช่น nurse01" autocomplete="username">
         </div>
         <div class="form-group">
             <label>ชื่อที่แสดง</label>
@@ -1351,7 +1355,7 @@
         </div>
         <div class="form-group">
             <label>รหัสผ่าน *</label>
-            <input type="password" id="new-password" placeholder="อย่างน้อย 4 ตัวอักษร">
+            <input type="password" id="new-password" placeholder="อย่างน้อย 4 ตัวอักษร" autocomplete="new-password">
         </div>
         <div class="form-group">
             <label>ระดับสิทธิ์</label>
@@ -1362,10 +1366,11 @@
                 <option value="admin">Admin (ผู้ดูแลระบบ) - เข้าถึงได้ทุกส่วน</option>
             </select>
         </div>
-        <button class="btn btn-success btn-lg" id="btn-add-user">
+        <button type="button" class="btn btn-success btn-lg" id="btn-add-user">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
             เพิ่มผู้ใช้
         </button>
+        </form>
     </div>
 
     <!-- User List -->

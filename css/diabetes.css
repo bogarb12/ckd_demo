@@ -111,6 +111,11 @@ body {
     overflow: hidden;
 }
 
+.logo-box-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
 .logo-box {
     width: 36px;
     height: 36px;
@@ -123,6 +128,23 @@ body {
     font-weight: 700;
     font-size: 0.85rem;
     flex-shrink: 0;
+}
+
+.db-dot-mini {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--warning);
+    border: 2px solid var(--surface);
+    cursor: help;
+    transition: background 0.3s;
+}
+
+.db-dot-mini.connected {
+    background: var(--success);
 }
 
 .header-logo h1 {

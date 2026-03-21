@@ -285,13 +285,15 @@ var homePatientChart = null;
 async function initHome() {
     var dotEl = document.getElementById('db-dot');
     var textEl = document.getElementById('db-text');
-    if (dotEl && textEl) {
+    if (dotEl) {
         if (API.dbConnected) {
-            dotEl.style.background = '#00e272';
-            textEl.textContent = 'Database Connected';
+            dotEl.classList.add('connected');
+            dotEl.title = 'Database Connected';
+            if (textEl) textEl.textContent = 'Database Connected';
         } else {
-            dotEl.style.background = '#fe6a35';
-            textEl.textContent = 'Server ไม่พร้อม';
+            dotEl.classList.remove('connected');
+            dotEl.title = 'Server ไม่พร้อม';
+            if (textEl) textEl.textContent = 'Server ไม่พร้อม';
         }
     }
 
