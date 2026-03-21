@@ -83,15 +83,15 @@ const DAXEngine = {
             const p6 = toNum(p.paid5_6month);
             p._paid5Change = (!isNaN(pb) && !isNaN(p6)) ? p6 - pb : null;
 
-            // Group normalized
-            const g = (p.study_group || p.group || '').toLowerCase();
+            // Group normalized (String() to handle numeric values)
+            const g = String(p.study_group || p.group || '').toLowerCase().trim();
             p._group = (g === 'experimental' || g === 'intervention' || g === '1') ? 'experimental'
                       : (g === 'control' || g === '0' || g === '2') ? 'control' : 'other';
 
             // Gender normalized
-            const gd = (p.gender || '').toLowerCase();
-            p._gender = (gd === 'm' || gd === 'male') ? 'male'
-                       : (gd === 'f' || gd === 'female') ? 'female' : 'other';
+            const gd = String(p.gender || '').toLowerCase().trim();
+            p._gender = (gd === 'm' || gd === 'male' || gd === 'ชาย') ? 'male'
+                       : (gd === 'f' || gd === 'female' || gd === 'หญิง') ? 'female' : 'other';
 
             // Comorbidity flags
             p._comorbidities = [];
@@ -284,9 +284,14 @@ const DAXEngine = {
     // Apply context → recalculate everything → update UI
     // =====================
     applyContext() {
-        const filtered = this.getFilteredPatients();
-        const measures = this.calcMeasures(filtered);
-        DAXDashboard.render(measures);
+        try {
+            const filtered = this.getFilteredPatients();
+            console.log('[DAX] Filtered:', filtered.length, '/', this._allPatients.length, 'patients');
+            const measures = this.calcMeasures(filtered);
+            DAXDashboard.render(measures);
+        } catch (err) {
+            console.error('[DAX] applyContext error:', err);
+        }
     },
 
     // Reset all filters

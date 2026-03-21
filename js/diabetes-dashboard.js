@@ -138,7 +138,50 @@ const DiabetesDashboard = {
             const rawPatients = this._lastRawPatients || [];
 
             let daxPatients;
-            if (usingDemo || rawPatients.length === 0) {
+            if (!usingDemo && rawPatients.length > 0) {
+                // Real patients from server — flatten nested sub-objects for DAX
+                daxPatients = rawPatients.map(p => {
+                    const toNum = v => v != null ? parseFloat(v) : null;
+                    const getPaid5 = (period) => {
+                        if (!p.paid5) return null;
+                        if (p.paid5['converted_' + period] != null) return toNum(p.paid5['converted_' + period]);
+                        if (p.paid5['total_' + period] != null) return toNum(p.paid5['total_' + period]) * 5;
+                        return null;
+                    };
+                    const getDistress = () => {
+                        if (!p.paid5) return null;
+                        if (p.paid5.distress_6month) return p.paid5.distress_6month;
+                        if (p.paid5.distress_baseline) return p.paid5.distress_baseline;
+                        const conv = getPaid5('6month') || getPaid5('baseline');
+                        if (conv != null) return conv >= 40 ? 'high' : 'low';
+                        return null;
+                    };
+                    return {
+                        patient_id: p.patient_id,
+                        first_name: p.first_name,
+                        last_name: p.last_name,
+                        gender: String(p.gender || ''),
+                        age: p.age,
+                        study_group: String(p.study_group || p.enrollment_group || ''),
+                        group: String(p.study_group || p.enrollment_group || ''),
+                        bmi: toNum(p.bmi),
+                        weight: toNum(p.weight),
+                        height: toNum(p.height),
+                        hba1c_baseline: toNum(p.hba1c_baseline),
+                        hba1c_6month: toNum(p.hba1c_6month),
+                        fbs: toNum(p.fbs),
+                        gfr: toNum(p.gfr),
+                        dtx_avg: toNum(p.dtx_avg),
+                        paid5_baseline: getPaid5('baseline'),
+                        paid5_6month: getPaid5('6month'),
+                        distress: getDistress(),
+                        diabetes_duration_years: toNum(p.diabetes_duration_years),
+                        d1: p.d1, d2: p.d2, d3: p.d3, d4: p.d4, d5: p.d5,
+                        healthLiteracy: p.healthLiteracy || null,
+                        selfCare: p.selfCare || null
+                    };
+                });
+            } else {
                 // Demo patients — enrich with fields DAX needs
                 const seed = { v: 42 };
                 const sr = () => { seed.v = (seed.v * 16807) % 2147483647; return (seed.v - 1) / 2147483646; };
@@ -156,11 +199,12 @@ const DiabetesDashboard = {
                     d4: p.d4 != null ? p.d4 : (sr() > 0.9 ? 1 : 0),
                     d5: p.d5 != null ? p.d5 : (sr() > 0.8 ? 1 : 0)
                 }));
-            } else {
-                daxPatients = rawPatients.map(p => this.normalizePatientForTable(p));
             }
 
             console.log('[DAX] Initializing with', daxPatients.length, 'patients');
+            if (daxPatients.length > 0) {
+                console.log('[DAX] Sample patient:', JSON.stringify(daxPatients[0], null, 2));
+            }
             DAXEngine.init(daxPatients);
 
             if (!this._daxSlicersBound) {
