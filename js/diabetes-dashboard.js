@@ -78,34 +78,10 @@ const DiabetesDashboard = {
             // Render patient table
             this.renderPatientTable(summaryData.patients, this.currentFilter);
 
-            // Initialize DAX Engine with raw patient data
-            if (typeof DAXEngine !== 'undefined') {
-                let daxPatients;
-                if (usingDemo) {
-                    // Demo patients are already flat — enrich with missing fields
-                    daxPatients = summaryData.patients.map(p => ({
-                        ...p,
-                        study_group: p.group || p.study_group || '',
-                        bmi: p.bmi != null ? p.bmi : parseFloat((Math.random() * 10 + 20).toFixed(1)),
-                        fbs: p.fbs != null ? p.fbs : Math.round(Math.random() * 80 + 100),
-                        gfr: p.gfr != null ? p.gfr : Math.round(Math.random() * 40 + 50),
-                        dtx_avg: p.dtx_avg != null ? p.dtx_avg : Math.round(Math.random() * 80 + 120),
-                        diabetes_duration_years: p.diabetes_duration_years || Math.round(Math.random() * 15 + 2),
-                        d1: p.d1 != null ? p.d1 : (Math.random() > 0.4 ? 1 : 0),
-                        d2: p.d2 != null ? p.d2 : (Math.random() > 0.5 ? 1 : 0),
-                        d3: p.d3 != null ? p.d3 : (Math.random() > 0.85 ? 1 : 0),
-                        d4: p.d4 != null ? p.d4 : (Math.random() > 0.9 ? 1 : 0),
-                        d5: p.d5 != null ? p.d5 : (Math.random() > 0.8 ? 1 : 0)
-                    }));
-                } else {
-                    daxPatients = patients.map(p => this.normalizePatientForTable(p));
-                }
-                DAXEngine.init(daxPatients);
-                if (!this._daxSlicersBound) {
-                    initDAXSlicers();
-                    this._daxSlicersBound = true;
-                }
-            }
+            // Save for DAX
+            this._lastSummary = summaryData;
+            this._lastUsingDemo = usingDemo;
+            this._lastRawPatients = patients;
 
             // Set up filter and export (only once)
             if (!this.initialized) {
@@ -135,23 +111,8 @@ const DiabetesDashboard = {
             this.createDTXGroupChart(demoData);
             this.createAgeChart(demoData);
             this.renderPatientTable(demoData.patients, 'all');
-            // DAX fallback — enrich demo patients
-            if (typeof DAXEngine !== 'undefined') {
-                const dp = (demoData.patients || []).map(p => ({
-                    ...p, study_group: p.group || '',
-                    bmi: p.bmi || parseFloat((Math.random()*10+20).toFixed(1)),
-                    fbs: p.fbs || Math.round(Math.random()*80+100),
-                    gfr: p.gfr || Math.round(Math.random()*40+50),
-                    dtx_avg: p.dtx_avg || Math.round(Math.random()*80+120),
-                    d1: p.d1 != null ? p.d1 : (Math.random()>0.4?1:0),
-                    d2: p.d2 != null ? p.d2 : (Math.random()>0.5?1:0),
-                    d3: p.d3 != null ? p.d3 : (Math.random()>0.85?1:0),
-                    d4: p.d4 != null ? p.d4 : (Math.random()>0.9?1:0),
-                    d5: p.d5 != null ? p.d5 : (Math.random()>0.8?1:0)
-                }));
-                DAXEngine.init(dp);
-                if (!this._daxSlicersBound) { initDAXSlicers(); this._daxSlicersBound = true; }
-            }
+            this._lastSummary = demoData;
+            this._lastUsingDemo = true;
         }
 
         // Always setup buttons (even if data loading fails)
@@ -163,6 +124,51 @@ const DiabetesDashboard = {
             this.setupPrintReport();
             this.setupCRUD();
             this.initialized = true;
+        }
+
+        // ===== DAX Engine init (always runs, outside try-catch) =====
+        this._initDAX();
+    },
+
+    _initDAX() {
+        if (typeof DAXEngine === 'undefined') return;
+        try {
+            const summary = this._lastSummary || this.getDemoData();
+            const usingDemo = this._lastUsingDemo !== false;
+            const rawPatients = this._lastRawPatients || [];
+
+            let daxPatients;
+            if (usingDemo || rawPatients.length === 0) {
+                // Demo patients — enrich with fields DAX needs
+                const seed = { v: 42 };
+                const sr = () => { seed.v = (seed.v * 16807) % 2147483647; return (seed.v - 1) / 2147483646; };
+                daxPatients = (summary.patients || []).map(p => ({
+                    ...p,
+                    study_group: p.group || p.study_group || '',
+                    bmi: p.bmi != null ? p.bmi : parseFloat((sr() * 12 + 18).toFixed(1)),
+                    fbs: p.fbs != null ? p.fbs : Math.round(sr() * 100 + 90),
+                    gfr: p.gfr != null ? p.gfr : Math.round(sr() * 50 + 40),
+                    dtx_avg: p.dtx_avg != null ? p.dtx_avg : Math.round(sr() * 100 + 100),
+                    diabetes_duration_years: p.diabetes_duration_years || Math.round(sr() * 15 + 1),
+                    d1: p.d1 != null ? p.d1 : (sr() > 0.4 ? 1 : 0),
+                    d2: p.d2 != null ? p.d2 : (sr() > 0.5 ? 1 : 0),
+                    d3: p.d3 != null ? p.d3 : (sr() > 0.85 ? 1 : 0),
+                    d4: p.d4 != null ? p.d4 : (sr() > 0.9 ? 1 : 0),
+                    d5: p.d5 != null ? p.d5 : (sr() > 0.8 ? 1 : 0)
+                }));
+            } else {
+                daxPatients = rawPatients.map(p => this.normalizePatientForTable(p));
+            }
+
+            console.log('[DAX] Initializing with', daxPatients.length, 'patients');
+            DAXEngine.init(daxPatients);
+
+            if (!this._daxSlicersBound) {
+                initDAXSlicers();
+                this._daxSlicersBound = true;
+            }
+        } catch (err) {
+            console.error('[DAX] Init error:', err);
         }
     },
 
