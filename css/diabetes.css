@@ -2045,24 +2045,51 @@ textarea { min-height: 80px; resize: vertical; }
     gap: 6px;
 }
 
-.dax-range-input {
-    width: 70px;
-    padding: 4px 6px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-family: 'Athiti', sans-serif;
+.dax-age-display {
     text-align: center;
-    outline: none;
-}
-
-.dax-range-input:focus {
-    border-color: var(--primary);
-}
-
-.dax-range-sep {
-    color: var(--text-muted);
     font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 4px;
+    background: var(--primary-subtle, #eef4ff);
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.dax-slider-row {
+    padding: 2px 0;
+}
+
+.dax-slider {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--border);
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+}
+
+.dax-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.dax-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
 .dax-reset-btn {

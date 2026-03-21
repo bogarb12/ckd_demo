@@ -10,7 +10,7 @@ const DAXEngine = {
     filterContext: {
         studyGroup: ['experimental', 'control', 'other'],
         gender: ['male', 'female', 'other'],
-        ageRange: [0, 120],
+        ageRange: [20, 90],
         diabetesDuration: [0, 50],
         comorbidities: [],
         bmiCategory: []
@@ -299,7 +299,7 @@ const DAXEngine = {
         this.filterContext = {
             studyGroup: ['experimental', 'control', 'other'],
             gender: ['male', 'female', 'other'],
-            ageRange: [0, 120],
+            ageRange: [20, 90],
             diabetesDuration: [0, 50],
             comorbidities: [],
             bmiCategory: []
@@ -310,8 +310,10 @@ const DAXEngine = {
         document.querySelectorAll('#dax-slicer input[type="checkbox"][data-filter="comorbidity"]').forEach(cb => cb.checked = false);
         const ageMin = document.getElementById('dax-age-min');
         const ageMax = document.getElementById('dax-age-max');
-        if (ageMin) ageMin.value = 0;
-        if (ageMax) ageMax.value = 120;
+        const ageDisplay = document.getElementById('dax-age-display');
+        if (ageMin) ageMin.value = 20;
+        if (ageMax) ageMax.value = 90;
+        if (ageDisplay) ageDisplay.textContent = '20 — 90 ปี';
         this.applyContext();
     }
 };
@@ -626,18 +628,25 @@ function initDAXSlicers() {
         });
     });
 
-    // Age range
+    // Age range (sliders)
     const ageMin = document.getElementById('dax-age-min');
     const ageMax = document.getElementById('dax-age-max');
+    const ageDisplay = document.getElementById('dax-age-display');
+    const updateAgeDisplay = () => {
+        if (ageDisplay && ageMin && ageMax) {
+            ageDisplay.textContent = ageMin.value + ' — ' + ageMax.value + ' ปี';
+        }
+    };
     let ageTimer;
     [ageMin, ageMax].forEach(el => {
         if (!el) return;
         el.addEventListener('input', () => {
+            updateAgeDisplay();
             clearTimeout(ageTimer);
             ageTimer = setTimeout(() => {
                 DAXEngine.filterContext.ageRange = [
                     parseInt(ageMin.value) || 0,
-                    parseInt(ageMax.value) || 120
+                    parseInt(ageMax.value) || 100
                 ];
                 DAXEngine.applyContext();
             }, 300);

@@ -1090,10 +1090,12 @@
             <!-- Age Range -->
             <div class="dax-slicer-section">
                 <div class="dax-slicer-label">ช่วงอายุ (ปี)</div>
-                <div class="dax-range-row">
-                    <input type="number" id="dax-age-min" value="0" min="0" max="120" class="dax-range-input">
-                    <span class="dax-range-sep">—</span>
-                    <input type="number" id="dax-age-max" value="120" min="0" max="120" class="dax-range-input">
+                <div class="dax-age-display" id="dax-age-display">20 — 90 ปี</div>
+                <div class="dax-slider-row">
+                    <input type="range" id="dax-age-min" min="0" max="100" value="20" class="dax-slider">
+                </div>
+                <div class="dax-slider-row">
+                    <input type="range" id="dax-age-max" min="0" max="100" value="90" class="dax-slider">
                 </div>
             </div>
 
