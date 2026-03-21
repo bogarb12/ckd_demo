@@ -8,7 +8,7 @@ const DAXEngine = {
 
     // Current filter context (like Power BI Slicer)
     filterContext: {
-        studyGroup: ['experimental', 'control'],
+        studyGroup: ['experimental', 'control', 'other'],
         gender: ['male', 'female', 'other'],
         ageRange: [0, 120],
         diabetesDuration: [0, 50],
@@ -297,7 +297,7 @@ const DAXEngine = {
     // Reset all filters
     resetFilters() {
         this.filterContext = {
-            studyGroup: ['experimental', 'control'],
+            studyGroup: ['experimental', 'control', 'other'],
             gender: ['male', 'female', 'other'],
             ageRange: [0, 120],
             diabetesDuration: [0, 50],
@@ -305,7 +305,8 @@ const DAXEngine = {
             bmiCategory: []
         };
         // Reset UI checkboxes
-        document.querySelectorAll('#dax-slicer input[type="checkbox"]').forEach(cb => cb.checked = true);
+        document.querySelectorAll('#dax-slicer input[type="checkbox"][data-filter="group"]').forEach(cb => cb.checked = true);
+        document.querySelectorAll('#dax-slicer input[type="checkbox"][data-filter="gender"]').forEach(cb => cb.checked = true);
         document.querySelectorAll('#dax-slicer input[type="checkbox"][data-filter="comorbidity"]').forEach(cb => cb.checked = false);
         const ageMin = document.getElementById('dax-age-min');
         const ageMax = document.getElementById('dax-age-max');
