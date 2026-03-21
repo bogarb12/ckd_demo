@@ -15,7 +15,7 @@
 |  | diabetes-form.js     diabetes-dtx.js          | |
 |  | diabetes-dashboard.js diabetes-questionnaire.js| |
 |  | diabetes-tracking.js  diabetes-linebot.js     | |
-|  | diabetes-education.js                         | |
+|  | diabetes-education.js diabetes-dax.js         | |
 |  +----------------------------------------------+  |
 |  | CSS: diabetes.css | style.css                 | |
 |  | Libs: Chart.js | FontAwesome | Google Fonts   | |
@@ -83,7 +83,8 @@ diabetes-tracking/
 │   ├── diabetes-questionnaire.js # Health literacy & self-care surveys
 │   ├── diabetes-tracking.js   # Daily behavior tracking
 │   ├── diabetes-education.js  # Educational video content
-│   └── diabetes-linebot.js    # LINE Bot script generator
+│   ├── diabetes-linebot.js    # LINE Bot script generator
+│   └── diabetes-dax.js        # DAX Analytics Engine (Power BI-style dashboard)
 │
 ├── css/
 │   ├── diabetes.css           # Main application styles (1,957 lines)
