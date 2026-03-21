@@ -78,6 +78,16 @@ const DiabetesDashboard = {
             // Render patient table
             this.renderPatientTable(summaryData.patients, this.currentFilter);
 
+            // Initialize DAX Engine with raw patient data
+            if (typeof DAXEngine !== 'undefined') {
+                const daxPatients = usingDemo ? summaryData.patients : patients;
+                DAXEngine.init(daxPatients.map(p => this.normalizePatientForTable ? this.normalizePatientForTable(p) : p));
+                if (!this._daxSlicersBound) {
+                    initDAXSlicers();
+                    this._daxSlicersBound = true;
+                }
+            }
+
             // Set up filter and export (only once)
             if (!this.initialized) {
                 this.setupFilter(summaryData);
@@ -106,6 +116,11 @@ const DiabetesDashboard = {
             this.createDTXGroupChart(demoData);
             this.createAgeChart(demoData);
             this.renderPatientTable(demoData.patients, 'all');
+            // DAX fallback
+            if (typeof DAXEngine !== 'undefined') {
+                DAXEngine.init(demoData.patients || []);
+                if (!this._daxSlicersBound) { initDAXSlicers(); this._daxSlicersBound = true; }
+            }
         }
 
         // Always setup buttons (even if data loading fails)

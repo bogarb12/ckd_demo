@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Athiti:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="stylesheet" href="css/diabetes.css?v=20260320b">
+    <link rel="stylesheet" href="css/diabetes.css?v=20260321a">
 </head>
 <body>
 
@@ -1040,7 +1040,7 @@
 <!-- TAB 5: Dashboard -->
 <!-- ============================================ -->
 <div class="tab-content" id="tab-dashboard">
-    <div class="section-title"><i class="fa-solid fa-chart-column"></i> Dashboard ภาพรวมข้อมูล</div>
+    <div class="section-title"><i class="fa-solid fa-chart-column"></i> DAX Analytics Dashboard</div>
 
     <!-- Login Required Overlay -->
     <div id="dashboard-auth-overlay" class="hidden" style="background:#f8fafc;border:2px dashed #cbd5e1;border-radius:16px;padding:48px 24px;text-align:center;margin-bottom:16px">
@@ -1058,218 +1058,293 @@
         <i class="fa-solid fa-triangle-exclamation"></i> ไม่ได้เชื่อมต่อฐานข้อมูล - แสดงข้อมูลตัวอย่าง (Demo)
     </div>
 
-    <!-- Summary Stats Row 1 - Patient Counts -->
-    <div class="stat-grid">
-        <div class="stat-card stat-primary">
-            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
-            <div class="stat-value" id="dash-total">0</div>
-            <div class="stat-label">ผู้ป่วยทั้งหมด</div>
-        </div>
-        <div class="stat-card stat-purple">
-            <div class="stat-icon"><i class="fa-solid fa-flask-vial"></i></div>
-            <div class="stat-value" id="dash-experimental">0</div>
-            <div class="stat-label">กลุ่มทดลอง</div>
-        </div>
-        <div class="stat-card stat-teal">
-            <div class="stat-icon"><i class="fa-solid fa-shield-halved"></i></div>
-            <div class="stat-value" id="dash-control">0</div>
-            <div class="stat-label">กลุ่มควบคุม</div>
-        </div>
-        <div class="stat-card stat-green">
-            <div class="stat-icon"><i class="fa-solid fa-clipboard-check"></i></div>
-            <div class="stat-value" id="dash-follow-up">-</div>
-            <div class="stat-label">อัตราติดตาม (%)</div>
-        </div>
-    </div>
-    <!-- Summary Stats Row 2 - Clinical -->
-    <div class="stat-grid" style="margin-top:8px">
-        <div class="stat-card stat-orange">
-            <div class="stat-icon"><i class="fa-solid fa-vial"></i></div>
-            <div class="stat-value" id="dash-avg-hba1c">-</div>
-            <div class="stat-label">HbA1c เฉลี่ย (%)</div>
-        </div>
-        <div class="stat-card stat-amber">
-            <div class="stat-icon"><i class="fa-solid fa-droplet"></i></div>
-            <div class="stat-value" id="dash-avg-fbs">-</div>
-            <div class="stat-label">FBS เฉลี่ย (mg/dL)</div>
-        </div>
-        <div class="stat-card stat-cyan">
-            <div class="stat-icon"><i class="fa-solid fa-kidneys"></i></div>
-            <div class="stat-value" id="dash-avg-gfr">-</div>
-            <div class="stat-label">GFR เฉลี่ย (mL/min)</div>
-        </div>
-        <div class="stat-card stat-red">
-            <div class="stat-icon"><i class="fa-solid fa-syringe"></i></div>
-            <div class="stat-value" id="dash-avg-dtx">-</div>
-            <div class="stat-label">DTX เฉลี่ย (mg/dL)</div>
-        </div>
-    </div>
-    <!-- Summary Stats Row 3 - Body -->
-    <div class="stat-grid stat-grid-2" style="margin-top:8px">
-        <div class="stat-card stat-violet">
-            <div class="stat-icon"><i class="fa-solid fa-weight-scale"></i></div>
-            <div class="stat-value" id="dash-avg-bmi">-</div>
-            <div class="stat-label">BMI เฉลี่ย</div>
-        </div>
-        <div class="stat-card stat-blue">
-            <div class="stat-icon"><i class="fa-solid fa-person"></i></div>
-            <div class="stat-value" id="dash-avg-age">-</div>
-            <div class="stat-label">อายุเฉลี่ย (ปี)</div>
-        </div>
-    </div>
+    <!-- Slicer Toggle Button (Mobile) -->
+    <button class="dax-slicer-toggle-btn" id="dax-slicer-toggle">
+        <i class="fa-solid fa-sliders"></i> Filter Context <span class="dax-filter-badge" id="dax-filter-count">0 ราย</span>
+    </button>
 
-    <!-- Import / Export / Report Actions -->
-    <div class="card" style="padding:14px 16px">
-        <div class="card-header" style="margin-bottom:8px"><span class="icon"><i class="fa-solid fa-database"></i></span> จัดการข้อมูล</div>
-        <div class="action-grid">
-            <button class="btn btn-outline" id="btn-download-template">
-                <i class="fa-solid fa-file-arrow-down"></i> ดาวน์โหลดเทมเพลต
-            </button>
-            <button class="btn btn-primary" id="btn-import-csv">
-                <i class="fa-solid fa-file-import"></i> นำเข้าข้อมูล CSV
-            </button>
-            <input type="file" id="csv-file-input" accept=".csv" style="display:none">
-            <button class="btn btn-success" id="btn-export-csv">
-                <i class="fa-solid fa-file-export"></i> ส่งออก CSV
-            </button>
-            <button class="btn btn-outline" id="btn-print-report" style="border-color:#544fc5;color:#544fc5">
-                <i class="fa-solid fa-print"></i> พิมพ์รายงาน
-            </button>
-        </div>
-    </div>
+    <!-- DAX Layout: Slicer + Main -->
+    <div class="dax-layout">
 
-    <!-- Import Result Banner (clickable to show detail) -->
-    <div class="notice-banner info hidden" id="import-result" style="margin-bottom:12px;cursor:pointer" title="คลิกเพื่อดูรายละเอียด">
-        <i class="fa-solid fa-circle-check"></i> <span id="import-result-text"></span>
-        <span style="margin-left:auto;font-size:12px;opacity:0.7"><i class="fa-solid fa-chevron-right"></i> ดูรายละเอียด</span>
-    </div>
+        <!-- ========== SLICER PANEL (Filter Context) ========== -->
+        <aside class="dax-slicer" id="dax-slicer">
+            <div class="dax-slicer-header">
+                <i class="fa-solid fa-sliders"></i> Filter Context
+            </div>
 
-    <!-- Import Report Modal -->
-    <div id="import-report-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;font-family:Athiti,sans-serif">
-        <div style="background:#fff;border-radius:16px;max-width:720px;width:95%;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
-            <!-- Header -->
-            <div id="import-report-header" style="padding:20px 24px 16px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:12px">
-                <div id="import-report-icon" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px"></div>
-                <div style="flex:1">
-                    <h3 style="margin:0;font-size:18px;font-weight:700" id="import-report-title">ผลการนำเข้าข้อมูล</h3>
-                    <div style="font-size:13px;color:#6b7280;margin-top:2px" id="import-report-subtitle"></div>
+            <!-- Study Group -->
+            <div class="dax-slicer-section">
+                <div class="dax-slicer-label">กลุ่มศึกษา</div>
+                <label class="dax-cb"><input type="checkbox" data-filter="group" value="experimental" checked> กลุ่มทดลอง</label>
+                <label class="dax-cb"><input type="checkbox" data-filter="group" value="control" checked> กลุ่มควบคุม</label>
+            </div>
+
+            <!-- Gender -->
+            <div class="dax-slicer-section">
+                <div class="dax-slicer-label">เพศ</div>
+                <label class="dax-cb"><input type="checkbox" data-filter="gender" value="male" checked> ชาย</label>
+                <label class="dax-cb"><input type="checkbox" data-filter="gender" value="female" checked> หญิง</label>
+            </div>
+
+            <!-- Age Range -->
+            <div class="dax-slicer-section">
+                <div class="dax-slicer-label">ช่วงอายุ (ปี)</div>
+                <div class="dax-range-row">
+                    <input type="number" id="dax-age-min" value="0" min="0" max="120" class="dax-range-input">
+                    <span class="dax-range-sep">—</span>
+                    <input type="number" id="dax-age-max" value="120" min="0" max="120" class="dax-range-input">
                 </div>
-                <button id="import-report-close" style="background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;padding:4px 8px;border-radius:8px" title="ปิด">&times;</button>
             </div>
-            <!-- Body (scrollable) -->
-            <div style="overflow-y:auto;padding:20px 24px" id="import-report-body"></div>
-            <!-- Footer -->
-            <div style="padding:14px 24px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:8px">
-                <button id="import-report-ok" class="btn btn-primary" style="min-width:100px">ตกลง</button>
+
+            <!-- Comorbidities -->
+            <div class="dax-slicer-section">
+                <div class="dax-slicer-label">โรคร่วม</div>
+                <label class="dax-cb"><input type="checkbox" data-filter="comorbidity" value="hypertension"> ความดันสูง</label>
+                <label class="dax-cb"><input type="checkbox" data-filter="comorbidity" value="dyslipidemia"> ไขมันสูง</label>
+                <label class="dax-cb"><input type="checkbox" data-filter="comorbidity" value="cvd"> โรคหัวใจ</label>
+                <label class="dax-cb"><input type="checkbox" data-filter="comorbidity" value="ckd"> โรคไต</label>
+                <label class="dax-cb"><input type="checkbox" data-filter="comorbidity" value="gout"> เกาต์</label>
             </div>
-        </div>
-    </div>
 
-    <!-- Filter -->
-    <div class="filter-row">
-        <label style="font-weight:600;font-size:0.85rem"><i class="fa-solid fa-filter"></i> กรอง:</label>
-        <select id="dash-filter-group">
-            <option value="all">ทั้งหมด</option>
-            <option value="experimental">กลุ่มทดลอง</option>
-            <option value="control">กลุ่มควบคุม</option>
-        </select>
-    </div>
+            <button class="dax-reset-btn" id="dax-reset-filters">
+                <i class="fa-solid fa-rotate-left"></i> รีเซ็ตตัวกรอง
+            </button>
+        </aside>
 
-    <!-- Charts -->
-    <div class="chart-container">
-        <div class="chart-title">HbA1c เปรียบเทียบ Baseline vs 6 เดือน</div>
-        <canvas id="chart-hba1c" height="250"></canvas>
-    </div>
+        <!-- ========== MAIN CONTENT ========== -->
+        <div class="dax-main">
 
-    <div class="chart-container">
-        <div class="chart-title">PAID-5 คะแนนความเครียดจากเบาหวาน</div>
-        <canvas id="chart-paid5" height="250"></canvas>
-    </div>
-
-    <div class="chart-container">
-        <div class="chart-title">ระดับ Distress ของผู้ป่วย</div>
-        <canvas id="chart-distress" height="220"></canvas>
-    </div>
-
-    <!-- New Charts Row -->
-    <div class="chart-container">
-        <div class="chart-title">ความรอบรู้ด้านสุขภาพ (Health Literacy) Baseline vs 6 เดือน</div>
-        <canvas id="chart-health-literacy" height="250"></canvas>
-    </div>
-
-    <div class="chart-container">
-        <div class="chart-title">พฤติกรรมการดูแลตนเอง (Self-care) Baseline vs 6 เดือน</div>
-        <canvas id="chart-self-care" height="250"></canvas>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="chart-container">
-            <div class="chart-title">การกระจาย BMI</div>
-            <canvas id="chart-bmi" height="220"></canvas>
-        </div>
-        <div class="chart-container">
-            <div class="chart-title">โรคร่วม (Comorbidities)</div>
-            <canvas id="chart-comorbidity" height="220"></canvas>
-        </div>
-    </div>
-
-    <div class="chart-container">
-        <div class="chart-title">DTX เฉลี่ย เปรียบเทียบตามกลุ่ม</div>
-        <canvas id="chart-dtx-group" height="250"></canvas>
-    </div>
-
-    <div class="chart-container">
-        <div class="chart-title">การกระจายอายุผู้ป่วย</div>
-        <canvas id="chart-age" height="220"></canvas>
-    </div>
-
-    <!-- Patient List (responsive: cards on mobile, table on desktop) -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;margin-bottom:8px">
-        <div class="section-title" style="margin:0"><i class="fa-solid fa-users"></i> ข้อมูลผู้ป่วย</div>
-        <button class="btn btn-success" id="btn-add-patient" style="padding:6px 16px;font-size:0.85rem">
-            <i class="fa-solid fa-plus"></i> เพิ่มผู้ป่วย
-        </button>
-    </div>
-    <div style="margin-bottom:10px">
-        <div style="position:relative">
-            <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px"></i>
-            <input type="text" id="patient-search-input" placeholder="ค้นหาผู้ป่วย (รหัส, ชื่อ, นามสกุล)" style="width:100%;padding:8px 12px 8px 36px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.85rem;font-family:Athiti,sans-serif;outline:none;transition:border-color 0.2s" onfocus="this.style.borderColor='#2A86FF'" onblur="this.style.borderColor='#e2e8f0'">
-        </div>
-    </div>
-    <div class="patient-list-container" id="patient-list-container">
-        <!-- Mobile: Card view -->
-        <div class="patient-cards" id="patient-cards">
-            <div style="text-align:center;padding:32px;color:#94a3b8">กำลังโหลดข้อมูล...</div>
-        </div>
-        <!-- Desktop: Table view -->
-        <div class="patient-table-desktop" id="patient-table-desktop">
-            <div class="data-table-wrapper">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th class="col-id">รหัส</th>
-                            <th class="col-name admin-only-col" style="display:none">ชื่อ</th>
-                            <th class="col-gender">เพศ</th>
-                            <th class="col-age">อายุ</th>
-                            <th class="col-num col-secondary">กลุ่ม</th>
-                            <th class="col-num">BMI</th>
-                            <th class="col-num">HbA1c</th>
-                            <th class="col-num">6m</th>
-                            <th class="col-num col-secondary">FBS</th>
-                            <th class="col-num col-secondary">GFR</th>
-                            <th class="col-num col-secondary">DTX</th>
-                            <th class="col-num">PAID</th>
-                            <th class="col-distress">Dist</th>
-                            <th class="col-actions admin-only-col" style="display:none"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="dash-patient-table">
-                        <tr><td colspan="14" class="text-center text-muted" style="padding:24px">กำลังโหลดข้อมูล...</td></tr>
-                    </tbody>
-                </table>
+            <!-- KPI Measure Cards Row 1 -->
+            <div class="dax-kpi-grid">
+                <div class="dax-kpi-card dax-kpi-blue" id="dax-kpi-total">
+                    <div class="dax-kpi-icon"><i class="fa-solid fa-users"></i></div>
+                    <div class="dax-kpi-label">ผู้ป่วยทั้งหมด</div>
+                    <div class="dax-kpi-value">0</div>
+                    <div class="dax-kpi-sub"></div>
+                </div>
+                <div class="dax-kpi-card dax-kpi-orange" id="dax-kpi-hba1c">
+                    <div class="dax-kpi-icon"><i class="fa-solid fa-vial"></i></div>
+                    <div class="dax-kpi-label">Avg HbA1c</div>
+                    <div class="dax-kpi-value">-</div>
+                    <div class="dax-kpi-sub"></div>
+                </div>
+                <div class="dax-kpi-card dax-kpi-red" id="dax-kpi-distress">
+                    <div class="dax-kpi-icon"><i class="fa-solid fa-heart-crack"></i></div>
+                    <div class="dax-kpi-label">Distress สูง</div>
+                    <div class="dax-kpi-value">0</div>
+                    <div class="dax-kpi-sub"></div>
+                </div>
+                <div class="dax-kpi-card dax-kpi-green" id="dax-kpi-improved">
+                    <div class="dax-kpi-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                    <div class="dax-kpi-label">% HbA1c ดีขึ้น</div>
+                    <div class="dax-kpi-value">-</div>
+                    <div class="dax-kpi-sub"></div>
+                </div>
             </div>
-        </div>
-    </div>
+
+            <!-- KPI Row 2 -->
+            <div class="dax-kpi-grid dax-kpi-grid-4">
+                <div class="dax-kpi-card dax-kpi-mini" id="dax-kpi-bmi">
+                    <div class="dax-kpi-label">BMI เฉลี่ย</div>
+                    <div class="dax-kpi-value">-</div>
+                    <div class="dax-kpi-sub"></div>
+                </div>
+                <div class="dax-kpi-card dax-kpi-mini" id="dax-kpi-fbs">
+                    <div class="dax-kpi-label">FBS เฉลี่ย</div>
+                    <div class="dax-kpi-value">-</div>
+                    <div class="dax-kpi-sub"></div>
+                </div>
+                <div class="dax-kpi-card dax-kpi-mini" id="dax-kpi-dtx">
+                    <div class="dax-kpi-label">DTX เฉลี่ย</div>
+                    <div class="dax-kpi-value">-</div>
+                    <div class="dax-kpi-sub"></div>
+                </div>
+                <div class="dax-kpi-card dax-kpi-mini" id="dax-kpi-age">
+                    <div class="dax-kpi-label">อายุเฉลี่ย</div>
+                    <div class="dax-kpi-value">-</div>
+                    <div class="dax-kpi-sub"></div>
+                </div>
+            </div>
+
+            <!-- Import / Export / Report Actions -->
+            <div class="card" style="padding:14px 16px">
+                <div class="card-header" style="margin-bottom:8px"><span class="icon"><i class="fa-solid fa-database"></i></span> จัดการข้อมูล</div>
+                <div class="action-grid">
+                    <button class="btn btn-outline" id="btn-download-template">
+                        <i class="fa-solid fa-file-arrow-down"></i> เทมเพลต
+                    </button>
+                    <button class="btn btn-primary" id="btn-import-csv">
+                        <i class="fa-solid fa-file-import"></i> นำเข้า CSV
+                    </button>
+                    <input type="file" id="csv-file-input" accept=".csv" style="display:none">
+                    <button class="btn btn-success" id="btn-export-csv">
+                        <i class="fa-solid fa-file-export"></i> ส่งออก CSV
+                    </button>
+                    <button class="btn btn-outline" id="btn-print-report" style="border-color:#544fc5;color:#544fc5">
+                        <i class="fa-solid fa-print"></i> พิมพ์รายงาน
+                    </button>
+                </div>
+            </div>
+
+            <!-- Import Result Banner -->
+            <div class="notice-banner info hidden" id="import-result" style="margin-bottom:12px;cursor:pointer" title="คลิกเพื่อดูรายละเอียด">
+                <i class="fa-solid fa-circle-check"></i> <span id="import-result-text"></span>
+                <span style="margin-left:auto;font-size:12px;opacity:0.7"><i class="fa-solid fa-chevron-right"></i> ดูรายละเอียด</span>
+            </div>
+
+            <!-- Import Report Modal -->
+            <div id="import-report-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;font-family:Athiti,sans-serif">
+                <div style="background:#fff;border-radius:16px;max-width:720px;width:95%;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+                    <div id="import-report-header" style="padding:20px 24px 16px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:12px">
+                        <div id="import-report-icon" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px"></div>
+                        <div style="flex:1">
+                            <h3 style="margin:0;font-size:18px;font-weight:700" id="import-report-title">ผลการนำเข้าข้อมูล</h3>
+                            <div style="font-size:13px;color:#6b7280;margin-top:2px" id="import-report-subtitle"></div>
+                        </div>
+                        <button id="import-report-close" style="background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;padding:4px 8px;border-radius:8px" title="ปิด">&times;</button>
+                    </div>
+                    <div style="overflow-y:auto;padding:20px 24px" id="import-report-body"></div>
+                    <div style="padding:14px 24px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:8px">
+                        <button id="import-report-ok" class="btn btn-primary" style="min-width:100px">ตกลง</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== Time Intelligence: HbA1c Baseline vs 6-Month ===== -->
+            <div class="dax-chart-row">
+                <div class="chart-container dax-chart-half">
+                    <div class="chart-title"><i class="fa-solid fa-clock-rotate-left"></i> Time Intelligence: HbA1c</div>
+                    <canvas id="dax-chart-time" height="240"></canvas>
+                    <div class="dax-delta-row">
+                        <span id="dax-time-exp-delta"></span>
+                        <span id="dax-time-ctrl-delta"></span>
+                    </div>
+                </div>
+                <div class="chart-container dax-chart-half">
+                    <div class="chart-title"><i class="fa-solid fa-shield-halved"></i> Risk Level Distribution</div>
+                    <canvas id="dax-chart-risk" height="240"></canvas>
+                </div>
+            </div>
+
+            <!-- ===== Risk Segmentation Matrix (Calculated Columns) ===== -->
+            <div class="chart-container">
+                <div class="chart-title"><i class="fa-solid fa-table-cells"></i> Risk Segmentation Matrix (Calculated Columns)</div>
+                <div class="dax-matrix">
+                    <table class="dax-matrix-table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th class="dax-mx-head-good">HbA1c ดี (&lt;7%)</th>
+                                <th class="dax-mx-head-mod">HbA1c ปานกลาง (7-9%)</th>
+                                <th class="dax-mx-head-high">HbA1c สูง (&gt;9%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="dax-mx-row-head">Distress ต่ำ</td>
+                                <td class="dax-mx-cell dax-mx-low" id="rm-good-low">0</td>
+                                <td class="dax-mx-cell dax-mx-med" id="rm-mod-low">0</td>
+                                <td class="dax-mx-cell dax-mx-high" id="rm-high-low">0</td>
+                            </tr>
+                            <tr>
+                                <td class="dax-mx-row-head">Distress สูง</td>
+                                <td class="dax-mx-cell dax-mx-med" id="rm-good-high">0</td>
+                                <td class="dax-mx-cell dax-mx-high" id="rm-mod-high">0</td>
+                                <td class="dax-mx-cell dax-mx-crit" id="rm-high-high">0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="dax-matrix-legend">
+                        <span class="dax-mx-leg dax-mx-leg-low">Low Risk</span>
+                        <span class="dax-mx-leg dax-mx-leg-med">Medium</span>
+                        <span class="dax-mx-leg dax-mx-leg-high">High</span>
+                        <span class="dax-mx-leg dax-mx-leg-crit">Critical</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== Cross-Table Analysis (Radar) ===== -->
+            <div class="chart-container">
+                <div class="chart-title"><i class="fa-solid fa-link"></i> Cross-Table Analysis (Relationships)</div>
+                <p style="font-size:0.7rem;color:var(--text-secondary);margin:-4px 0 8px">PAID-5, Health Literacy, Self-Care: เปรียบเทียบกลุ่มทดลอง vs ควบคุม</p>
+                <canvas id="dax-chart-cross" height="280"></canvas>
+            </div>
+
+            <!-- ===== Patient Ranking Table (Iterator / RANKX) ===== -->
+            <div class="chart-container">
+                <div class="chart-title" style="display:flex;justify-content:space-between;align-items:center">
+                    <span><i class="fa-solid fa-ranking-star"></i> Patient Ranking (RANKX: HbA1c Improvement)</span>
+                    <span class="dax-ranking-count" id="dax-ranking-count">0 ราย</span>
+                </div>
+                <div class="dax-ranking-wrap">
+                    <table class="dax-ranking-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>ID</th>
+                                <th>เพศ</th>
+                                <th>อายุ</th>
+                                <th>HbA1c BL</th>
+                                <th>HbA1c 6m</th>
+                                <th>Change</th>
+                                <th>Risk</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dax-ranking-body">
+                            <tr><td colspan="8" style="text-align:center;padding:20px;color:#94a3b8">กำลังโหลด...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== Legacy Patient Table (kept for CRUD) ===== -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;margin-bottom:8px">
+                <div class="section-title" style="margin:0"><i class="fa-solid fa-users"></i> จัดการข้อมูลผู้ป่วย</div>
+                <button class="btn btn-success" id="btn-add-patient" style="padding:6px 16px;font-size:0.85rem">
+                    <i class="fa-solid fa-plus"></i> เพิ่มผู้ป่วย
+                </button>
+            </div>
+            <div style="margin-bottom:10px">
+                <div style="position:relative">
+                    <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px"></i>
+                    <input type="text" id="patient-search-input" placeholder="ค้นหาผู้ป่วย (รหัส, ชื่อ, นามสกุล)" style="width:100%;padding:8px 12px 8px 36px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.85rem;font-family:Athiti,sans-serif;outline:none;transition:border-color 0.2s" onfocus="this.style.borderColor='#2A86FF'" onblur="this.style.borderColor='#e2e8f0'">
+                </div>
+            </div>
+            <div class="patient-list-container" id="patient-list-container">
+                <div class="patient-cards" id="patient-cards">
+                    <div style="text-align:center;padding:32px;color:#94a3b8">กำลังโหลดข้อมูล...</div>
+                </div>
+                <div class="patient-table-desktop" id="patient-table-desktop">
+                    <div class="data-table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-id">รหัส</th>
+                                    <th class="col-name admin-only-col" style="display:none">ชื่อ</th>
+                                    <th class="col-gender">เพศ</th>
+                                    <th class="col-age">อายุ</th>
+                                    <th class="col-num col-secondary">กลุ่ม</th>
+                                    <th class="col-num">BMI</th>
+                                    <th class="col-num">HbA1c</th>
+                                    <th class="col-num">6m</th>
+                                    <th class="col-num col-secondary">FBS</th>
+                                    <th class="col-num col-secondary">GFR</th>
+                                    <th class="col-num col-secondary">DTX</th>
+                                    <th class="col-num">PAID</th>
+                                    <th class="col-distress">Dist</th>
+                                    <th class="col-actions admin-only-col" style="display:none"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-patient-table">
+                                <tr><td colspan="14" class="text-center text-muted" style="padding:24px">กำลังโหลดข้อมูล...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /dax-main -->
+    </div><!-- /dax-layout -->
     </div><!-- /dashboard-content -->
 </div>
 
@@ -1698,7 +1773,8 @@
 <script src="js/diabetes-form.js?v=20260317"></script>
 <script src="js/diabetes-questionnaire.js?v=20260317"></script>
 <script src="js/diabetes-education.js?v=20260317"></script>
-<script src="js/diabetes-dashboard.js?v=20260320c"></script>
+<script src="js/diabetes-dashboard.js?v=20260321a"></script>
+<script src="js/diabetes-dax.js?v=20260321a"></script>
 <script src="js/diabetes-tracking.js?v=20260317"></script>
 <script src="js/diabetes-dtx.js?v=20260320"></script>
 <script src="js/diabetes-linebot.js?v=20260317"></script>
